@@ -232,14 +232,26 @@
       <div class="divider"></div>
       <h2 data-i18n="musicTitle">Musique</h2>
 
-      <div class="ctrl">
-        <label style="margin-bottom:6px;" data-i18n="lblDir">Sens de lecture</label>
-        <select id="playDir">
-          <option value="lr" selected data-i18n="dirLR">→  Gauche à droite</option>
-          <option value="rl" data-i18n="dirRL">←  Droite à gauche</option>
-          <option value="tb" data-i18n="dirTB">↓  Haut vers bas</option>
-          <option value="bt" data-i18n="dirBT">↑  Bas vers haut</option>
-        </select>
+      <div class="row2">
+        <div class="ctrl">
+          <label style="margin-bottom:6px;" data-i18n="lblDir">Sens de lecture</label>
+          <select id="playDir">
+            <option value="lr" selected data-i18n="dirLR">→  Gauche à droite</option>
+            <option value="rl" data-i18n="dirRL">←  Droite à gauche</option>
+            <option value="tb" data-i18n="dirTB">↓  Haut vers bas</option>
+            <option value="bt" data-i18n="dirBT">↑  Bas vers haut</option>
+          </select>
+        </div>
+        <div class="ctrl">
+          <label style="margin-bottom:6px;" data-i18n="lblCurve">Courbe de lecture</label>
+          <select id="curve">
+            <option value="linear" selected data-i18n="curveLinear">Linéaire (régulier)</option>
+            <option value="accel" data-i18n="curveAccel">Accéléré</option>
+            <option value="decel" data-i18n="curveDecel">Ralenti</option>
+            <option value="pulse" data-i18n="curvePulse">Pulsé (dense aux bords)</option>
+            <option value="swing" data-i18n="curveSwing">Swing</option>
+          </select>
+        </div>
       </div>
 
       <div class="row2">
@@ -355,6 +367,12 @@ const I18N = {
     dirRL: "←  Droite à gauche",
     dirTB: "↓  Haut vers bas",
     dirBT: "↑  Bas vers haut",
+    lblCurve: "Courbe de lecture",
+    curveLinear: "Linéaire (régulier)",
+    curveAccel: "Accéléré",
+    curveDecel: "Ralenti",
+    curvePulse: "Pulsé (dense aux bords)",
+    curveSwing: "Swing",
     lblScale: "Gamme",
     scMajPenta: "Pentatonique majeure",
     scMinPenta: "Pentatonique mineure",
@@ -427,6 +445,12 @@ const I18N = {
     dirRL: "←  Right to left",
     dirTB: "↓  Top to bottom",
     dirBT: "↑  Bottom to top",
+    lblCurve: "Playback curve",
+    curveLinear: "Linear (steady)",
+    curveAccel: "Accelerating",
+    curveDecel: "Decelerating",
+    curvePulse: "Pulsing (dense at edges)",
+    curveSwing: "Swing",
     lblScale: "Scale",
     scMajPenta: "Major pentatonic",
     scMinPenta: "Minor pentatonic",
@@ -856,6 +880,29 @@ function readDir(){
   return { timeOnX: d === 'lr' || d === 'rl', timeRev: d === 'rl' || d === 'bt' };
 }
 
+// full loop duration in ms, read live from tempo / bars
+function loopDurationMs(){
+  return parseInt($('bars').value) * 4 * (60000 / parseInt($('tempo').value)); // 4/4
+}
+
+// Playback curve: time-warp the playhead across the loop.
+// Returns, for grid step k of n, the fraction of the loop (0..1) at which it sounds.
+// Linear -> k/n. The others bend that so notes rush / drag / swing.
+function stepTimeFrac(k, n){
+  if(k <= 0) return 0;
+  if(k >= n) return 1;
+  const p = k / n;
+  switch($('curve').value){
+    case 'accel': return 1 - (1 - p) * (1 - p);                 // slow start, fast end
+    case 'decel': return p * p;                                 // fast start, slow end
+    case 'pulse': return p < 0.5                                // dense at both edges of the loop
+      ? 0.5 * (1 - (1 - 2*p) * (1 - 2*p))
+      : 0.5 + 0.5 * (2*p - 1) * (2*p - 1);
+    case 'swing': return Math.min(1, p + ((k % 2) ? 0.28 / n : 0)); // delay every other step
+    default:      return p;                                     // linear
+  }
+}
+
 function process(){
   if(!img) return;
   const w = imgCanvas.width, h = imgCanvas.height;
@@ -1003,6 +1050,19 @@ function drawPreview(){
       pctx.fill();
     });
   });
+  pctx.globalAlpha = 1;
+
+  // playback-curve ticks along the leading edge: even spacing = linear, uneven = warped
+  pctx.strokeStyle = 'rgba(255,255,255,.28)';
+  pctx.lineWidth = 1;
+  for(let k=0; k<=steps; k++){
+    const ft = stepTimeFrac(k, steps);
+    const fp = timeRev ? (1 - ft) : ft;
+    pctx.beginPath();
+    if(timeOnX){ const x = fp*preview.width;  pctx.moveTo(x, 0); pctx.lineTo(x, 7); }
+    else       { const y = fp*preview.height; pctx.moveTo(0, y); pctx.lineTo(7, y); }
+    pctx.stroke();
+  }
   pctx.restore();
 }
 
@@ -1031,8 +1091,6 @@ function buildMidi(){
   const tempo = parseInt($('tempo').value);
   const gatePct = parseInt($('gate').value)/100;
   const totalTicks = bars*4*PPQ; // 4/4
-  const stepTicks = totalTicks/steps;
-  const noteDur = Math.max(10, Math.round(stepTicks*gatePct));
 
   const tracks = [];
 
@@ -1050,8 +1108,11 @@ function buildMidi(){
     // program change at tick 0
     events.push({tick:0, bytes:[0xC0|chan, L.program & 0x7F]});
     lastNotes[Li].forEach(n=>{
-      const onTick = n.step*stepTicks;
-      const offTick = onTick + noteDur;
+      // note position + length follow the playback curve (linear = even grid)
+      const onT = totalTicks * stepTimeFrac(n.step, steps);
+      const spanT = totalTicks * (stepTimeFrac(n.step + 1, steps) - stepTimeFrac(n.step, steps));
+      const onTick = Math.round(onT);
+      const offTick = Math.round(onT + Math.max(10, spanT * gatePct));
       events.push({tick:onTick, bytes:[0x90|chan, n.midi & 0x7F, n.vel & 0x7F]});
       events.push({tick:offTick, bytes:[0x80|chan, n.midi & 0x7F, 0]});
     });
@@ -1103,6 +1164,7 @@ let sink = 'midi';       // 'midi' (Web MIDI out) | 'synth' (built-in preview sy
 let schedTimer = null, rafId = null;
 let playStep = 0;            // next grid step to schedule
 let nextStepTime = 0;        // when that step should sound (performance.now clock)
+let stepWin = [];            // recent scheduled steps {step, at, span} — drives the playhead
 let hangingNotes = new Set(); // chan*128+note keys, to force-off on stop
 let usedChannels = new Set();
 
@@ -1187,16 +1249,9 @@ midiPortSel.addEventListener('change', ()=>{
   if(midiOut) setMidiState(playing ? 'midiPlaying' : 'midiReady', playing, midiOut.name);
 });
 
-// duration of one grid step, read live from the tempo / bars / steps sliders
-function stepDurationMs(){
-  const bars = parseInt($('bars').value);
-  const steps = parseInt($('steps').value);
-  const tempo = parseInt($('tempo').value);
-  return (bars * 4 * (60000 / tempo)) / steps; // 4/4
-}
-
 // schedule every step falling within [now, now + LOOKAHEAD].
-// lastNotes, tempo, gate, scale... are re-read on each step → live editing.
+// lastNotes, tempo, gate, scale, curve... are re-read on each step → live editing.
+// Each step's span is time-warped by the playback curve (stepTimeFrac).
 function scheduler(){
   if(!playing) return;
   if(sink === 'midi' && !midiOut) return;
@@ -1205,14 +1260,17 @@ function scheduler(){
   const horizon = now + LOOKAHEAD_MS;
   // lock the audio clock to the performance.now clock for this batch
   const audioEpoch = (sink === 'synth' && ac) ? (ac.currentTime - now / 1000) : 0;
+  const gatePct = parseInt($('gate').value) / 100;
   let guard = 0;
   while(nextStepTime < horizon && guard++ < 512){
     const steps = parseInt($('steps').value);
-    const stepDur = stepDurationMs();
-    // -3 ms so a re-triggered same note has room to breathe
-    const gateMs = Math.max(15, Math.min(stepDur - 3, stepDur * (parseInt($('gate').value) / 100)));
+    const loopMs = loopDurationMs();
     if(playStep >= steps) playStep = 0;
     const s = playStep, at = nextStepTime;
+    // this step lasts until the next one — warped by the curve
+    const spanMs = Math.max(8, loopMs * (stepTimeFrac(s + 1, steps) - stepTimeFrac(s, steps)));
+    // -3 ms so a re-triggered same note has room to breathe
+    const gateMs = Math.max(15, Math.min(spanMs - 3, spanMs * gatePct));
     lastNotes.forEach((arr, Li)=>{
       if(!layerAudible(Li)) return;         // Mute / Solo
       const chan = Li % 16;
@@ -1228,19 +1286,23 @@ function scheduler(){
         }
       }
     });
-    nextStepTime = at + stepDur;
+    stepWin.push({ step: s, at, span: spanMs });
+    nextStepTime = at + spanMs;
     playStep = s + 1;
   }
+  stepWin = stepWin.filter(w => w.at + w.span > now - 150);
 }
 
 function drawPlayhead(){
   if(!playing) return;
   redrawPreview();
   const steps = parseInt($('steps').value);
-  const stepDur = stepDurationMs();
   const {timeOnX, timeRev} = readDir();
-  // playStep is the next step to sound, due at nextStepTime
-  let pos = playStep - (nextStepTime - performance.now()) / stepDur;
+  const now = performance.now();
+  // find the scheduled step whose time-span contains `now`, interpolate within it
+  const w = stepWin.find(v => now >= v.at && now < v.at + v.span) || stepWin[0];
+  let pos = 0;
+  if(w) pos = w.step + Math.max(0, Math.min(1, (now - w.at) / w.span));
   pos = ((pos % steps) + steps) % steps;
   const slot = timeRev ? (steps - pos) : pos;   // position along the time axis, image-oriented
   const f = slot / steps;
@@ -1283,6 +1345,7 @@ function startPlayback(which){
     setMidiState('midiPlaying', true, midiOut.name || t('portFallback'));
   }
   playStep = 0;
+  stepWin = [];
   nextStepTime = performance.now() + 90; // small delay for a clean start
   scheduler();
   schedTimer = setInterval(scheduler, SCHED_INTERVAL_MS);
@@ -1483,7 +1546,7 @@ document.addEventListener('visibilitychange', ()=>{
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
 
 /* ---- wire up controls ---- */
-const liveIds = ['contrast','thresh','layers','sepMode','playDir','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
+const liveIds = ['contrast','thresh','layers','sepMode','playDir','curve','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
 function syncLabels(){
   $('vContrast').textContent = $('contrast').value+'%';
   $('vThresh').textContent = $('thresh').value;
