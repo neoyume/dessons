@@ -114,6 +114,7 @@
   .swatch{-webkit-appearance:none; appearance:none; width:13px; height:13px; border-radius:3px; border:1px solid rgba(255,255,255,.15); padding:0; cursor:default;}
   .swatch.pickable{cursor:pointer;}
   .swatch.pickable:hover{border-color:var(--amber);}
+  .swatch.pickable:not(.picked){border-style:dashed; border-color:var(--text-dim);}
   .swatch.arming{border-color:var(--amber); box-shadow:0 0 0 2px var(--amber); animation:swatchPulse .9s ease-in-out infinite;}
   @keyframes swatchPulse{50%{opacity:.4;}}
   canvas#preview.picking{cursor:crosshair;}
@@ -277,6 +278,10 @@
           </select>
         </div>
       </div>
+      <div class="ctrl" id="pickTolRow" hidden>
+        <label><span data-i18n="lblPickTol">Tolérance couleur</span> <span class="val" id="vPickTol">60</span></label>
+        <input type="range" id="pickTol" min="10" max="150" value="60">
+      </div>
 
       <div class="divider"></div>
       <h2 data-i18n="musicTitle">Musique</h2>
@@ -390,8 +395,9 @@ const I18N = {
     optHue: "Par couleur (teinte)",
     optLum: "Par luminosité",
     optPick: "Par couleurs (pipette)",
-    pickArm: "Clique dans l'image pour choisir la couleur du calque.",
+    pickArm: "Clique dans l'image pour isoler cette couleur — le reste restera silencieux.",
     swatchTitle: "Choisir la couleur dans l'image",
+    lblPickTol: "Tolérance couleur",
     musicTitle: "Musique",
     lblDirShort: "Sens",
     dirLR: "Gauche → droite",
@@ -473,8 +479,9 @@ const I18N = {
     optHue: "By color (hue)",
     optLum: "By brightness",
     optPick: "By picked colors (eyedropper)",
-    pickArm: "Click in the image to set that layer's color.",
+    pickArm: "Click in the image to isolate that color — everything else stays silent.",
     swatchTitle: "Pick color from the image",
+    lblPickTol: "Color tolerance",
     musicTitle: "Music",
     lblDirShort: "Direction",
     dirLR: "Left → right",
@@ -802,6 +809,7 @@ preview.addEventListener('click', e=>{
   const hex = rgbToHex(r,g,b);
   layers[pickLayer].color = hex;
   layers[pickLayer].pickColor = hex;
+  layers[pickLayer].picked = true;
   pickLayer = -1;
   renderLayerList();
   process();
@@ -833,6 +841,7 @@ function rebuildLayers(){
     layers.push({
       color,
       pickColor: (keep && keep.pickColor) || color,      // remembered even when not in 'pick' mode
+      picked: keep ? !!keep.picked : false,               // has the user actually chosen a color yet?
       name: isAuto ? (base + ' ' + (i+1)) : keep.name,
       auto: isAuto,
       program: keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog,
@@ -841,6 +850,7 @@ function rebuildLayers(){
     });
   }
   renderLayerList();
+  $('pickTolRow').hidden = mode !== 'pick';
   // already playing: re-send the channel patches for the current layers
   if(playing && midiOut){
     layers.forEach((L,i)=> midiOut.send([0xC0|(i%16), L.program & 0x7F]));
@@ -858,6 +868,7 @@ function renderLayerList(){
     sw.type = 'button'; sw.className='swatch'; sw.style.background = L.color;
     if($('sepMode').value === 'pick'){
       sw.classList.add('pickable');
+      sw.classList.toggle('picked', !!L.picked);
       sw.title = t('swatchTitle');
       sw.classList.toggle('arming', pickLayer === i);
       sw.addEventListener('click', ()=>{ pickLayer = (pickLayer === i) ? -1 : i; renderLayerList(); });
@@ -1130,22 +1141,28 @@ function process(){
     }
   }
 
-  // 'pick' mode: each layer has a target RGB, pixels go to the nearest one
+  // 'pick' mode: each layer isolates one picked color. A pixel joins the
+  // closest picked layer within tolerance; if none is close enough (or no
+  // color has been picked yet) it belongs to no layer — silence, not a
+  // fallback bucket. That's what makes "pick the green leaves" mean
+  // *only* the green leaves, not "everything, sorted by nearest hue".
   const pickTargets = sepMode==='pick' ? layers.map(L => hexToRgb(L.color)) : null;
+  const pickTolSq = (parseInt($('pickTol').value) || 60) ** 2;
 
   // pick a layer for a pixel (by hue bin, brightness bin, or nearest picked color)
   function layerOf(px){
-    if(nLayers===1) return 0;
     if(sepMode==='pick'){
-      let best=0, bestD=Infinity;
+      let best=-1, bestD=pickTolSq;
       for(let L=0;L<nLayers;L++){
+        if(!layers[L].picked) continue;
         const t = pickTargets[L];
         const dr=pr[px]-t[0], dg=pg[px]-t[1], db=pb[px]-t[2];
         const d = dr*dr+dg*dg+db*db;
-        if(d<bestD){ bestD=d; best=L; }
+        if(d<=bestD){ bestD=d; best=L; }
       }
-      return best;
+      return best;   // -1 = no picked color close enough
     }
+    if(nLayers===1) return 0;
     if(sepMode==='hue'){
       return Math.floor((hue[px]/360)*nLayers) % nLayers;
     } else {
@@ -1177,6 +1194,7 @@ function process(){
         for(let x=x0;x<x1;x++){
           const px = y*w+x;
           const L = layerOf(px);
+          if(L<0) continue;   // 'pick' mode: pixel doesn't match any picked color
           if(edge[px]>bestEdge[L]) bestEdge[L]=edge[px];
         }
       }
@@ -1777,11 +1795,12 @@ document.addEventListener('visibilitychange', ()=>{
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
 
 /* ---- wire up controls ---- */
-const liveIds = ['contrast','sat','thresh','layers','sepMode','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
+const liveIds = ['contrast','sat','thresh','layers','sepMode','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
 function syncLabels(){
   $('vContrast').textContent = $('contrast').value+'%';
   $('vSat').textContent = $('sat').value+'%';
   $('vThresh').textContent = $('thresh').value;
+  $('vPickTol').textContent = $('pickTol').value;
   $('vLayers').textContent = $('layers').value;
   $('vOctLow').textContent = $('octLow').value;
   $('vOctHigh').textContent = $('octHigh').value;
