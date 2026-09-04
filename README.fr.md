@@ -3,6 +3,7 @@
 # Dessons
 
 [![Licence : CC BY-NC 4.0](https://img.shields.io/badge/Licence-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Soutenir-13C3FF?logo=kofi&logoColor=white)](https://ko-fi.com/neoyume)
 
 *dessin + sons* — convertit une image, une vidéo ou un flux webcam en MIDI multi-pistes, exportable en `.mid` ou envoyé en temps réel dans ton DAW via un port MIDI virtuel. Pensé pour créer des loops dans Logic Pro (ou n'importe quel DAW).
 
@@ -61,11 +62,12 @@ La méthode A est le vrai temps réel multipiste mais elle est réputée caprici
 
 ```
 dessons/
-├── index.html     # l'application entière (HTML + CSS + JS, un seul fichier)
-├── README.md      # doc en anglais
-├── README.fr.md   # doc en français (ce fichier)
-├── LICENSE
-└── CLAUDE.md      # contexte projet pour itérer avec Claude Code
+├── index.html              # l'application entière (HTML + CSS + JS, un seul fichier)
+├── README.md               # doc en anglais
+├── README.fr.md            # doc en français (ce fichier)
+├── LICENSE                 # CC BY-NC 4.0
+├── CLAUDE.md               # contexte projet pour itérer avec Claude Code
+└── .github/FUNDING.yml     # lien Ko-fi pour le bouton Sponsor du repo
 ```
 
 ## Publier sur GitHub (première fois)
@@ -82,6 +84,10 @@ git push -u origin main
 ```
 
 Le repo doit exister sur GitHub au préalable, sous ce nom (créable via l'interface web, sans README ni .gitignore pour éviter un conflit à la première synchro).
+
+## Soutenir
+
+Dessons est gratuit, sans aucune fonctionnalité payante — jamais. S'il te sert, tu peux laisser un pourboire sur Ko-fi : **[ko-fi.com/neoyume](https://ko-fi.com/neoyume)** ☕. Sans pression.
 
 ## Contribuer
 

@@ -3,6 +3,7 @@
 # Dessons
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-13C3FF?logo=kofi&logoColor=white)](https://ko-fi.com/neoyume)
 
 *dessin + sons* (French for "drawing + sounds") — turns an image, a video or a webcam feed into a multi-track MIDI file, exported as `.mid` or streamed live into your DAW through a virtual MIDI port. Built for making loops in Logic Pro (or any DAW).
 
@@ -61,11 +62,12 @@ Method A is the true real-time multitrack path but is known to be finicky (armin
 
 ```
 dessons/
-├── index.html     # the whole app (HTML + CSS + JS, single file)
-├── README.md      # English docs (this file)
-├── README.fr.md   # French docs
-├── LICENSE
-└── CLAUDE.md      # project context for iterating with Claude Code
+├── index.html              # the whole app (HTML + CSS + JS, single file)
+├── README.md               # English docs (this file)
+├── README.fr.md            # French docs
+├── LICENSE                 # CC BY-NC 4.0
+├── CLAUDE.md               # project context for iterating with Claude Code
+└── .github/FUNDING.yml     # Ko-fi link for the repo's Sponsor button
 ```
 
 ## Publish to GitHub (first time)
@@ -82,6 +84,10 @@ git push -u origin main
 ```
 
 The repo must already exist on GitHub under that name (create it from the web UI, without a README or .gitignore to avoid a conflict on the first sync).
+
+## Support
+
+Dessons is free, with no paywalled features — ever. If it's useful to you, you can leave a tip on Ko-fi: **[ko-fi.com/neoyume](https://ko-fi.com/neoyume)** ☕. No pressure.
 
 ## Contributing
 

@@ -50,6 +50,7 @@ Ajouts successifs (tous rétro-compatibles avec l'export `.mid` de base) :
 - **Sens de lecture** (gauche→droite, droite→gauche, haut→bas, bas→haut) : aperçu + temps réel + export.
 - **Vidéo & webcam** en source, ré-analysées en live (~15 fps) → la boucle MIDI suit l'image. Bouton « Figer ».
 - **Interface bilingue FR/EN** avec détection auto + mémorisation.
+- **Don / Ko-fi** : `ko-fi.com/neoyume`. Lien dans le `<footer>` de l'appli (i18n : `footerFree` / `footerKofi`), badge + section « Soutenir » dans les README, `.github/FUNDING.yml` pour le bouton Sponsor GitHub. Pas de fonctionnalité payante — le don est purement optionnel, ne jamais gater quoi que ce soit derrière.
 
 ## Pistes d'itération possibles (non demandées explicitement, à proposer si pertinent)
 
