@@ -161,7 +161,7 @@
   .transportIcons{margin-top:10px; display:flex; flex-direction:column; gap:6px;}
   .iconRow{display:flex; align-items:center; gap:8px;}
   .iconLbl{font-size:11px; color:var(--text-dim); flex:none; width:70px;}
-  .iconGroup{display:flex; gap:3px;}
+  .iconGroup{display:flex; gap:3px; flex-wrap:wrap;}
   .iconGroup button{
     width:24px; height:22px; padding:0; flex:none;
     display:flex; align-items:center; justify-content:center;
@@ -404,6 +404,10 @@ const I18N = {
     dirRL: "Droite → gauche",
     dirTB: "Haut → bas",
     dirBT: "Bas → haut",
+    dirTLBR: "Haut-gauche → bas-droite",
+    dirBRTL: "Bas-droite → haut-gauche",
+    dirTRBL: "Haut-droite → bas-gauche",
+    dirBLTR: "Bas-gauche → haut-droite",
     lblCurveShort: "Courbe",
     curveLinear: "Linéaire (régulier)",
     curveAccel: "Accéléré",
@@ -488,6 +492,10 @@ const I18N = {
     dirRL: "Right → left",
     dirTB: "Top → bottom",
     dirBT: "Bottom → top",
+    dirTLBR: "Top-left → bottom-right",
+    dirBRTL: "Bottom-right → top-left",
+    dirTRBL: "Top-right → bottom-left",
+    dirBLTR: "Bottom-left → top-right",
     lblCurveShort: "Curve",
     curveLinear: "Linear (steady)",
     curveAccel: "Accelerating",
@@ -957,10 +965,26 @@ function scaleNotesForRange(){
   return notes; // ascending, low->high
 }
 
-// playback direction: which image axis carries time, and in which direction
+// Playback direction: maps normalized image coords (nx,ny ∈ [0,1), y downward)
+// to (τ,ρ) = (time fraction, pitch fraction), both ∈ [0,1). fwd is used to sort
+// pixels into the grid; inv (its exact algebraic inverse) is used to place note
+// dots and the playhead back onto the image. All 8 are affine in (nx,ny), so a
+// line of constant τ (the playhead) is always a straight line in image space —
+// horizontal/vertical for the 4 cardinal directions, a real diagonal for the
+// other 4. Diagonal pitch runs along the *other* diagonal, high on the
+// top-right side — same "top/right = high" convention as the cardinal modes.
+const DIR_DEFS = {
+  lr:   { fwd:(nx,ny)=>[nx,               1-ny],       inv:(t,r)=>[t,           1-r] },
+  rl:   { fwd:(nx,ny)=>[1-nx,             1-ny],       inv:(t,r)=>[1-t,         1-r] },
+  tb:   { fwd:(nx,ny)=>[ny,               nx],         inv:(t,r)=>[r,           t]   },
+  bt:   { fwd:(nx,ny)=>[1-ny,             nx],         inv:(t,r)=>[r,           1-t] },
+  tlbr: { fwd:(nx,ny)=>[(nx+ny)/2,        (nx-ny+1)/2], inv:(t,r)=>[t+r-0.5,    t-r+0.5] },
+  brtl: { fwd:(nx,ny)=>[1-(nx+ny)/2,      (nx-ny+1)/2], inv:(t,r)=>[0.5-t+r,    1.5-t-r] },
+  trbl: { fwd:(nx,ny)=>[(ny-nx+1)/2,      (nx+ny)/2],   inv:(t,r)=>[r-t+0.5,    r+t-0.5] },
+  bltr: { fwd:(nx,ny)=>[(nx-ny+1)/2,      (nx+ny)/2],   inv:(t,r)=>[r+t-0.5,    r-t+0.5] }
+};
 function readDir(){
-  const d = $('playDir').value;
-  return { timeOnX: d === 'lr' || d === 'rl', timeRev: d === 'rl' || d === 'bt' };
+  return DIR_DEFS[$('playDir').value] || DIR_DEFS.lr;
 }
 
 // full loop duration in ms, read live from tempo / bars
@@ -1006,10 +1030,14 @@ function customCurveY(p){
 
 /* ---- icon controls (direction + curve) next to the preview button ---- */
 const DIRS = [
-  ['lr', 'M4 9H14M10 5l4 4-4 4'],
-  ['rl', 'M14 9H4M8 5l-4 4 4 4'],
-  ['tb', 'M9 4v10M5 10l4 4 4-4'],
-  ['bt', 'M9 14V4M5 8l4-4 4 4']
+  ['lr',   'M4 9H14M10 5l4 4-4 4'],
+  ['rl',   'M14 9H4M8 5l-4 4 4 4'],
+  ['tb',   'M9 4v10M5 10l4 4 4-4'],
+  ['bt',   'M9 14V4M5 8l4-4 4 4'],
+  ['tlbr', 'M4 4L14 14M8 14H14V8'],   // top-left → bottom-right
+  ['brtl', 'M14 14L4 4M10 4H4V10'],   // bottom-right → top-left
+  ['trbl', 'M14 4L4 14M10 14H4V8'],   // top-right → bottom-left
+  ['bltr', 'M4 14L14 4M8 4H14V10']    // bottom-left → top-right
 ];
 const CURVES = ['linear','accel','decel','pulse','swing','custom'];
 
@@ -1172,35 +1200,33 @@ function process(){
 
   const cutoff = (1-threshPct) * maxEdge;
   const rows = pitches.length;              // number of pitch lanes
-  const {timeOnX, timeRev} = readDir();
+  const dir = readDir();
   lastNotes = layers.map(()=>[]);
 
-  // ti = time index (0 = played first) ; pi = pitch index (0 = lowest)
+  // Single pass over every pixel: sort it into a (time step, pitch row) cell
+  // via the current direction's forward mapping, and keep the strongest edge
+  // per (step, row, layer). Works uniformly for cardinal *and* diagonal
+  // directions — a "cell" is just whichever pixels land on the same (ti,pi).
+  const bestEdge = new Float32Array(steps*rows*nLayers);
+  for(let y=0;y<h;y++){
+    const ny = y/h;
+    for(let x=0;x<w;x++){
+      const px = y*w+x;
+      const L = layerOf(px);
+      if(L<0) continue;   // 'pick' mode: pixel doesn't match any picked color
+      const [tau, rho] = dir.fwd(x/w, ny);
+      const ti = clamp(Math.floor(tau*steps), 0, steps-1);
+      const pi = clamp(Math.floor(rho*rows), 0, rows-1);
+      const idx = (ti*rows+pi)*nLayers + L;
+      if(edge[px] > bestEdge[idx]) bestEdge[idx] = edge[px];
+    }
+  }
   for(let ti=0; ti<steps; ti++){
-    const tSlot = timeRev ? (steps-1-ti) : ti;   // matching cell along the image time axis
     for(let pi=0; pi<rows; pi++){
-      let x0,x1,y0,y1;
-      if(timeOnX){                                // time = horizontal, pitch = vertical (top = high)
-        x0 = Math.floor(tSlot*w/steps);  x1 = Math.max(x0+1, Math.floor((tSlot+1)*w/steps));
-        const rr = rows-1-pi;
-        y0 = Math.floor(rr*h/rows);      y1 = Math.max(y0+1, Math.floor((rr+1)*h/rows));
-      } else {                                    // time = vertical, pitch = horizontal (right = high)
-        y0 = Math.floor(tSlot*h/steps);  y1 = Math.max(y0+1, Math.floor((tSlot+1)*h/steps));
-        x0 = Math.floor(pi*w/rows);      x1 = Math.max(x0+1, Math.floor((pi+1)*w/rows));
-      }
-      // strongest gradient per layer inside the cell
-      const bestEdge = new Float32Array(nLayers);
-      for(let y=y0;y<y1;y++){
-        for(let x=x0;x<x1;x++){
-          const px = y*w+x;
-          const L = layerOf(px);
-          if(L<0) continue;   // 'pick' mode: pixel doesn't match any picked color
-          if(edge[px]>bestEdge[L]) bestEdge[L]=edge[px];
-        }
-      }
-      for(let L=0;L<nLayers;L++){
-        if(bestEdge[L] >= cutoff && bestEdge[L] > 2){
-          const vel = Math.round(clamp(40 + 87*(bestEdge[L]/maxEdge), 40, 127));
+      for(let L=0; L<nLayers; L++){
+        const v = bestEdge[(ti*rows+pi)*nLayers+L];
+        if(v >= cutoff && v > 2){
+          const vel = Math.round(clamp(40 + 87*(v/maxEdge), 40, 127));
           lastNotes[L].push({step: ti, midi: pitches[pi], vel});
         }
       }
@@ -1265,22 +1291,17 @@ function drawPreview(){
   const steps = parseInt($('steps').value);
   const pitches = scaleNotesForRange();
   const rows = pitches.length;
-  const {timeOnX, timeRev} = readDir();
+  const dir = readDir();
   lastNotes.forEach((arr,Li)=>{
     pctx.fillStyle = layers[Li].color;
     pctx.globalAlpha = layerAudible(Li) ? 1 : 0.22;   // dim muted / non-soloed layers
     arr.forEach(n=>{
       const pIdx = pitches.indexOf(n.midi);
       if(pIdx < 0) return;
-      const tSlot = timeRev ? (steps-1-n.step) : n.step;
-      let cx, cy;
-      if(timeOnX){
-        cx = (tSlot+0.5)/steps * preview.width;
-        cy = ((rows-1-pIdx)+0.5)/rows * preview.height;
-      } else {
-        cy = (tSlot+0.5)/steps * preview.height;
-        cx = (pIdx+0.5)/rows * preview.width;
-      }
+      // n.step is already play-order; inv() maps (time,pitch) fractions straight
+      // back to image space, reversal and diagonals included — no extra bookkeeping.
+      const [nx, ny] = dir.inv((n.step+0.5)/steps, (pIdx+0.5)/rows);
+      const cx = nx*preview.width, cy = ny*preview.height;
       const rad = 2 + (n.vel/127)*4;
       pctx.beginPath();
       pctx.arc(cx,cy,rad,0,Math.PI*2);
@@ -1289,15 +1310,21 @@ function drawPreview(){
   });
   pctx.globalAlpha = 1;
 
-  // playback-curve ticks along the leading edge: even spacing = linear, uneven = warped
+  // playback-curve ticks: short mark at each step's warped time position, from
+  // the ρ=0 edge/corner of the sweep line toward ρ=1 — even spacing = linear,
+  // uneven = warped. Same construction for cardinal and diagonal directions.
   pctx.strokeStyle = 'rgba(255,255,255,.28)';
   pctx.lineWidth = 1;
   for(let k=0; k<=steps; k++){
     const ft = stepTimeFrac(k, steps);
-    const fp = timeRev ? (1 - ft) : ft;
+    const [x0n,y0n] = dir.inv(ft, 0), [x1n,y1n] = dir.inv(ft, 1);
+    let dx = (x1n-x0n)*preview.width, dy = (y1n-y0n)*preview.height;
+    const len = Math.hypot(dx,dy) || 1;
+    dx = dx/len*7; dy = dy/len*7;
+    const x0 = x0n*preview.width, y0 = y0n*preview.height;
     pctx.beginPath();
-    if(timeOnX){ const x = fp*preview.width;  pctx.moveTo(x, 0); pctx.lineTo(x, 7); }
-    else       { const y = fp*preview.height; pctx.moveTo(0, y); pctx.lineTo(7, y); }
+    pctx.moveTo(x0, y0);
+    pctx.lineTo(x0+dx, y0+dy);
     pctx.stroke();
   }
   pctx.restore();
@@ -1534,21 +1561,24 @@ function drawPlayhead(){
   if(!playing) return;
   redrawPreview();
   const steps = parseInt($('steps').value);
-  const {timeOnX, timeRev} = readDir();
+  const dir = readDir();
   const now = performance.now();
   // find the scheduled step whose time-span contains `now`, interpolate within it
   const w = stepWin.find(v => now >= v.at && now < v.at + v.span) || stepWin[0];
   let pos = 0;
   if(w) pos = w.step + Math.max(0, Math.min(1, (now - w.at) / w.span));
   pos = ((pos % steps) + steps) % steps;
-  const slot = timeRev ? (steps - pos) : pos;   // position along the time axis, image-oriented
-  const f = slot / steps;
+  const tau = pos / steps;
+  // a line of constant τ, spanning the full pitch axis (ρ 0→1) — a straight
+  // line in image space for every direction, cardinal or diagonal, since inv()
+  // is affine; canvas clips it automatically if it runs past a corner.
+  const [x0n,y0n] = dir.inv(tau, 0), [x1n,y1n] = dir.inv(tau, 1);
   pctx.save();
   pctx.strokeStyle = 'rgba(79,209,197,.9)';
   pctx.lineWidth = 2;
   pctx.beginPath();
-  if(timeOnX){ const x = f*preview.width;  pctx.moveTo(x, 0); pctx.lineTo(x, preview.height); }
-  else       { const y = f*preview.height; pctx.moveTo(0, y); pctx.lineTo(preview.width, y); }
+  pctx.moveTo(x0n*preview.width, y0n*preview.height);
+  pctx.lineTo(x1n*preview.width, y1n*preview.height);
   pctx.stroke();
   pctx.restore();
   rafId = requestAnimationFrame(drawPlayhead);
