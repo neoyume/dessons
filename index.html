@@ -242,6 +242,7 @@
           </svg>
         </div>
       </div>
+      <div class="midiRow"><span class="dot" id="synthDot"></span><span id="synthState">—</span></div>
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
     </div>
 
@@ -443,6 +444,10 @@ const I18N = {
     footerKofi: "☕ Me soutenir sur Ko-fi",
     btnPreview: "▶ Écouter l'aperçu",
     previewHint: "Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.",
+    synthUnavail: "Web Audio indisponible dans ce navigateur",
+    synthUninit: "Synthé non initialisé",
+    synthReady: "Prêt ({x})",
+    synthPlaying: "Lecture ({x})",
     muteTitle: "Muet — couper ce calque (aperçu + Web MIDI, pas l'export .mid)",
     soloTitle: "Solo — n'entendre que ce(s) calque(s)",
     notesWord: "notes",
@@ -531,6 +536,10 @@ const I18N = {
     footerKofi: "☕ Support me on Ko-fi",
     btnPreview: "▶ Preview sound",
     previewHint: "Preview with the browser's built-in synth — rough sounds, just to judge the loop without a DAW.",
+    synthUnavail: "Web Audio unavailable in this browser",
+    synthUninit: "Synth not initialized",
+    synthReady: "Ready ({x})",
+    synthPlaying: "Playing ({x})",
     muteTitle: "Mute — silence this layer (preview + Web MIDI, not the .mid export)",
     soloTitle: "Solo — hear only this / these layer(s)",
     notesWord: "notes",
@@ -1456,6 +1465,7 @@ function renderMidiState(){
 
 function updatePlayBtnState(){
   previewBtn.disabled = !img || !audioSupported();
+  updateSynthState();
   if(!midiSupported()){
     playBtn.disabled = true;
     setMidiState('midiUnavail', false);
@@ -1595,6 +1605,21 @@ function updateTransportButtons(){
   playBtn.classList.toggle('playing', midiOn);
   previewBtn.textContent = synthOn ? t('btnStop') : t('btnPreview');
   previewBtn.classList.toggle('playing', synthOn);
+  updateSynthState();
+}
+
+// visible, on-page diagnostic — no devtools needed to tell what the synth is
+// doing, notably ac.state, which is the first thing to check if it's silent.
+function synthStatusKey(){
+  if(!audioSupported()) return 'synthUnavail';
+  if(!ac) return 'synthUninit';
+  return (playing && sink === 'synth') ? 'synthPlaying' : 'synthReady';
+}
+function updateSynthState(){
+  const key = synthStatusKey();
+  const arg = ac ? ac.state : '';
+  $('synthState').textContent = (t(key) || key).replace('{x}', arg);
+  $('synthDot').classList.toggle('on', !!ac && ac.state === 'running');
 }
 
 function startPlayback(which){
@@ -1665,7 +1690,8 @@ playBtn.addEventListener('click', async ()=>{
 previewBtn.addEventListener('click', ()=>{
   if(playing && sink === 'synth'){ stopPlayback(); return; }
   if(!img || !ensureAudio()) return;
-  ac.resume().catch(()=>{});     // fire-and-forget, doesn't block the gesture chain
+  ac.resume().then(updateSynthState).catch(updateSynthState);  // fire-and-forget, doesn't block the gesture chain
+  if(iosAudioEl && iosAudioEl.paused) iosAudioEl.play().catch(()=>{}); // re-arm if iOS paused it in the background
   if(!lastNotes.length || lastNotes.every(a=>!a.length)) return;
   if(playing) stopPlayback();    // was playing into a MIDI port → switch outputs
   startPlayback('synth');
@@ -1675,6 +1701,15 @@ previewBtn.addEventListener('click', ()=>{
 function audioSupported(){
   return typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
 }
+
+// iPhone/iPad detection (iPadOS 13+ reports as "Mac" but has touch points).
+// Used only to decide the output routing below — nothing else depends on it.
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+let iosAudioEl = null; // kept alive on purpose, see ensureAudio()
 
 function ensureAudio(){
   if(ac) return true;
@@ -1700,7 +1735,31 @@ function ensureAudio(){
   conv.buffer = makeImpulse(1.8, 2.5);
   masterGain.connect(dry); dry.connect(comp);
   masterGain.connect(conv); conv.connect(wet); wet.connect(comp);
-  comp.connect(ac.destination);
+
+  if(isIOS() && typeof ac.createMediaStreamDestination === 'function'){
+    // iOS Safari mutes plain Web Audio output (ac.destination) whenever the
+    // physical ring/silent switch is set to silent — it treats it as an
+    // "ambient" sound. Routing the signal through a real <audio> element
+    // instead makes it use the "playback" audio session category, which iOS
+    // does NOT silence. This is the standard workaround for that switch.
+    try{
+      const dest = ac.createMediaStreamDestination();
+      comp.connect(dest);
+      const el = document.createElement('audio');
+      el.srcObject = dest.stream;
+      el.autoplay = true;
+      el.setAttribute('playsinline', '');
+      el.style.display = 'none';
+      document.body.appendChild(el);
+      el.play().catch(()=>{});
+      iosAudioEl = el; // keep a reference so nothing garbage-collects it mid-loop
+    }catch(e){
+      comp.connect(ac.destination); // routing failed for some reason: fall back
+    }
+  } else {
+    comp.connect(ac.destination);
+  }
+  updateSynthState();
   return true;
 }
 
