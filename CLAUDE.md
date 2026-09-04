@@ -52,7 +52,7 @@ Tourne 100% dans le navigateur, aucune donnée envoyée à un serveur (l'image, 
 
 Fonctionnel, testé par l'utilisateur, exporte bien vers Logic Pro. Publié : https://github.com/neoyume/dessons
 
-Licence **CC BY-NC 4.0** (choix explicite de l'utilisateur) : usage/modif/partage non commercial avec attribution, interdit de vendre ou redistribuer l'outil comme produit/service payant. En revanche la **musique produite avec Dessons n'est pas couverte** — l'utilisateur peut la vendre. Le fichier `LICENSE` a un en-tête qui clarifie ce point, suivi du texte légal CC complet. Ne pas repasser en MIT sans demande explicite.
+Licence **PolyForm Noncommercial 1.0.0** (choix explicite de l'utilisateur, après CC BY-NC 4.0) : usage/modif/partage réservés aux fins non commerciales, interdit de vendre ou redistribuer l'outil (modifié ou non) comme produit/service payant, ou de l'intégrer à un tel produit. En revanche la **musique produite avec Dessons n'est pas couverte** — l'utilisateur peut la vendre. Le fichier `LICENSE` a un en-tête qui clarifie ce point, suivi du texte légal PolyForm complet. Ne pas repasser en MIT ni en CC sans demande explicite.
 
 Docs bilingues : `README.md` (anglais, fichier principal vu par défaut sur GitHub) + `README.fr.md` (français), liés en tête l'un de l'autre. `CLAUDE.md` reste en français.
 

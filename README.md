@@ -2,7 +2,7 @@
 
 # Dessons
 
-[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-lightgrey.svg)](LICENSE)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-13C3FF?logo=kofi&logoColor=white)](https://ko-fi.com/neoyume)
 
 *dessin + sons* (French for "drawing + sounds") — turns an image, a video or a webcam feed into a multi-track MIDI file, exported as `.mid` or streamed live into your DAW through a virtual MIDI port. Built for making loops in Logic Pro (or any DAW).
@@ -69,7 +69,7 @@ dessons/
 ├── index.html              # the whole app (HTML + CSS + JS, single file)
 ├── README.md               # English docs (this file)
 ├── README.fr.md            # French docs
-├── LICENSE                 # CC BY-NC 4.0
+├── LICENSE                 # PolyForm Noncommercial 1.0.0
 ├── CLAUDE.md               # project context for iterating with Claude Code
 └── .github/FUNDING.yml     # Ko-fi link for the repo's Sponsor button
 ```
@@ -95,15 +95,15 @@ Dessons is free, with no paywalled features — ever. If it's useful to you, you
 
 ## Contributing
 
-Issues and pull requests are welcome — bugs, new layer-separation methods, other export formats, and so on. By submitting a contribution you agree to license it under CC BY-NC 4.0, like the rest of the project.
+Issues and pull requests are welcome — bugs, new layer-separation methods, other export formats, and so on. By submitting a contribution you agree to license it under PolyForm Noncommercial 1.0.0, like the rest of the project.
 
 ## License
 
-[CC BY-NC 4.0](LICENSE) © [neoyume](https://github.com/neoyume).
+[PolyForm Noncommercial 1.0.0](LICENSE) © [neoyume](https://github.com/neoyume).
 
-Free to use, modify and share **for non-commercial purposes**, with attribution.
-You may **not** sell Dessons or redistribute it (modified or not) as a paid
-product or service.
+Free to use, modify and share **for non-commercial purposes**. Commercial use of
+Dessons itself — selling it, redistributing it as a paid product or service, or
+using it as part of one — is not permitted under this license.
 
 **Music you make with Dessons is yours** — the license covers the tool, not its
 output. Use your loops for anything, commercial releases included.

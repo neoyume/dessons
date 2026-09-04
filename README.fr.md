@@ -2,7 +2,7 @@
 
 # Dessons
 
-[![Licence : CC BY-NC 4.0](https://img.shields.io/badge/Licence-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
+[![Licence : PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/Licence-PolyForm%20Noncommercial%201.0.0-lightgrey.svg)](LICENSE)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Soutenir-13C3FF?logo=kofi&logoColor=white)](https://ko-fi.com/neoyume)
 
 *dessin + sons* — convertit une image, une vidéo ou un flux webcam en MIDI multi-pistes, exportable en `.mid` ou envoyé en temps réel dans ton DAW via un port MIDI virtuel. Pensé pour créer des loops dans Logic Pro (ou n'importe quel DAW).
@@ -69,7 +69,7 @@ dessons/
 ├── index.html              # l'application entière (HTML + CSS + JS, un seul fichier)
 ├── README.md               # doc en anglais
 ├── README.fr.md            # doc en français (ce fichier)
-├── LICENSE                 # CC BY-NC 4.0
+├── LICENSE                 # PolyForm Noncommercial 1.0.0
 ├── CLAUDE.md               # contexte projet pour itérer avec Claude Code
 └── .github/FUNDING.yml     # lien Ko-fi pour le bouton Sponsor du repo
 ```
@@ -95,15 +95,16 @@ Dessons est gratuit, sans aucune fonctionnalité payante — jamais. S'il te ser
 
 ## Contribuer
 
-Les issues et pull requests sont les bienvenues — que ce soit pour des bugs, de nouvelles méthodes de séparation de calques, d'autres formats d'export, etc. En proposant une contribution, tu acceptes qu'elle soit sous licence CC BY-NC 4.0, comme le reste du projet.
+Les issues et pull requests sont les bienvenues — que ce soit pour des bugs, de nouvelles méthodes de séparation de calques, d'autres formats d'export, etc. En proposant une contribution, tu acceptes qu'elle soit sous licence PolyForm Noncommercial 1.0.0, comme le reste du projet.
 
 ## Licence
 
-[CC BY-NC 4.0](LICENSE) © [neoyume](https://github.com/neoyume).
+[PolyForm Noncommercial 1.0.0](LICENSE) © [neoyume](https://github.com/neoyume).
 
 Libre d'utilisation, de modification et de partage **à des fins non
-commerciales**, avec attribution. Tu ne peux **pas** vendre Dessons ni le
-redistribuer (modifié ou non) comme produit ou service payant.
+commerciales**. L'usage commercial de Dessons lui-même — le vendre, le
+redistribuer (modifié ou non) comme produit ou service payant, ou l'intégrer
+à un tel produit — n'est pas permis par cette licence.
 
 **La musique que tu fais avec Dessons t'appartient** — la licence couvre l'outil,
 pas ce qu'il produit. Tes loops sont utilisables pour tout, sorties commerciales
