@@ -131,6 +131,15 @@
   button#playBtn:hover{filter:brightness(1.08);}
   button#playBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed;}
   button#playBtn.playing{background:#e5484d; color:#fff;}
+
+  button#previewBtn{
+    width:100%; margin-top:12px; background:var(--panel-2); color:var(--text);
+    border:1px solid var(--line); padding:11px; font-size:13px; font-weight:600;
+    border-radius:7px; cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  button#previewBtn:hover:not(:disabled){border-color:var(--amber);}
+  button#previewBtn:disabled{color:var(--text-dim); cursor:not-allowed;}
+  button#previewBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
   .midiRow{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px;}
   .dot{width:8px; height:8px; border-radius:50%; background:var(--line); flex:none;}
   .dot.on{background:var(--cyan); box-shadow:0 0 6px var(--cyan);}
@@ -178,6 +187,8 @@
       <div class="hint err" id="srcHint" hidden></div>
       <canvas id="preview" width="600" height="600"></canvas>
       <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
+      <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
+      <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
     </div>
 
     <!-- RIGHT: controls -->
@@ -359,6 +370,8 @@ const I18N = {
     midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>. Chrome ou Edge requis (Safari ne gère pas Web MIDI).",
     footerFree: "Dessons est gratuit et open source.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
+    btnPreview: "▶ Écouter l'aperçu",
+    previewHint: "Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.",
     notesWord: "notes",
     unitPx: "px",
     srcVideoLabel: "vidéo",
@@ -427,6 +440,8 @@ const I18N = {
     midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>. Chrome or Edge required (Safari has no Web MIDI).",
     footerFree: "Dessons is free and open source.",
     footerKofi: "☕ Support me on Ko-fi",
+    btnPreview: "▶ Preview sound",
+    previewHint: "Preview with the browser's built-in synth — rough sounds, just to judge the loop without a DAW.",
     notesWord: "notes",
     unitPx: "px",
     srcVideoLabel: "video",
@@ -477,7 +492,7 @@ function setLang(lang){
   document.querySelectorAll('#langToggle button').forEach(b=> b.classList.toggle('active', b.dataset.lang === LANG));
   applyI18n();
   if(layers.length) rebuildLayers();          // refresh auto layer names + instrument labels
-  playBtn.textContent = playing ? t('btnStop') : t('btnPlay');
+  updateTransportButtons();
   updateSrcBtns();
   renderMidiState();
   if(img) process();
@@ -1013,7 +1028,7 @@ $('exportBtn').addEventListener('click', ()=>{
 /* ============================================================
    Web MIDI — real-time playback into a virtual port (IAC Driver)
    ============================================================ */
-const playBtn = $('playBtn'), midiPortSel = $('midiPort');
+const playBtn = $('playBtn'), previewBtn = $('previewBtn'), midiPortSel = $('midiPort');
 const midiDot = $('midiDot'), midiState = $('midiState');
 
 let midiAccess = null;   // MIDIAccess
@@ -1021,11 +1036,16 @@ let midiOut = null;      // selected MIDIOutput
 let midiReady = false;   // requestMIDIAccess resolved
 let midiInitPromise = null;
 let playing = false;
+let sink = 'midi';       // 'midi' (Web MIDI out) | 'synth' (built-in preview synth)
 let schedTimer = null, rafId = null;
 let playStep = 0;            // next grid step to schedule
 let nextStepTime = 0;        // when that step should sound (performance.now clock)
 let hangingNotes = new Set(); // chan*128+note keys, to force-off on stop
 let usedChannels = new Set();
+
+// built-in preview synth (Web Audio, no dependency)
+let ac = null, masterGain = null;
+let voices = new Set();      // live { osc, g, sub } entries
 
 // just-in-time scheduling: only the next ~150 ms is programmed, never the whole
 // loop, so any setting change is heard on the very next step.
@@ -1046,6 +1066,7 @@ function renderMidiState(){
 }
 
 function updatePlayBtnState(){
+  previewBtn.disabled = !img || !audioSupported();
   if(!midiSupported()){
     playBtn.disabled = true;
     setMidiState('midiUnavail', false);
@@ -1114,10 +1135,13 @@ function stepDurationMs(){
 // schedule every step falling within [now, now + LOOKAHEAD].
 // lastNotes, tempo, gate, scale... are re-read on each step → live editing.
 function scheduler(){
-  if(!playing || !midiOut) return;
+  if(!playing) return;
+  if(sink === 'midi' && !midiOut) return;
   const now = performance.now();
   if(nextStepTime < now - 250) nextStepTime = now; // big lag (jank / tab): resync
   const horizon = now + LOOKAHEAD_MS;
+  // lock the audio clock to the performance.now clock for this batch
+  const audioEpoch = (sink === 'synth' && ac) ? (ac.currentTime - now / 1000) : 0;
   let guard = 0;
   while(nextStepTime < horizon && guard++ < 512){
     const steps = parseInt($('steps').value);
@@ -1130,10 +1154,14 @@ function scheduler(){
       const chan = Li % 16;
       for(const n of arr){
         if(n.step !== s) continue;
-        midiOut.send([0x90|chan, n.midi & 0x7F, n.vel & 0x7F], at);
-        midiOut.send([0x80|chan, n.midi & 0x7F, 0], at + gateMs);
-        hangingNotes.add(chan*128 + (n.midi & 0x7F));
-        usedChannels.add(chan);
+        if(sink === 'midi'){
+          midiOut.send([0x90|chan, n.midi & 0x7F, n.vel & 0x7F], at);
+          midiOut.send([0x80|chan, n.midi & 0x7F, 0], at + gateMs);
+          hangingNotes.add(chan*128 + (n.midi & 0x7F));
+          usedChannels.add(chan);
+        } else {
+          spawnVoice(n.midi, n.vel, audioEpoch + at / 1000, gateMs / 1000, Li);
+        }
       }
     });
     nextStepTime = at + stepDur;
@@ -1167,33 +1195,42 @@ function redrawPreview(){
   if(img) drawPreview();
 }
 
-function startPlayback(){
+function updateTransportButtons(){
+  const midiOn  = playing && sink === 'midi';
+  const synthOn = playing && sink === 'synth';
+  playBtn.textContent = midiOn ? t('btnStop') : t('btnPlay');
+  playBtn.classList.toggle('playing', midiOn);
+  previewBtn.textContent = synthOn ? t('btnStop') : t('btnPreview');
+  previewBtn.classList.toggle('playing', synthOn);
+}
+
+function startPlayback(which){
+  sink = which;
   playing = true;
-  playBtn.textContent = t('btnStop');
-  playBtn.classList.add('playing');
-  hangingNotes = new Set();
-  usedChannels = new Set();
-  // program change (once) on every channel in use
-  layers.forEach((L, Li)=>{
-    const chan = Li % 16;
-    usedChannels.add(chan);
-    midiOut.send([0xC0|chan, L.program & 0x7F]);
-  });
+  if(which === 'midi'){
+    hangingNotes = new Set();
+    usedChannels = new Set();
+    // program change (once) on every channel in use
+    layers.forEach((L, Li)=>{
+      const chan = Li % 16;
+      usedChannels.add(chan);
+      midiOut.send([0xC0|chan, L.program & 0x7F]);
+    });
+    setMidiState('midiPlaying', true, midiOut.name || t('portFallback'));
+  }
   playStep = 0;
   nextStepTime = performance.now() + 90; // small delay for a clean start
   scheduler();
   schedTimer = setInterval(scheduler, SCHED_INTERVAL_MS);
   rafId = requestAnimationFrame(drawPlayhead);
-  setMidiState('midiPlaying', true, midiOut.name || t('portFallback'));
+  updateTransportButtons();
 }
 
 function stopPlayback(){
   playing = false;
-  playBtn.textContent = t('btnPlay');
-  playBtn.classList.remove('playing');
   if(schedTimer){ clearInterval(schedTimer); schedTimer = null; }
   if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
-  if(midiOut){
+  if(sink === 'midi' && midiOut){
     try{ if(typeof midiOut.clear === 'function') midiOut.clear(); }catch(e){}
     hangingNotes.forEach(key=>{
       midiOut.send([0x80 | (key>>7 & 0x0F), key & 0x7F, 0]);
@@ -1202,14 +1239,16 @@ function stopPlayback(){
       midiOut.send([0xB0|chan, 120, 0]); // All Sound Off
       midiOut.send([0xB0|chan, 123, 0]); // All Notes Off
     });
+    setMidiState('midiReady', false, midiOut.name || t('portFallback'));
   }
   hangingNotes.clear();
-  if(midiOut) setMidiState('midiReady', false, midiOut.name || t('portFallback'));
+  stopAllVoices();
+  updateTransportButtons();
   redrawPreview();
 }
 
 playBtn.addEventListener('click', async ()=>{
-  if(playing){ stopPlayback(); return; }
+  if(playing && sink === 'midi'){ stopPlayback(); return; }
   if(!img) return;
   const ok = await ensureMidi();
   if(!ok) return;
@@ -1221,8 +1260,135 @@ playBtn.addEventListener('click', async ()=>{
     setMidiState('midiNoNotes', false);
     return;
   }
-  startPlayback();
+  if(playing) stopPlayback();   // was previewing on the synth → switch outputs
+  startPlayback('midi');
 });
+
+previewBtn.addEventListener('click', async ()=>{
+  if(playing && sink === 'synth'){ stopPlayback(); return; }
+  if(!img || !ensureAudio()) return;
+  try{ await ac.resume(); }catch(e){}
+  if(!lastNotes.length || lastNotes.every(a=>!a.length)) return;
+  if(playing) stopPlayback();    // was playing into a MIDI port → switch outputs
+  startPlayback('synth');
+});
+
+/* ---- built-in preview synth (Web Audio) ------------------------------- */
+function audioSupported(){
+  return typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
+}
+
+function ensureAudio(){
+  if(ac) return true;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return false;
+  ac = new AC();
+  masterGain = ac.createGain();
+  masterGain.gain.value = 0.9;
+  const comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -12; comp.knee.value = 24; comp.ratio.value = 4;
+  comp.attack.value = 0.004; comp.release.value = 0.2;
+  const dry = ac.createGain(); dry.gain.value = 0.85;
+  const wet = ac.createGain(); wet.gain.value = 0.16;
+  const conv = ac.createConvolver();
+  conv.buffer = makeImpulse(1.8, 2.5);
+  masterGain.connect(dry); dry.connect(comp);
+  masterGain.connect(conv); conv.connect(wet); wet.connect(comp);
+  comp.connect(ac.destination);
+  return true;
+}
+
+function makeImpulse(seconds, decay){
+  const rate = ac.sampleRate, len = Math.max(1, Math.floor(rate * seconds));
+  const buf = ac.createBuffer(2, len, rate);
+  for(let ch = 0; ch < 2; ch++){
+    const d = buf.getChannelData(ch);
+    for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+  }
+  return buf;
+}
+
+// rough General MIDI family -> synth voice shape
+function timbreFor(prog){
+  prog = prog | 0;
+  if(prog >= 8  && prog <= 15)  return {wave:'triangle', atk:0.003, dec:0.5,  sus:0.0,  rel:0.4,  cut:6500, q:0.5, gain:0.24};            // mallets / bells / music box
+  if(prog >= 16 && prog <= 23)  return {wave:'sawtooth', atk:0.02,  dec:0.06, sus:0.85, rel:0.14, cut:2200, q:0.4, gain:0.14};            // organ
+  if(prog >= 24 && prog <= 31)  return {wave:'triangle', atk:0.004, dec:0.35, sus:0.12, rel:0.25, cut:3400, q:0.6, gain:0.22};            // guitar
+  if(prog >= 32 && prog <= 39)  return {wave:'sine',     atk:0.006, dec:0.22, sus:0.45, rel:0.2,  cut:1100, q:0.7, gain:0.28, sub:true};  // bass
+  if(prog >= 40 && prog <= 55)  return {wave:'sawtooth', atk:0.09,  dec:0.2,  sus:0.7,  rel:0.35, cut:2600, q:0.3, gain:0.13};            // strings / ensemble
+  if(prog >= 72 && prog <= 79)  return {wave:'sine',     atk:0.04,  dec:0.1,  sus:0.7,  rel:0.2,  cut:5200, q:0.4, gain:0.20};            // flute / pipe
+  if(prog >= 80 && prog <= 87)  return {wave:'sawtooth', atk:0.006, dec:0.15, sus:0.6,  rel:0.2,  cut:3600, q:0.6, gain:0.15};            // synth lead
+  if(prog >= 88 && prog <= 95)  return {wave:'sawtooth', atk:0.13,  dec:0.3,  sus:0.8,  rel:0.5,  cut:1900, q:0.3, gain:0.12};            // synth pad
+  if(prog >= 96 && prog <= 111) return {wave:'triangle', atk:0.003, dec:0.45, sus:0.0,  rel:0.4,  cut:5800, q:0.5, gain:0.22};            // kalimba / atmospheres
+  if(prog === 114)              return {wave:'square',   atk:0.003, dec:0.4,  sus:0.0,  rel:0.35, cut:4200, q:0.6, gain:0.20};            // steel drums
+  return {wave:'triangle', atk:0.004, dec:0.3, sus:0.22, rel:0.25, cut:3400, q:0.6, gain:0.23};                                          // piano-ish default
+}
+
+function spawnVoice(midi, vel, whenSec, durSec, layerIdx){
+  if(!ac || voices.size > 96) return;
+  const L = layers[layerIdx];
+  const tb = timbreFor(L ? L.program : 0);
+  const freq = 440 * Math.pow(2, (midi - 69) / 12);
+  const amp = tb.gain * Math.max(0.06, vel / 127);
+  const t0 = Math.max(whenSec, ac.currentTime + 0.003);
+  const off = Math.max(t0 + durSec, t0 + tb.atk + 0.03);
+  const end = off + tb.rel;
+  const decEnd = Math.min(t0 + tb.atk + tb.dec, off);
+  const susLvl = Math.max(0.0002, amp * tb.sus);
+
+  const osc = ac.createOscillator();
+  osc.type = tb.wave;
+  osc.frequency.setValueAtTime(freq, t0);
+
+  const filt = ac.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.frequency.setValueAtTime(Math.min(tb.cut, ac.sampleRate / 2 - 800), t0);
+  filt.Q.value = tb.q;
+
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0002, t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0003, amp), t0 + tb.atk);
+  g.gain.exponentialRampToValueAtTime(susLvl, decEnd);
+  if(decEnd < off) g.gain.setValueAtTime(susLvl, off);
+  g.gain.exponentialRampToValueAtTime(0.0002, end);
+
+  osc.connect(filt); filt.connect(g); g.connect(masterGain);
+
+  let sub = null;
+  if(tb.sub){
+    sub = ac.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(freq / 2, t0);
+    const sg = ac.createGain();
+    sg.gain.setValueAtTime(0.0002, t0);
+    sg.gain.exponentialRampToValueAtTime(Math.max(0.0003, amp * 0.7), t0 + tb.atk);
+    sg.gain.exponentialRampToValueAtTime(0.0002, end);
+    sub.connect(sg); sg.connect(masterGain);
+    sub.start(t0); sub.stop(end + 0.05);
+  }
+
+  osc.start(t0);
+  osc.stop(end + 0.05);
+
+  const entry = { osc, g, sub };
+  voices.add(entry);
+  osc.onended = () => voices.delete(entry);
+}
+
+function stopAllVoices(){
+  if(!ac) return;
+  const now = ac.currentTime;
+  voices.forEach(v=>{
+    try{
+      v.g.gain.cancelScheduledValues(now);
+      v.g.gain.setValueAtTime(Math.max(0.0002, v.g.gain.value), now);
+      v.g.gain.exponentialRampToValueAtTime(0.0002, now + 0.05);
+      v.osc.stop(now + 0.06);
+      if(v.sub) v.sub.stop(now + 0.06);
+    }catch(e){}
+  });
+  voices.clear();
+}
 
 // tab hidden: stop MIDI playback (timers throttle) and pause the live grab loop
 document.addEventListener('visibilitychange', ()=>{
