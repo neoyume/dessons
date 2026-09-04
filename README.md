@@ -2,7 +2,7 @@
 
 # Dessons
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
 
 *dessin + sons* (French for "drawing + sounds") — turns an image, a video or a webcam feed into a multi-track MIDI file, exported as `.mid` or streamed live into your DAW through a virtual MIDI port. Built for making loops in Logic Pro (or any DAW).
 
@@ -85,8 +85,15 @@ The repo must already exist on GitHub under that name (create it from the web UI
 
 ## Contributing
 
-Issues and pull requests are welcome — bugs, new layer-separation methods, other export formats, and so on.
+Issues and pull requests are welcome — bugs, new layer-separation methods, other export formats, and so on. By submitting a contribution you agree to license it under CC BY-NC 4.0, like the rest of the project.
 
 ## License
 
-[MIT](LICENSE) © [neoyume](https://github.com/neoyume) — free to use, modify and redistribute, including commercially.
+[CC BY-NC 4.0](LICENSE) © [neoyume](https://github.com/neoyume).
+
+Free to use, modify and share **for non-commercial purposes**, with attribution.
+You may **not** sell Dessons or redistribute it (modified or not) as a paid
+product or service.
+
+**Music you make with Dessons is yours** — the license covers the tool, not its
+output. Use your loops for anything, commercial releases included.

@@ -39,7 +39,9 @@ Tourne 100% dans le navigateur, aucune donnée envoyée à un serveur (l'image, 
 
 ## État actuel
 
-Fonctionnel, testé par l'utilisateur, exporte bien vers Logic Pro. Licence MIT, prêt pour GitHub public.
+Fonctionnel, testé par l'utilisateur, exporte bien vers Logic Pro. Publié : https://github.com/neoyume/dessons
+
+Licence **CC BY-NC 4.0** (choix explicite de l'utilisateur) : usage/modif/partage non commercial avec attribution, interdit de vendre ou redistribuer l'outil comme produit/service payant. En revanche la **musique produite avec Dessons n'est pas couverte** — l'utilisateur peut la vendre. Le fichier `LICENSE` a un en-tête qui clarifie ce point, suivi du texte légal CC complet. Ne pas repasser en MIT sans demande explicite.
 
 Docs bilingues : `README.md` (anglais, fichier principal vu par défaut sur GitHub) + `README.fr.md` (français), liés en tête l'un de l'autre. `CLAUDE.md` reste en français.
 
