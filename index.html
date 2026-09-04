@@ -107,13 +107,24 @@
 
   /* layer legend */
   .layer{
-    display:grid; grid-template-columns:16px 1fr 1fr; gap:8px; align-items:center;
+    display:grid; grid-template-columns:13px 46px 1fr 1fr; gap:6px; align-items:center;
     padding:8px 0; border-bottom:1px solid var(--line); font-size:12px;
   }
   .layer:last-child{border-bottom:none;}
   .swatch{width:13px; height:13px; border-radius:3px; border:1px solid rgba(255,255,255,.15);}
   .layer input[type=text]{padding:5px 7px; font-size:12px;}
   .layer select{padding:5px 7px; font-size:12px;}
+  .layer.muted input[type=text], .layer.muted select, .layer.muted .swatch{opacity:.4;}
+  .layerMS{display:flex; gap:3px;}
+  .layerMS button{
+    width:21px; height:21px; padding:0; flex:none;
+    border:1px solid var(--line); border-radius:4px; background:var(--panel-2);
+    color:var(--text-dim); font-family:var(--mono); font-size:10px; font-weight:700;
+    cursor:pointer; line-height:1;
+  }
+  .layerMS button:hover{color:var(--text);}
+  .layerMS button.m.on{background:#e5484d; border-color:#e5484d; color:#fff;}
+  .layerMS button.s.on{background:var(--amber); border-color:var(--amber); color:#1a1200;}
 
   button#exportBtn{
     width:100%; margin-top:18px; background:var(--amber); color:#1a1200;
@@ -372,6 +383,8 @@ const I18N = {
     footerKofi: "☕ Me soutenir sur Ko-fi",
     btnPreview: "▶ Écouter l'aperçu",
     previewHint: "Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.",
+    muteTitle: "Muet — couper ce calque (aperçu + Web MIDI, pas l'export .mid)",
+    soloTitle: "Solo — n'entendre que ce(s) calque(s)",
     notesWord: "notes",
     unitPx: "px",
     srcVideoLabel: "vidéo",
@@ -442,6 +455,8 @@ const I18N = {
     footerKofi: "☕ Support me on Ko-fi",
     btnPreview: "▶ Preview sound",
     previewHint: "Preview with the browser's built-in synth — rough sounds, just to judge the loop without a DAW.",
+    muteTitle: "Mute — silence this layer (preview + Web MIDI, not the .mid export)",
+    soloTitle: "Solo — hear only this / these layer(s)",
     notesWord: "notes",
     unitPx: "px",
     srcVideoLabel: "video",
@@ -734,7 +749,9 @@ function rebuildLayers(){
       color,
       name: isAuto ? (base + ' ' + (i+1)) : keep.name,
       auto: isAuto,
-      program: keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog
+      program: keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog,
+      mute: keep ? !!keep.mute : false,
+      solo: keep ? !!keep.solo : false
     });
   }
   renderLayerList();
@@ -752,6 +769,17 @@ function renderLayerList(){
     row.className='layer';
     const sw = document.createElement('div');
     sw.className='swatch'; sw.style.background = L.color;
+
+    const ms = document.createElement('div');
+    ms.className = 'layerMS';
+    const mBtn = document.createElement('button');
+    mBtn.type='button'; mBtn.className='m'; mBtn.textContent='M'; mBtn.title = t('muteTitle');
+    mBtn.addEventListener('click', ()=>{ layers[i].mute = !layers[i].mute; onMixChange(); });
+    const sBtn = document.createElement('button');
+    sBtn.type='button'; sBtn.className='s'; sBtn.textContent='S'; sBtn.title = t('soloTitle');
+    sBtn.addEventListener('click', ()=>{ layers[i].solo = !layers[i].solo; onMixChange(); });
+    ms.appendChild(mBtn); ms.appendChild(sBtn);
+
     const nameInput = document.createElement('input');
     nameInput.type='text'; nameInput.value = L.name;
     nameInput.addEventListener('input', e=>{ layers[i].name = e.target.value; layers[i].auto = false; });
@@ -766,9 +794,43 @@ function renderLayerList(){
       layers[i].program = parseInt(e.target.value);
       if(playing && midiOut) midiOut.send([0xC0|(i%16), layers[i].program & 0x7F]);
     });
-    row.appendChild(sw); row.appendChild(nameInput); row.appendChild(sel);
+    row.appendChild(sw); row.appendChild(ms); row.appendChild(nameInput); row.appendChild(sel);
     list.appendChild(row);
   });
+  refreshMixUI();
+}
+
+// Solo overrides Mute (DAW convention): if anything is soloed, only soloed
+// layers are audible; otherwise everything except the muted ones.
+function anySolo(){ return layers.some(L => L.solo); }
+function layerAudible(i){
+  const L = layers[i];
+  if(!L) return false;
+  return anySolo() ? !!L.solo : !L.mute;
+}
+
+function refreshMixUI(){
+  const rows = $('layerList').children;
+  layers.forEach((L,i)=>{
+    const row = rows[i]; if(!row) return;
+    row.classList.toggle('muted', !layerAudible(i));
+    const btns = row.querySelectorAll('.layerMS button');
+    if(btns[0]) btns[0].classList.toggle('on', !!L.mute);
+    if(btns[1]) btns[1].classList.toggle('on', !!L.solo);
+  });
+}
+
+// Mute/Solo affect real-time playback only (preview synth + Web MIDI), not the .mid export.
+function onMixChange(){
+  refreshMixUI();
+  if(playing){
+    layers.forEach((L,Li)=>{
+      if(layerAudible(Li)) return;
+      if(sink === 'midi' && midiOut) midiOut.send([0xB0|(Li%16), 123, 0]); // all notes off on that channel
+      else if(sink === 'synth') stopLayerVoices(Li);
+    });
+  }
+  redrawPreview();
 }
 
 /* ---- processing ---- */
@@ -922,6 +984,7 @@ function drawPreview(){
   const {timeOnX, timeRev} = readDir();
   lastNotes.forEach((arr,Li)=>{
     pctx.fillStyle = layers[Li].color;
+    pctx.globalAlpha = layerAudible(Li) ? 1 : 0.22;   // dim muted / non-soloed layers
     arr.forEach(n=>{
       const pIdx = pitches.indexOf(n.midi);
       if(pIdx < 0) return;
@@ -1151,6 +1214,7 @@ function scheduler(){
     if(playStep >= steps) playStep = 0;
     const s = playStep, at = nextStepTime;
     lastNotes.forEach((arr, Li)=>{
+      if(!layerAudible(Li)) return;         // Mute / Solo
       const chan = Li % 16;
       for(const n of arr){
         if(n.step !== s) continue;
@@ -1370,9 +1434,25 @@ function spawnVoice(midi, vel, whenSec, durSec, layerIdx){
   osc.start(t0);
   osc.stop(end + 0.05);
 
-  const entry = { osc, g, sub };
+  const entry = { osc, g, sub, layerIdx };
   voices.add(entry);
   osc.onended = () => voices.delete(entry);
+}
+
+function killVoice(v){
+  const now = ac.currentTime;
+  try{
+    v.g.gain.cancelScheduledValues(now);
+    v.g.gain.setValueAtTime(Math.max(0.0002, v.g.gain.value), now);
+    v.g.gain.exponentialRampToValueAtTime(0.0002, now + 0.05);
+    v.osc.stop(now + 0.06);
+    if(v.sub) v.sub.stop(now + 0.06);
+  }catch(e){}
+}
+
+function stopLayerVoices(i){
+  if(!ac) return;
+  voices.forEach(v=>{ if(v.layerIdx === i) killVoice(v); });
 }
 
 function stopAllVoices(){

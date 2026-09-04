@@ -34,7 +34,7 @@ No installation needed. Two options:
 
 - **Source**: drop an **image** (JPG / PNG / WebP) or a **video** (MP4 / WebM / MOV), or turn on the **webcam**. Video and webcam are re-analysed ~15 times per second: the notes are recomputed live and, together with "Play into Logic", the MIDI loop evolves with the moving image. The **Freeze** button captures a single frame.
 - **Contrast / Sensitivity**: control which parts of the image become notes. Lower sensitivity means fewer notes (only the most contrasted areas are kept).
-- **Split into layers**: separate the image by color (hue) or by brightness (shadows / midtones / highlights). Each layer becomes its own MIDI track, with its own General MIDI instrument and name.
+- **Split into layers**: separate the image by color (hue) or by brightness (shadows / midtones / highlights). Each layer becomes its own MIDI track, with its own General MIDI instrument and name. Each row has **M** (mute) and **S** (solo) toggles to A/B layers while listening — they affect the preview and Web MIDI only; the `.mid` export always keeps every layer.
 - **Scale / octave / tempo / bars**: one image axis is quantized to the chosen scale (no wrong notes possible), the other becomes time.
 - **Playback direction**: left→right (default), right→left, top→bottom or bottom→top. Sets which axis carries time and which way the playhead sweeps it — applies to the preview, real-time playback and the export.
 - **Preview sound**: the **▶ Preview sound** button plays the loop right in the browser through a small built-in synth (rough approximations of the General MIDI families) — no DAW, no setup, works in every browser including Safari. Just to judge a loop before exporting or routing it.
