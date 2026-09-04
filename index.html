@@ -111,7 +111,12 @@
     padding:8px 0; border-bottom:1px solid var(--line); font-size:12px;
   }
   .layer:last-child{border-bottom:none;}
-  .swatch{width:13px; height:13px; border-radius:3px; border:1px solid rgba(255,255,255,.15);}
+  .swatch{-webkit-appearance:none; appearance:none; width:13px; height:13px; border-radius:3px; border:1px solid rgba(255,255,255,.15); padding:0; cursor:default;}
+  .swatch.pickable{cursor:pointer;}
+  .swatch.pickable:hover{border-color:var(--amber);}
+  .swatch.arming{border-color:var(--amber); box-shadow:0 0 0 2px var(--amber); animation:swatchPulse .9s ease-in-out infinite;}
+  @keyframes swatchPulse{50%{opacity:.4;}}
+  canvas#preview.picking{cursor:crosshair;}
   .layer input[type=text]{padding:5px 7px; font-size:12px;}
   .layer select{padding:5px 7px; font-size:12px;}
   .layer.muted input[type=text], .layer.muted select, .layer.muted .swatch{opacity:.4;}
@@ -165,6 +170,13 @@
   .iconGroup button:hover{color:var(--text); border-color:var(--amber);}
   .iconGroup button.on{background:var(--amber); border-color:var(--amber); color:#1a1200;}
   .iconGroup button svg{width:15px; height:15px; display:block;}
+
+  .curveEditor{margin-left:78px;}
+  .curveEditor svg{display:block; touch-action:none;}
+  .curveEditor rect{fill:var(--panel-2); stroke:var(--line);}
+  .curveEditor polyline{fill:none; stroke:var(--cyan); stroke-width:1.6;}
+  .curveEditor circle.cp{fill:var(--amber); stroke:#1a1200; stroke-width:1; cursor:grab;}
+  .curveEditor circle.cp:active{cursor:grabbing;}
   .midiRow{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px;}
   .dot{width:8px; height:8px; border-radius:50%; background:var(--line); flex:none;}
   .dot.on{background:var(--cyan); box-shadow:0 0 6px var(--cyan);}
@@ -211,6 +223,7 @@
       </div>
       <div class="hint err" id="srcHint" hidden></div>
       <canvas id="preview" width="600" height="600"></canvas>
+      <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
       <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
       <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
       <div class="transportIcons">
@@ -218,6 +231,15 @@
         <input type="hidden" id="curve" value="linear">
         <div class="iconRow"><span class="iconLbl" data-i18n="lblDirShort">Sens</span><div class="iconGroup" id="dirIcons"></div></div>
         <div class="iconRow"><span class="iconLbl" data-i18n="lblCurveShort">Courbe</span><div class="iconGroup" id="curveIcons"></div></div>
+        <div class="curveEditor" id="curveEditor" hidden>
+          <svg id="curveGraph" viewBox="0 0 140 70" width="140" height="70" preserveAspectRatio="none">
+            <rect x="0.5" y="0.5" width="139" height="69" rx="4"></rect>
+            <polyline id="curvePoly" points=""></polyline>
+            <circle class="cp" data-i="1" r="5"></circle>
+            <circle class="cp" data-i="2" r="5"></circle>
+            <circle class="cp" data-i="3" r="5"></circle>
+          </svg>
+        </div>
       </div>
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
     </div>
@@ -226,9 +248,15 @@
     <div class="panel">
       <h2 data-i18n="analysisTitle">Analyse de l'image</h2>
 
-      <div class="ctrl">
-        <label><span data-i18n="lblContrast">Contraste</span> <span class="val" id="vContrast">120%</span></label>
-        <input type="range" id="contrast" min="50" max="300" value="120">
+      <div class="row2">
+        <div class="ctrl">
+          <label><span data-i18n="lblContrast">Contraste</span> <span class="val" id="vContrast">120%</span></label>
+          <input type="range" id="contrast" min="50" max="300" value="120">
+        </div>
+        <div class="ctrl">
+          <label><span data-i18n="lblSat">Saturation</span> <span class="val" id="vSat">100%</span></label>
+          <input type="range" id="sat" min="0" max="200" value="100">
+        </div>
       </div>
       <div class="ctrl">
         <label><span data-i18n="lblSensitivity">Sensibilité (garder les zones les + contrastées)</span> <span class="val" id="vThresh">55</span></label>
@@ -245,6 +273,7 @@
           <select id="sepMode">
             <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
             <option value="lum" data-i18n="optLum">Par luminosité</option>
+            <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
           </select>
         </div>
       </div>
@@ -354,11 +383,15 @@ const I18N = {
     btnResume: "Reprendre",
     analysisTitle: "Analyse de l'image",
     lblContrast: "Contraste",
+    lblSat: "Saturation",
     lblSensitivity: "Sensibilité (garder les zones les + contrastées)",
     lblLayers: "Séparation en calques",
     lblMethod: "Méthode",
     optHue: "Par couleur (teinte)",
     optLum: "Par luminosité",
+    optPick: "Par couleurs (pipette)",
+    pickArm: "Clique dans l'image pour choisir la couleur du calque.",
+    swatchTitle: "Choisir la couleur dans l'image",
     musicTitle: "Musique",
     lblDirShort: "Sens",
     dirLR: "Gauche → droite",
@@ -371,6 +404,7 @@ const I18N = {
     curveDecel: "Ralenti",
     curvePulse: "Pulsé (dense aux bords)",
     curveSwing: "Swing",
+    curveCustom: "Personnalisée",
     lblScale: "Gamme",
     scMajPenta: "Pentatonique majeure",
     scMinPenta: "Pentatonique mineure",
@@ -432,11 +466,15 @@ const I18N = {
     btnResume: "Resume",
     analysisTitle: "Image analysis",
     lblContrast: "Contrast",
+    lblSat: "Saturation",
     lblSensitivity: "Sensitivity (keep the most contrasted areas)",
     lblLayers: "Split into layers",
     lblMethod: "Method",
     optHue: "By color (hue)",
     optLum: "By brightness",
+    optPick: "By picked colors (eyedropper)",
+    pickArm: "Click in the image to set that layer's color.",
+    swatchTitle: "Pick color from the image",
     musicTitle: "Music",
     lblDirShort: "Direction",
     dirLR: "Left → right",
@@ -449,6 +487,7 @@ const I18N = {
     curveDecel: "Decelerating",
     curvePulse: "Pulsing (dense at edges)",
     curveSwing: "Swing",
+    curveCustom: "Custom",
     lblScale: "Scale",
     scMajPenta: "Major pentatonic",
     scMinPenta: "Minor pentatonic",
@@ -571,8 +610,9 @@ const SCALES = {
 
 let img = null;                 // truthy once a source (image / video / webcam) is ready
 let imgCanvas = document.createElement('canvas'), imgCtx = imgCanvas.getContext('2d');
-let layers = [];                 // {color, name, auto, program}
+let layers = [];                 // {color, pickColor, name, auto, program, mute, solo}
 let lastNotes = [];              // per layer: array of {step, midi, vel}
+let pickLayer = -1;              // index of the layer waiting for a click on the image ('pick' mode), -1 = none
 const MAXDIM = 260;
 
 /* ---- source state: image, video file, or live webcam ---- */
@@ -746,6 +786,27 @@ function updateSrcBtns(){
   fb.classList.toggle('active', frozen);
 }
 
+/* ---- eyedropper: click a layer's swatch, then click the image ('pick' mode) ---- */
+function updatePickUI(){
+  preview.classList.toggle('picking', pickLayer >= 0);
+  $('pickHint').hidden = pickLayer < 0;
+}
+
+preview.addEventListener('click', e=>{
+  if(pickLayer < 0 || !img || !imgCanvas.width) return;
+  const rect = preview.getBoundingClientRect();
+  const ix = Math.round(clamp((e.clientX - rect.left) / rect.width * imgCanvas.width, 0, imgCanvas.width - 1));
+  const iy = Math.round(clamp((e.clientY - rect.top) / rect.height * imgCanvas.height, 0, imgCanvas.height - 1));
+  const px = imgCtx.getImageData(ix, iy, 1, 1).data;
+  const [r,g,b] = adjustRGB(px[0], px[1], px[2]);   // sample what you see, not the raw pixel
+  const hex = rgbToHex(r,g,b);
+  layers[pickLayer].color = hex;
+  layers[pickLayer].pickColor = hex;
+  pickLayer = -1;
+  renderLayerList();
+  process();
+});
+
 /* ---- layer UI ---- */
 function hslToHex(h,s,l){
   s/=100; l/=100;
@@ -763,13 +824,15 @@ function rebuildLayers(){
   const oldLayers = layers;
   layers = [];
   for(let i=0;i<n;i++){
+    const keep = oldLayers[i];
     let color;
     if(mode==='hue') color = hslToHex(Math.round(360*i/n), 70, 55);
-    else color = hslToHex(0, 0, Math.round(20 + 60*i/(Math.max(n-1,1))));
-    const keep = oldLayers[i];
+    else if(mode==='lum') color = hslToHex(0, 0, Math.round(20 + 60*i/(Math.max(n-1,1))));
+    else color = (keep && keep.pickColor) || hslToHex(Math.round(360*i/n), 70, 55); // 'pick': keep the last picked color
     const isAuto = keep ? keep.auto !== false : true;   // auto name unless the user renamed it
     layers.push({
       color,
+      pickColor: (keep && keep.pickColor) || color,      // remembered even when not in 'pick' mode
       name: isAuto ? (base + ' ' + (i+1)) : keep.name,
       auto: isAuto,
       program: keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog,
@@ -785,13 +848,22 @@ function rebuildLayers(){
 }
 
 function renderLayerList(){
+  if($('sepMode').value !== 'pick') pickLayer = -1;   // leaving 'pick' mode always disarms
   const list = $('layerList');
   list.innerHTML = '';
   layers.forEach((L,i)=>{
     const row = document.createElement('div');
     row.className='layer';
-    const sw = document.createElement('div');
-    sw.className='swatch'; sw.style.background = L.color;
+    const sw = document.createElement('button');
+    sw.type = 'button'; sw.className='swatch'; sw.style.background = L.color;
+    if($('sepMode').value === 'pick'){
+      sw.classList.add('pickable');
+      sw.title = t('swatchTitle');
+      sw.classList.toggle('arming', pickLayer === i);
+      sw.addEventListener('click', ()=>{ pickLayer = (pickLayer === i) ? -1 : i; renderLayerList(); });
+    } else {
+      sw.disabled = true;
+    }
 
     const ms = document.createElement('div');
     ms.className = 'layerMS';
@@ -821,6 +893,7 @@ function renderLayerList(){
     list.appendChild(row);
   });
   refreshMixUI();
+  updatePickUI();
 }
 
 // Solo overrides Mute (DAW convention): if anything is soloed, only soloed
@@ -898,10 +971,27 @@ function curveFrac(mode, k, n){
       ? 0.5 * (1 - (1 - 2*p) * (1 - 2*p))
       : 0.5 + 0.5 * (2*p - 1) * (2*p - 1);
     case 'swing': return Math.min(1, p + ((k % 2) ? 0.28 / n : 0)); // delay every other step
+    case 'custom': return customCurveY(p);                       // user-drawn, see curveEditor
     default:      return p;                                     // linear
   }
 }
 function stepTimeFrac(k, n){ return curveFrac($('curve').value, k, n); }
+
+// custom curve: 3 draggable handles at x = .25/.5/.75 (endpoints fixed at 0/1),
+// each y clamped between its neighbours during drag so the curve is always
+// monotonic — piecewise-linear interpolation between them.
+let customPoints = [0, 0.25, 0.5, 0.75, 1];
+let customSeeded = false;
+function customCurveY(p){
+  const xs = [0, 0.25, 0.5, 0.75, 1];
+  for(let i=0;i<4;i++){
+    if(p <= xs[i+1] || i===3){
+      const t = (p - xs[i]) / (xs[i+1] - xs[i]);
+      return customPoints[i] + (customPoints[i+1] - customPoints[i]) * t;
+    }
+  }
+  return p;
+}
 
 /* ---- icon controls (direction + curve) next to the preview button ---- */
 const DIRS = [
@@ -910,7 +1000,7 @@ const DIRS = [
   ['tb', 'M9 4v10M5 10l4 4 4-4'],
   ['bt', 'M9 14V4M5 8l4-4 4 4']
 ];
-const CURVES = ['linear','accel','decel','pulse','swing'];
+const CURVES = ['linear','accel','decel','pulse','swing','custom'];
 
 function dirIconSVG(d){
   const path = (DIRS.find(x => x[0] === d) || DIRS[0])[1];
@@ -943,9 +1033,62 @@ function renderTransportIcons(){
     b.type = 'button'; b.innerHTML = curveIconSVG(c);
     b.title = t('curve' + c[0].toUpperCase() + c.slice(1));
     b.classList.toggle('on', $('curve').value === c);
-    b.addEventListener('click', ()=>{ $('curve').value = c; renderTransportIcons(); redrawPreview(); });
+    b.addEventListener('click', ()=>{
+      const prev = $('curve').value;
+      $('curve').value = c;
+      if(c === 'custom' && !customSeeded){
+        // start the editor from whatever curve was active, not from scratch
+        const from = prev === 'custom' ? 'linear' : prev;
+        customPoints = [0, curveFrac(from,1,4), curveFrac(from,2,4), curveFrac(from,3,4), 1];
+        customSeeded = true;
+      }
+      renderTransportIcons();
+      toggleCurveEditor();
+      redrawPreview();
+    });
     cg.appendChild(b);
   });
+}
+
+function toggleCurveEditor(){
+  const on = $('curve').value === 'custom';
+  $('curveEditor').hidden = !on;
+  if(on) redrawCurveEditor();
+}
+
+// draggable 3-point curve editor (SVG), wired once at startup
+function redrawCurveEditor(){
+  const xs = [0, 35, 70, 105, 140], H = 70;
+  $('curvePoly').setAttribute('points', xs.map((x,i)=> x+','+(H - customPoints[i]*H)).join(' '));
+  document.querySelectorAll('#curveGraph circle.cp').forEach((c,idx)=>{
+    const i = idx + 1;
+    c.setAttribute('cx', xs[i]);
+    c.setAttribute('cy', H - customPoints[i]*H);
+  });
+}
+function refreshCustomIcon(){
+  const idx = CURVES.indexOf('custom');
+  const btn = $('curveIcons') && $('curveIcons').children[idx];
+  if(btn) btn.innerHTML = curveIconSVG('custom');
+}
+function initCurveEditor(){
+  const svg = $('curveGraph');
+  svg.querySelectorAll('circle.cp').forEach(circle=>{
+    const i = parseInt(circle.dataset.i);
+    const drag = e=>{
+      const rect = svg.getBoundingClientRect();
+      let val = 1 - (e.clientY - rect.top) / rect.height;
+      val = Math.max(0, Math.min(1, val));
+      customPoints[i] = Math.min(customPoints[i+1], Math.max(customPoints[i-1], val));
+      redrawCurveEditor();
+      refreshCustomIcon();
+      redrawPreview();
+    };
+    circle.addEventListener('pointerdown', e=>{ circle.setPointerCapture(e.pointerId); drag(e); e.preventDefault(); });
+    circle.addEventListener('pointermove', e=>{ if(circle.hasPointerCapture(e.pointerId)) drag(e); });
+    circle.addEventListener('pointerup', e=>{ try{ circle.releasePointerCapture(e.pointerId); }catch(err){} });
+  });
+  redrawCurveEditor();
 }
 
 function process(){
@@ -954,27 +1097,24 @@ function process(){
   if(!w || !h) return;
   const data = imgCtx.getImageData(0,0,w,h).data;
 
-  const contrastPct = parseInt($('contrast').value)/100;
   const threshPct = parseInt($('thresh').value)/100;
   const nLayers = layers.length;
   const sepMode = $('sepMode').value;
   const steps = parseInt($('steps').value);
   const pitches = scaleNotesForRange(); // low->high, index 0 = lowest
 
-  // per-pixel: contrasted luminance and hue
+  // per-pixel: contrast+saturation-adjusted RGB, luminance and hue
   const lum = new Float32Array(w*h);
   const hue = new Float32Array(w*h);
+  const pr = new Uint8ClampedArray(w*h), pg = new Uint8ClampedArray(w*h), pb = new Uint8ClampedArray(w*h);
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
       const idx = (y*w+x)*4;
-      let r=data[idx], g=data[idx+1], b=data[idx+2];
-      // contrast adjust (around 128) per channel
-      r = clamp((r-128)*contrastPct+128,0,255);
-      g = clamp((g-128)*contrastPct+128,0,255);
-      b = clamp((b-128)*contrastPct+128,0,255);
-      const L = 0.299*r+0.587*g+0.114*b;
-      lum[y*w+x] = L;
-      hue[y*w+x] = rgbToHue(r,g,b);
+      const [r,g,b] = adjustRGB(data[idx], data[idx+1], data[idx+2]);
+      const px = y*w+x;
+      pr[px]=r; pg[px]=g; pb[px]=b;
+      lum[px] = 0.299*r+0.587*g+0.114*b;
+      hue[px] = rgbToHue(r,g,b);
     }
   }
   // edge magnitude (simple gradient)
@@ -990,9 +1130,22 @@ function process(){
     }
   }
 
-  // pick a layer for a pixel (by hue bin or brightness bin)
+  // 'pick' mode: each layer has a target RGB, pixels go to the nearest one
+  const pickTargets = sepMode==='pick' ? layers.map(L => hexToRgb(L.color)) : null;
+
+  // pick a layer for a pixel (by hue bin, brightness bin, or nearest picked color)
   function layerOf(px){
     if(nLayers===1) return 0;
+    if(sepMode==='pick'){
+      let best=0, bestD=Infinity;
+      for(let L=0;L<nLayers;L++){
+        const t = pickTargets[L];
+        const dr=pr[px]-t[0], dg=pg[px]-t[1], db=pb[px]-t[2];
+        const d = dr*dr+dg*dg+db*db;
+        if(d<bestD){ bestD=d; best=L; }
+      }
+      return best;
+    }
     if(sepMode==='hue'){
       return Math.floor((hue[px]/360)*nLayers) % nLayers;
     } else {
@@ -1058,6 +1211,27 @@ function rgbToHue(r,g,b){
   return h;
 }
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+// contrast + saturation, read live from the sliders — the single place both
+// the analysis (process) and the eyedropper sample colors from, so what you
+// click is what gets analyzed.
+function adjustRGB(r,g,b){
+  const c = parseInt($('contrast').value)/100;
+  const s = parseInt($('sat').value)/100;
+  r = clamp((r-128)*c+128, 0, 255);
+  g = clamp((g-128)*c+128, 0, 255);
+  b = clamp((b-128)*c+128, 0, 255);
+  const y = 0.299*r + 0.587*g + 0.114*b;
+  return [clamp(y+(r-y)*s,0,255), clamp(y+(g-y)*s,0,255), clamp(y+(b-y)*s,0,255)];
+}
+function rgbToHex(r,g,b){
+  const h = x => Math.round(clamp(x,0,255)).toString(16).padStart(2,'0');
+  return '#'+h(r)+h(g)+h(b);
+}
+function hexToRgb(hex){
+  const n = parseInt(hex.slice(1), 16) || 0;
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
 
 function drawPreview(){
   pctx.clearRect(0,0,preview.width,preview.height);
@@ -1436,10 +1610,14 @@ playBtn.addEventListener('click', async ()=>{
   startPlayback('midi');
 });
 
-previewBtn.addEventListener('click', async ()=>{
+// NOT async on purpose: iOS Safari only "unlocks" audio when the first node
+// is started synchronously inside the gesture handler — any `await` before
+// that (even a resolved-instantly one) can drop out of the gesture and leave
+// the context silently suspended. Keep this whole handler synchronous.
+previewBtn.addEventListener('click', ()=>{
   if(playing && sink === 'synth'){ stopPlayback(); return; }
   if(!img || !ensureAudio()) return;
-  try{ await ac.resume(); }catch(e){}
+  ac.resume().catch(()=>{});     // fire-and-forget, doesn't block the gesture chain
   if(!lastNotes.length || lastNotes.every(a=>!a.length)) return;
   if(playing) stopPlayback();    // was playing into a MIDI port → switch outputs
   startPlayback('synth');
@@ -1455,6 +1633,14 @@ function ensureAudio(){
   const AC = window.AudioContext || window.webkitAudioContext;
   if(!AC) return false;
   ac = new AC();
+  // iOS Safari unlock trick: start a silent buffer synchronously, in the same
+  // gesture that created the context, before anything else touches the audio
+  // timeline. Harmless everywhere else.
+  try{
+    const buf = ac.createBuffer(1, 1, 22050);
+    const src = ac.createBufferSource();
+    src.buffer = buf; src.connect(ac.destination); src.start(0);
+  }catch(e){}
   masterGain = ac.createGain();
   masterGain.gain.value = 0.9;
   const comp = ac.createDynamicsCompressor();
@@ -1591,9 +1777,10 @@ document.addEventListener('visibilitychange', ()=>{
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
 
 /* ---- wire up controls ---- */
-const liveIds = ['contrast','thresh','layers','sepMode','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
+const liveIds = ['contrast','sat','thresh','layers','sepMode','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
 function syncLabels(){
   $('vContrast').textContent = $('contrast').value+'%';
+  $('vSat').textContent = $('sat').value+'%';
   $('vThresh').textContent = $('thresh').value;
   $('vLayers').textContent = $('layers').value;
   $('vOctLow').textContent = $('octLow').value;
@@ -1613,6 +1800,7 @@ liveIds.forEach(id=>{
 });
 syncLabels();
 updatePlayBtnState();
+initCurveEditor();
 setLang(initialLang());
 </script>
 </body>
