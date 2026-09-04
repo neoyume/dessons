@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dessons · Générateur de loops image → MIDI</title>
+<style>
+  :root{
+    --bg:#0e0f12;
+    --panel:#17181d;
+    --panel-2:#1e2027;
+    --line:#2b2e37;
+    --text:#e8e6df;
+    --text-dim:#8b8d97;
+    --amber:#f5a623;
+    --amber-dim:#8a621c;
+    --cyan:#4fd1c5;
+    --mono: 'SF Mono', 'Roboto Mono', Consolas, monospace;
+    --sans: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); padding:28px 20px 60px; min-height:100vh;
+  }
+  .wrap{max-width:1180px; margin:0 auto;}
+  header{margin-bottom:26px; position:relative; padding-right:70px;}
+  header h1{
+    font-size:22px; font-weight:600; letter-spacing:.2px; margin:0 0 4px;
+  }
+  header p{color:var(--text-dim); margin:0; font-size:13.5px; max-width:620px; line-height:1.5;}
+
+  /* language switch */
+  .langToggle{
+    position:absolute; top:0; right:0; display:flex;
+    border:1px solid var(--line); border-radius:6px; overflow:hidden;
+  }
+  .langToggle button{
+    background:var(--panel); color:var(--text-dim); border:none; cursor:pointer;
+    padding:5px 9px; font-size:11px; font-family:var(--mono); letter-spacing:.6px;
+  }
+  .langToggle button.active{background:var(--amber); color:#1a1200;}
+  .langToggle button:not(.active):hover{color:var(--text);}
+
+  .rack{
+    display:grid; grid-template-columns: 1.15fr 1fr; gap:16px;
+  }
+  @media (max-width: 880px){ .rack{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:18px 18px 20px;
+  }
+  .panel h2{
+    font-size:11px; text-transform:uppercase; letter-spacing:1.4px;
+    color:var(--text-dim); margin:0 0 14px; font-weight:600;
+  }
+
+  /* dropzone */
+  .drop{
+    border:1.5px dashed var(--line); border-radius:8px; padding:22px;
+    text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+    color:var(--text-dim); font-size:13px;
+  }
+  .drop:hover, .drop.drag{border-color:var(--amber); background:rgba(245,166,35,.05); color:var(--text);}
+  .drop input{display:none;}
+
+  .srcBtns{display:flex; gap:8px; margin-top:10px;}
+  .srcBtns button{
+    flex:1; background:var(--panel-2); color:var(--text-dim); border:1px solid var(--line);
+    padding:8px; border-radius:6px; font-size:12px; cursor:pointer; font-family:var(--sans);
+    transition:border-color .15s, color .15s;
+  }
+  .srcBtns button:hover{border-color:var(--amber); color:var(--text);}
+  .srcBtns button.active{background:var(--amber); color:#1a1200; border-color:var(--amber); font-weight:700;}
+
+  canvas#preview{
+    width:100%; display:block; border-radius:7px; margin-top:14px;
+    background:#0a0a0c; border:1px solid var(--line);
+    image-rendering:pixelated;
+  }
+  .previewMeta{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-top:6px; font-family:var(--mono);}
+
+  /* controls */
+  .ctrl{margin-bottom:16px;}
+  .ctrl label{
+    display:flex; justify-content:space-between; font-size:12.5px;
+    margin-bottom:6px; color:var(--text);
+  }
+  .ctrl label span.val{color:var(--amber); font-family:var(--mono); font-size:12px;}
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:3px; background:var(--line);
+    border-radius:2px; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--amber); cursor:pointer; border:2px solid #0e0f12;
+    box-shadow:0 0 0 1px var(--amber-dim);
+  }
+  select, input[type=text]{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:7px 8px; border-radius:6px; font-size:12.5px; font-family:var(--sans);
+  }
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+  .divider{height:1px; background:var(--line); margin:18px 0;}
+
+  /* layer legend */
+  .layer{
+    display:grid; grid-template-columns:16px 1fr 1fr; gap:8px; align-items:center;
+    padding:8px 0; border-bottom:1px solid var(--line); font-size:12px;
+  }
+  .layer:last-child{border-bottom:none;}
+  .swatch{width:13px; height:13px; border-radius:3px; border:1px solid rgba(255,255,255,.15);}
+  .layer input[type=text]{padding:5px 7px; font-size:12px;}
+  .layer select{padding:5px 7px; font-size:12px;}
+
+  button#exportBtn{
+    width:100%; margin-top:18px; background:var(--amber); color:#1a1200;
+    border:none; padding:13px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
+    border-radius:7px; cursor:pointer; transition:filter .15s;
+  }
+  button#exportBtn:hover{filter:brightness(1.08);}
+  button#exportBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed;}
+
+  button#playBtn{
+    width:100%; margin-top:12px; background:var(--cyan); color:#04211e;
+    border:none; padding:13px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
+    border-radius:7px; cursor:pointer; transition:filter .15s, background .15s;
+  }
+  button#playBtn:hover{filter:brightness(1.08);}
+  button#playBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed;}
+  button#playBtn.playing{background:#e5484d; color:#fff;}
+  .midiRow{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px;}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--line); flex:none;}
+  .dot.on{background:var(--cyan); box-shadow:0 0 6px var(--cyan);}
+
+  .hint{font-size:11.5px; color:var(--text-dim); margin-top:8px; line-height:1.5;}
+  .hint.err{color:#e5484d;}
+  .stat{font-family:var(--mono); font-size:11px; color:var(--cyan); margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="langToggle" id="langToggle">
+      <button type="button" data-lang="fr">FR</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+    <h1>Dessons</h1>
+    <p data-i18n="tagline">Dépose une image ou une vidéo, ajuste le contraste et le seuil pour ne garder que les zones les plus marquées, sépare en calques (couleur ou luminosité) — chaque calque devient une piste MIDI avec son instrument. Exporte en .mid, ou joue la boucle en direct dans Logic via un port MIDI virtuel (IAC Driver).</p>
+  </header>
+
+  <div class="rack">
+    <!-- LEFT: source + preview -->
+    <div class="panel">
+      <h2 data-i18n="srcTitle">Source</h2>
+      <div class="drop" id="drop">
+        <span data-i18n-html="dropText">Clique ou dépose une image ou une vidéo ici<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span></span>
+        <input type="file" id="fileInput" accept="image/*,video/*">
+      </div>
+      <div class="srcBtns">
+        <button type="button" id="webcamBtn" data-i18n="btnWebcam">Webcam</button>
+        <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
+      </div>
+      <div class="hint err" id="srcHint" hidden></div>
+      <canvas id="preview" width="600" height="600"></canvas>
+      <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
+    </div>
+
+    <!-- RIGHT: controls -->
+    <div class="panel">
+      <h2 data-i18n="analysisTitle">Analyse de l'image</h2>
+
+      <div class="ctrl">
+        <label><span data-i18n="lblContrast">Contraste</span> <span class="val" id="vContrast">120%</span></label>
+        <input type="range" id="contrast" min="50" max="300" value="120">
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblSensitivity">Sensibilité (garder les zones les + contrastées)</span> <span class="val" id="vThresh">55</span></label>
+        <input type="range" id="thresh" min="1" max="100" value="55">
+      </div>
+
+      <div class="row2">
+        <div class="ctrl">
+          <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val" id="vLayers">3</span></label>
+          <input type="range" id="layers" min="1" max="6" value="3">
+        </div>
+        <div class="ctrl">
+          <label style="margin-bottom:6px;" data-i18n="lblMethod">Méthode</label>
+          <select id="sepMode">
+            <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
+            <option value="lum" data-i18n="optLum">Par luminosité</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <h2 data-i18n="musicTitle">Musique</h2>
+
+      <div class="ctrl">
+        <label style="margin-bottom:6px;" data-i18n="lblDir">Sens de lecture</label>
+        <select id="playDir">
+          <option value="lr" selected data-i18n="dirLR">→  Gauche à droite</option>
+          <option value="rl" data-i18n="dirRL">←  Droite à gauche</option>
+          <option value="tb" data-i18n="dirTB">↓  Haut vers bas</option>
+          <option value="bt" data-i18n="dirBT">↑  Bas vers haut</option>
+        </select>
+      </div>
+
+      <div class="row2">
+        <div class="ctrl">
+          <label style="margin-bottom:6px;" data-i18n="lblScale">Gamme</label>
+          <select id="scale">
+            <option value="majPenta" data-i18n="scMajPenta">Pentatonique majeure</option>
+            <option value="minPenta" selected data-i18n="scMinPenta">Pentatonique mineure</option>
+            <option value="major" data-i18n="scMajor">Majeure</option>
+            <option value="minor" data-i18n="scMinor">Mineure naturelle</option>
+            <option value="dorian" data-i18n="scDorian">Dorien</option>
+            <option value="wholetone" data-i18n="scWhole">Ton par ton</option>
+            <option value="chromatic" data-i18n="scChromatic">Chromatique</option>
+          </select>
+        </div>
+        <div class="ctrl">
+          <label style="margin-bottom:6px;" data-i18n="lblRoot">Note fondamentale</label>
+          <select id="root">
+            <option value="0">C</option><option value="1">C#</option><option value="2">D</option>
+            <option value="3">D#</option><option value="4">E</option><option value="5">F</option>
+            <option value="6">F#</option><option value="7">G</option><option value="8">G#</option>
+            <option value="9">A</option><option value="10">A#</option><option value="11">B</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="ctrl">
+          <label><span data-i18n="lblOctLow">Octave basse</span> <span class="val" id="vOctLow">3</span></label>
+          <input type="range" id="octLow" min="0" max="7" value="3">
+        </div>
+        <div class="ctrl">
+          <label><span data-i18n="lblOctHigh">Octave haute</span> <span class="val" id="vOctHigh">5</span></label>
+          <input type="range" id="octHigh" min="0" max="7" value="5">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="ctrl">
+          <label><span data-i18n="lblSteps">Résolution rythmique (pas)</span> <span class="val" id="vSteps">16</span></label>
+          <input type="range" id="steps" min="4" max="64" value="16">
+        </div>
+        <div class="ctrl">
+          <label><span data-i18n="lblBars">Longueur (mesures)</span> <span class="val" id="vBars">2</span></label>
+          <input type="range" id="bars" min="1" max="8" value="2">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="ctrl">
+          <label><span data-i18n="lblTempo">Tempo</span> <span class="val" id="vTempo">100 bpm</span></label>
+          <input type="range" id="tempo" min="40" max="200" value="100">
+        </div>
+        <div class="ctrl">
+          <label><span data-i18n="lblGate">Gate (durée note)</span> <span class="val" id="vGate">80%</span></label>
+          <input type="range" id="gate" min="10" max="100" value="80">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <h2 data-i18n="layersTitle">Calques / Instruments</h2>
+      <div id="layerList"></div>
+
+      <button id="exportBtn" disabled data-i18n="btnExport">Exporter le .mid</button>
+      <div class="stat" id="statLine"></div>
+      <div class="hint" data-i18n="exportHint">Chaque calque = une piste MIDI (canal séparé, patch General MIDI). Importe le fichier dans Logic Pro : une piste par instrument sera créée automatiquement à la lecture du fichier multi-pistes.</div>
+
+      <div class="divider"></div>
+      <h2 data-i18n="rtTitle">Temps réel (Web MIDI)</h2>
+      <div class="ctrl">
+        <label style="margin-bottom:6px;" data-i18n="lblPort">Port MIDI de sortie</label>
+        <select id="midiPort"><option value="" data-i18n="portDetect">— clique pour détecter les ports —</option></select>
+      </div>
+      <button id="playBtn" disabled data-i18n="btnPlay">▶ Jouer dans Logic</button>
+      <div class="midiRow"><span class="dot" id="midiDot"></span><span id="midiState">Web MIDI non initialisé</span></div>
+      <div class="hint" id="midiHint" data-i18n-html="midiHint">Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>. Chrome ou Edge requis (Safari ne gère pas Web MIDI).</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   i18n — the whole UI is bilingual (FR / EN).
+   Static strings live on [data-i18n] / [data-i18n-html] nodes;
+   dynamic strings go through t('key'). Auto-detected on first
+   visit from navigator.language, then remembered in localStorage.
+   ============================================================ */
+const I18N = {
+  fr: {
+    docTitle: "Dessons · Générateur de loops image → MIDI",
+    tagline: "Dépose une image ou une vidéo, ajuste le contraste et le seuil pour ne garder que les zones les plus marquées, sépare en calques (couleur ou luminosité) — chaque calque devient une piste MIDI avec son instrument. Exporte en .mid, ou joue la boucle en direct dans Logic via un port MIDI virtuel (IAC Driver).",
+    srcTitle: "Source",
+    dropText: 'Clique ou dépose une image ou une vidéo ici<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span>',
+    btnWebcam: "Webcam",
+    btnWebcamStop: "Arrêter la webcam",
+    btnFreeze: "Figer l'image",
+    btnResume: "Reprendre",
+    analysisTitle: "Analyse de l'image",
+    lblContrast: "Contraste",
+    lblSensitivity: "Sensibilité (garder les zones les + contrastées)",
+    lblLayers: "Séparation en calques",
+    lblMethod: "Méthode",
+    optHue: "Par couleur (teinte)",
+    optLum: "Par luminosité",
+    musicTitle: "Musique",
+    lblDir: "Sens de lecture",
+    dirLR: "→  Gauche à droite",
+    dirRL: "←  Droite à gauche",
+    dirTB: "↓  Haut vers bas",
+    dirBT: "↑  Bas vers haut",
+    lblScale: "Gamme",
+    scMajPenta: "Pentatonique majeure",
+    scMinPenta: "Pentatonique mineure",
+    scMajor: "Majeure",
+    scMinor: "Mineure naturelle",
+    scDorian: "Dorien",
+    scWhole: "Ton par ton",
+    scChromatic: "Chromatique",
+    lblRoot: "Note fondamentale",
+    lblOctLow: "Octave basse",
+    lblOctHigh: "Octave haute",
+    lblSteps: "Résolution rythmique (pas)",
+    lblBars: "Longueur (mesures)",
+    lblTempo: "Tempo",
+    lblGate: "Gate (durée note)",
+    layersTitle: "Calques / Instruments",
+    btnExport: "Exporter le .mid",
+    exportHint: "Chaque calque = une piste MIDI (canal séparé, patch General MIDI). Importe le fichier dans Logic Pro : une piste par instrument sera créée automatiquement à la lecture du fichier multi-pistes.",
+    rtTitle: "Temps réel (Web MIDI)",
+    lblPort: "Port MIDI de sortie",
+    portDetect: "— clique pour détecter les ports —",
+    btnPlay: "▶ Jouer dans Logic",
+    btnStop: "■ Stop",
+    midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>. Chrome ou Edge requis (Safari ne gère pas Web MIDI).",
+    notesWord: "notes",
+    unitPx: "px",
+    srcVideoLabel: "vidéo",
+    srcWebcamLabel: "webcam",
+    layerWord: "Calque",
+    midiUninit: "Web MIDI non initialisé",
+    midiUnavail: "Web MIDI indisponible dans ce navigateur",
+    midiRequest: "Demande d'accès MIDI…",
+    midiDenied: "Accès MIDI refusé — recharge la page et autorise l'accès",
+    midiNoPort: "Aucun port MIDI de sortie détecté",
+    midiNoPortOpt: "Aucun port — active l'IAC Driver",
+    midiReady: "Prêt → {x}",
+    midiPlaying: "Lecture → {x}",
+    midiSelectPort: "Sélectionne un port de sortie (active l'IAC Driver)",
+    midiNoNotes: "Aucune note à jouer — baisse la sensibilité",
+    portFallback: "port MIDI",
+    webcamUnavail: "Webcam indisponible dans ce navigateur",
+    webcamDenied: "Accès webcam refusé ou aucune caméra disponible",
+    videoErr: "Vidéo illisible dans ce navigateur"
+  },
+  en: {
+    docTitle: "Dessons · Image → MIDI loop generator",
+    tagline: "Drop an image or a video, adjust contrast and threshold to keep only the sharpest areas, split into layers (color or brightness) — each layer becomes a MIDI track with its own instrument. Export a .mid, or play the loop live into Logic through a virtual MIDI port (IAC Driver).",
+    srcTitle: "Source",
+    dropText: 'Click or drop an image or a video here<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span>',
+    btnWebcam: "Webcam",
+    btnWebcamStop: "Stop webcam",
+    btnFreeze: "Freeze frame",
+    btnResume: "Resume",
+    analysisTitle: "Image analysis",
+    lblContrast: "Contrast",
+    lblSensitivity: "Sensitivity (keep the most contrasted areas)",
+    lblLayers: "Split into layers",
+    lblMethod: "Method",
+    optHue: "By color (hue)",
+    optLum: "By brightness",
+    musicTitle: "Music",
+    lblDir: "Playback direction",
+    dirLR: "→  Left to right",
+    dirRL: "←  Right to left",
+    dirTB: "↓  Top to bottom",
+    dirBT: "↑  Bottom to top",
+    lblScale: "Scale",
+    scMajPenta: "Major pentatonic",
+    scMinPenta: "Minor pentatonic",
+    scMajor: "Major",
+    scMinor: "Natural minor",
+    scDorian: "Dorian",
+    scWhole: "Whole tone",
+    scChromatic: "Chromatic",
+    lblRoot: "Root note",
+    lblOctLow: "Low octave",
+    lblOctHigh: "High octave",
+    lblSteps: "Rhythmic resolution (steps)",
+    lblBars: "Length (bars)",
+    lblTempo: "Tempo",
+    lblGate: "Gate (note length)",
+    layersTitle: "Layers / Instruments",
+    btnExport: "Export .mid",
+    exportHint: "Each layer = one MIDI track (separate channel, General MIDI patch). Import the file into Logic Pro: one track per instrument is created automatically when the multi-track file is played.",
+    rtTitle: "Real-time (Web MIDI)",
+    lblPort: "MIDI output port",
+    portDetect: "— click to detect ports —",
+    btnPlay: "▶ Play into Logic",
+    btnStop: "■ Stop",
+    midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>. Chrome or Edge required (Safari has no Web MIDI).",
+    notesWord: "notes",
+    unitPx: "px",
+    srcVideoLabel: "video",
+    srcWebcamLabel: "webcam",
+    layerWord: "Layer",
+    midiUninit: "Web MIDI not initialized",
+    midiUnavail: "Web MIDI unavailable in this browser",
+    midiRequest: "Requesting MIDI access…",
+    midiDenied: "MIDI access denied — reload the page and allow access",
+    midiNoPort: "No MIDI output port detected",
+    midiNoPortOpt: "No port — enable the IAC Driver",
+    midiReady: "Ready → {x}",
+    midiPlaying: "Playing → {x}",
+    midiSelectPort: "Select an output port (enable the IAC Driver)",
+    midiNoNotes: "No notes to play — lower the sensitivity",
+    portFallback: "MIDI port",
+    webcamUnavail: "Webcam unavailable in this browser",
+    webcamDenied: "Webcam access denied or no camera available",
+    videoErr: "Cannot read this video in this browser"
+  }
+};
+
+let LANG = 'en';
+const t = k => (I18N[LANG] && I18N[LANG][k] != null ? I18N[LANG][k] : (I18N.en[k] != null ? I18N.en[k] : k));
+
+function initialLang(){
+  try{ const s = localStorage.getItem('dessons.lang'); if(s === 'fr' || s === 'en') return s; }catch(e){}
+  return (navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en';
+}
+
+function applyI18n(){
+  const D = I18N[LANG];
+  document.documentElement.lang = LANG;
+  document.title = D.docTitle;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const v = D[el.getAttribute('data-i18n')];
+    if(v != null) el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+    const v = D[el.getAttribute('data-i18n-html')];
+    if(v != null) el.innerHTML = v;
+  });
+}
+
+function setLang(lang){
+  LANG = (lang === 'fr' || lang === 'en') ? lang : 'en';
+  try{ localStorage.setItem('dessons.lang', LANG); }catch(e){}
+  document.querySelectorAll('#langToggle button').forEach(b=> b.classList.toggle('active', b.dataset.lang === LANG));
+  applyI18n();
+  if(layers.length) rebuildLayers();          // refresh auto layer names + instrument labels
+  playBtn.textContent = playing ? t('btnStop') : t('btnPlay');
+  updateSrcBtns();
+  renderMidiState();
+  if(img) process();
+}
+
+document.querySelectorAll('#langToggle button').forEach(b=>{
+  b.addEventListener('click', ()=> setLang(b.dataset.lang));
+});
+
+/* ---- General MIDI instrument shortlist (bilingual label + program number) ---- */
+const GM_INSTR = [
+  {fr:"Piano acoustique",  en:"Acoustic Piano",    prog:0},
+  {fr:"Piano électrique",  en:"Electric Piano",    prog:4},
+  {fr:"Clavecin",          en:"Harpsichord",       prog:6},
+  {fr:"Célesta",           en:"Celesta",           prog:8},
+  {fr:"Vibraphone",        en:"Vibraphone",        prog:11},
+  {fr:"Marimba",           en:"Marimba",           prog:12},
+  {fr:"Boîte à musique",   en:"Music Box",         prog:10},
+  {fr:"Kalimba",           en:"Kalimba",           prog:108},
+  {fr:"Cordes pizzicato",  en:"Pizzicato Strings", prog:45},
+  {fr:"Cordes (ensemble)", en:"String Ensemble",   prog:48},
+  {fr:"Nappe synthé",      en:"Synth Pad",         prog:89},
+  {fr:"Lead synthé",       en:"Synth Lead",        prog:81},
+  {fr:"Basse synthé",      en:"Synth Bass",        prog:38},
+  {fr:"Steel drums",       en:"Steel Drums",       prog:114},
+  {fr:"Flûte",             en:"Flute",             prog:73},
+  {fr:"Cloches tubulaires",en:"Tubular Bells",     prog:14},
+  {fr:"Orgue",             en:"Organ",             prog:19},
+  {fr:"Guitare nylon",     en:"Nylon Guitar",      prog:24},
+  {fr:"Xylophone",         en:"Xylophone",         prog:13}
+];
+
+const SCALES = {
+  majPenta:[0,2,4,7,9], minPenta:[0,3,5,7,10],
+  major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10],
+  dorian:[0,2,3,5,7,9,10], wholetone:[0,2,4,6,8,10], chromatic:[0,1,2,3,4,5,6,7,8,9,10,11]
+};
+
+let img = null;                 // truthy once a source (image / video / webcam) is ready
+let imgCanvas = document.createElement('canvas'), imgCtx = imgCanvas.getContext('2d');
+let layers = [];                 // {color, name, auto, program}
+let lastNotes = [];              // per layer: array of {step, midi, vel}
+const MAXDIM = 260;
+
+/* ---- source state: image, video file, or live webcam ---- */
+let srcEl = null;                // HTMLImageElement or HTMLVideoElement
+let srcKind = null;              // 'image' | 'video' | 'webcam'
+let camStream = null;            // MediaStream while the webcam is on
+let grabTimer = null;            // setTimeout id of the live re-analysis loop
+let frozen = false;              // live source paused on its current frame
+
+const $ = id => document.getElementById(id);
+const dropEl = $('drop'), fileInput = $('fileInput'), preview = $('preview'), pctx = preview.getContext('2d');
+
+['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault(); dropEl.classList.add('drag');}));
+['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault(); dropEl.classList.remove('drag');}));
+dropEl.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+dropEl.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+
+function showSrcError(msg){
+  const el = $('srcHint');
+  el.textContent = msg || '';
+  el.hidden = !msg;
+}
+
+// tear down whatever source is currently running
+function stopSource(){
+  if(grabTimer){ clearTimeout(grabTimer); grabTimer = null; }
+  if(camStream){ camStream.getTracks().forEach(tr=>tr.stop()); camStream = null; }
+  if(srcEl && srcEl.tagName === 'VIDEO'){
+    try{ srcEl.pause(); srcEl.removeAttribute('src'); srcEl.srcObject = null; srcEl.load(); }catch(e){}
+  }
+  srcEl = null; srcKind = null; frozen = false;
+  updateSrcBtns();
+}
+
+function sourceDims(){
+  if(!srcEl) return [0,0];
+  if(srcKind === 'image') return [srcEl.naturalWidth || srcEl.width, srcEl.naturalHeight || srcEl.height];
+  return [srcEl.videoWidth, srcEl.videoHeight];
+}
+
+// size the analysis + preview canvases to the current source
+function fitCanvas(){
+  let [w,h] = sourceDims();
+  if(!w || !h) return false;
+  const s = Math.min(1, MAXDIM/Math.max(w,h));
+  w = Math.round(w*s); h = Math.round(h*s);
+  imgCanvas.width = w; imgCanvas.height = h;
+  preview.width = w*3; preview.height = h*3;
+  return true;
+}
+
+// copy the current source frame into the analysis canvas
+function grabFrame(){
+  if(!srcEl || !imgCanvas.width) return;
+  try{ imgCtx.drawImage(srcEl, 0, 0, imgCanvas.width, imgCanvas.height); }catch(e){}
+}
+
+// live re-analysis loop for video / webcam (~15 fps)
+function liveLoop(){
+  grabTimer = null;
+  if(srcKind !== 'video' && srcKind !== 'webcam') return;
+  if(!frozen){ grabFrame(); process(); }
+  grabTimer = setTimeout(liveLoop, 66);
+}
+
+function clearPreview(){
+  pctx.clearRect(0,0,preview.width,preview.height);
+  $('dims').textContent = '—';
+  $('noteCount').textContent = '0 ' + t('notesWord');
+  $('statLine').textContent = '';
+}
+
+function loadFile(file){
+  if(!file) return;
+  const isVideo = (file.type && file.type.startsWith('video')) || /\.(mp4|webm|mov|m4v|ogv)$/i.test(file.name);
+  showSrcError('');
+  stopSource();
+  if(playing) stopPlayback();
+  const url = URL.createObjectURL(file);
+
+  if(isVideo){
+    const v = document.createElement('video');
+    v.src = url; v.loop = true; v.muted = true; v.playsInline = true;
+    v.addEventListener('error', ()=> showSrcError(t('videoErr')), {once:true});
+    v.addEventListener('loadeddata', ()=>{
+      srcEl = v; srcKind = 'video'; img = v; frozen = false;
+      if(!fitCanvas()){ showSrcError(t('videoErr')); return; }
+      $('exportBtn').disabled = false;
+      updateSrcBtns();
+      updatePlayBtnState();
+      rebuildLayers();
+      v.play().catch(()=>{});
+      liveLoop();
+    }, {once:true});
+    v.load();
+  } else {
+    const image = new Image();
+    image.onload = ()=>{
+      srcEl = image; srcKind = 'image'; img = image; frozen = false;
+      if(!fitCanvas()) return;
+      $('exportBtn').disabled = false;
+      updateSrcBtns();
+      updatePlayBtnState();
+      rebuildLayers();
+      grabFrame();
+      process();
+    };
+    image.onerror = ()=> showSrcError(t('videoErr'));
+    image.src = url;
+  }
+}
+
+async function toggleWebcam(){
+  if(srcKind === 'webcam'){                 // turn it off → back to empty state
+    stopSource();
+    img = null;
+    if(playing) stopPlayback();
+    $('exportBtn').disabled = true;
+    updatePlayBtnState();
+    clearPreview();
+    return;
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showSrcError(t('webcamUnavail'));
+    return;
+  }
+  showSrcError('');
+  stopSource();
+  if(playing) stopPlayback();
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:false });
+  }catch(e){
+    showSrcError(t('webcamDenied'));
+    return;
+  }
+  camStream = stream;
+  const v = document.createElement('video');
+  v.srcObject = stream; v.muted = true; v.playsInline = true;
+  try{ await v.play(); }catch(e){}
+  const ready = ()=>{
+    if(!camStream){ return; }               // toggled off again while waiting
+    if(!v.videoWidth){ requestAnimationFrame(ready); return; }
+    srcEl = v; srcKind = 'webcam'; img = v; frozen = false;
+    fitCanvas();
+    $('exportBtn').disabled = false;
+    updateSrcBtns();
+    updatePlayBtnState();
+    rebuildLayers();
+    liveLoop();
+  };
+  ready();
+}
+$('webcamBtn').addEventListener('click', toggleWebcam);
+
+$('freezeBtn').addEventListener('click', ()=>{
+  frozen = !frozen;
+  if(srcKind === 'video' && srcEl){ frozen ? srcEl.pause() : srcEl.play().catch(()=>{}); }
+  updateSrcBtns();
+  if(!frozen && !grabTimer) liveLoop();
+});
+
+function updateSrcBtns(){
+  const wb = $('webcamBtn');
+  wb.textContent = srcKind === 'webcam' ? t('btnWebcamStop') : t('btnWebcam');
+  wb.classList.toggle('active', srcKind === 'webcam');
+  const fb = $('freezeBtn');
+  fb.hidden = !(srcKind === 'video' || srcKind === 'webcam');
+  fb.textContent = frozen ? t('btnResume') : t('btnFreeze');
+  fb.classList.toggle('active', frozen);
+}
+
+/* ---- layer UI ---- */
+function hslToHex(h,s,l){
+  s/=100; l/=100;
+  const k = n => (n + h/30) % 12;
+  const a = s * Math.min(l, 1-l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n),1)));
+  const toHex = x => Math.round(255*x).toString(16).padStart(2,'0');
+  return '#'+toHex(f(0))+toHex(f(8))+toHex(f(4));
+}
+
+function rebuildLayers(){
+  const n = parseInt($('layers').value);
+  const mode = $('sepMode').value;
+  const base = t('layerWord');
+  const oldLayers = layers;
+  layers = [];
+  for(let i=0;i<n;i++){
+    let color;
+    if(mode==='hue') color = hslToHex(Math.round(360*i/n), 70, 55);
+    else color = hslToHex(0, 0, Math.round(20 + 60*i/(Math.max(n-1,1))));
+    const keep = oldLayers[i];
+    const isAuto = keep ? keep.auto !== false : true;   // auto name unless the user renamed it
+    layers.push({
+      color,
+      name: isAuto ? (base + ' ' + (i+1)) : keep.name,
+      auto: isAuto,
+      program: keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog
+    });
+  }
+  renderLayerList();
+  // already playing: re-send the channel patches for the current layers
+  if(playing && midiOut){
+    layers.forEach((L,i)=> midiOut.send([0xC0|(i%16), L.program & 0x7F]));
+  }
+}
+
+function renderLayerList(){
+  const list = $('layerList');
+  list.innerHTML = '';
+  layers.forEach((L,i)=>{
+    const row = document.createElement('div');
+    row.className='layer';
+    const sw = document.createElement('div');
+    sw.className='swatch'; sw.style.background = L.color;
+    const nameInput = document.createElement('input');
+    nameInput.type='text'; nameInput.value = L.name;
+    nameInput.addEventListener('input', e=>{ layers[i].name = e.target.value; layers[i].auto = false; });
+    const sel = document.createElement('select');
+    GM_INSTR.forEach(inst=>{
+      const opt = document.createElement('option');
+      opt.value = inst.prog; opt.textContent = inst[LANG] || inst.en;
+      if(inst.prog === L.program) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', e=>{
+      layers[i].program = parseInt(e.target.value);
+      if(playing && midiOut) midiOut.send([0xC0|(i%16), layers[i].program & 0x7F]);
+    });
+    row.appendChild(sw); row.appendChild(nameInput); row.appendChild(sel);
+    list.appendChild(row);
+  });
+}
+
+/* ---- processing ---- */
+function scaleNotesForRange(){
+  const root = parseInt($('root').value);
+  const scaleName = $('scale').value;
+  const degrees = SCALES[scaleName];
+  const octLow = parseInt($('octLow').value);
+  const octHigh = Math.max(octLow, parseInt($('octHigh').value));
+  const notes = [];
+  for(let oct=octLow; oct<=octHigh; oct++){
+    degrees.forEach(d=>{
+      const midi = 12*(oct+1) + root + d; // C4 = 60 convention -> (oct+1)*12
+      if(midi>=0 && midi<=127) notes.push(midi);
+    });
+  }
+  return notes; // ascending, low->high
+}
+
+// playback direction: which image axis carries time, and in which direction
+function readDir(){
+  const d = $('playDir').value;
+  return { timeOnX: d === 'lr' || d === 'rl', timeRev: d === 'rl' || d === 'bt' };
+}
+
+function process(){
+  if(!img) return;
+  const w = imgCanvas.width, h = imgCanvas.height;
+  if(!w || !h) return;
+  const data = imgCtx.getImageData(0,0,w,h).data;
+
+  const contrastPct = parseInt($('contrast').value)/100;
+  const threshPct = parseInt($('thresh').value)/100;
+  const nLayers = layers.length;
+  const sepMode = $('sepMode').value;
+  const steps = parseInt($('steps').value);
+  const pitches = scaleNotesForRange(); // low->high, index 0 = lowest
+
+  // per-pixel: contrasted luminance and hue
+  const lum = new Float32Array(w*h);
+  const hue = new Float32Array(w*h);
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const idx = (y*w+x)*4;
+      let r=data[idx], g=data[idx+1], b=data[idx+2];
+      // contrast adjust (around 128) per channel
+      r = clamp((r-128)*contrastPct+128,0,255);
+      g = clamp((g-128)*contrastPct+128,0,255);
+      b = clamp((b-128)*contrastPct+128,0,255);
+      const L = 0.299*r+0.587*g+0.114*b;
+      lum[y*w+x] = L;
+      hue[y*w+x] = rgbToHue(r,g,b);
+    }
+  }
+  // edge magnitude (simple gradient)
+  const edge = new Float32Array(w*h);
+  let maxEdge = 1;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const gx = x<w-1 ? Math.abs(lum[y*w+x+1]-lum[y*w+x]) : 0;
+      const gy = y<h-1 ? Math.abs(lum[(y+1)*w+x]-lum[y*w+x]) : 0;
+      const m = gx+gy;
+      edge[y*w+x]=m;
+      if(m>maxEdge) maxEdge=m;
+    }
+  }
+
+  // pick a layer for a pixel (by hue bin or brightness bin)
+  function layerOf(px){
+    if(nLayers===1) return 0;
+    if(sepMode==='hue'){
+      return Math.floor((hue[px]/360)*nLayers) % nLayers;
+    } else {
+      return Math.min(nLayers-1, Math.floor((lum[px]/256)*nLayers));
+    }
+  }
+
+  const cutoff = (1-threshPct) * maxEdge;
+  const rows = pitches.length;              // number of pitch lanes
+  const {timeOnX, timeRev} = readDir();
+  lastNotes = layers.map(()=>[]);
+
+  // ti = time index (0 = played first) ; pi = pitch index (0 = lowest)
+  for(let ti=0; ti<steps; ti++){
+    const tSlot = timeRev ? (steps-1-ti) : ti;   // matching cell along the image time axis
+    for(let pi=0; pi<rows; pi++){
+      let x0,x1,y0,y1;
+      if(timeOnX){                                // time = horizontal, pitch = vertical (top = high)
+        x0 = Math.floor(tSlot*w/steps);  x1 = Math.max(x0+1, Math.floor((tSlot+1)*w/steps));
+        const rr = rows-1-pi;
+        y0 = Math.floor(rr*h/rows);      y1 = Math.max(y0+1, Math.floor((rr+1)*h/rows));
+      } else {                                    // time = vertical, pitch = horizontal (right = high)
+        y0 = Math.floor(tSlot*h/steps);  y1 = Math.max(y0+1, Math.floor((tSlot+1)*h/steps));
+        x0 = Math.floor(pi*w/rows);      x1 = Math.max(x0+1, Math.floor((pi+1)*w/rows));
+      }
+      // strongest gradient per layer inside the cell
+      const bestEdge = new Float32Array(nLayers);
+      for(let y=y0;y<y1;y++){
+        for(let x=x0;x<x1;x++){
+          const px = y*w+x;
+          const L = layerOf(px);
+          if(edge[px]>bestEdge[L]) bestEdge[L]=edge[px];
+        }
+      }
+      for(let L=0;L<nLayers;L++){
+        if(bestEdge[L] >= cutoff && bestEdge[L] > 2){
+          const vel = Math.round(clamp(40 + 87*(bestEdge[L]/maxEdge), 40, 127));
+          lastNotes[L].push({step: ti, midi: pitches[pi], vel});
+        }
+      }
+    }
+  }
+
+  drawPreview();
+  const total = lastNotes.reduce((a,arr)=>a+arr.length,0);
+  const srcLabel = srcKind === 'webcam' ? ' · ' + t('srcWebcamLabel')
+                 : srcKind === 'video'  ? ' · ' + t('srcVideoLabel')
+                 : ' ' + t('unitPx');
+  $('dims').textContent = w + '×' + h + srcLabel;
+  $('noteCount').textContent = total + ' ' + t('notesWord');
+  $('statLine').textContent = layers.map((L,i)=>L.name+': '+lastNotes[i].length).join('   ·   ');
+}
+
+function rgbToHue(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0; const d=max-min;
+  if(d===0) h=0;
+  else if(max===r) h=60*(((g-b)/d)%6);
+  else if(max===g) h=60*((b-r)/d+2);
+  else h=60*((r-g)/d+4);
+  if(h<0) h+=360;
+  return h;
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+function drawPreview(){
+  pctx.clearRect(0,0,preview.width,preview.height);
+  pctx.save();
+  pctx.filter = 'contrast('+($('contrast').value)+'%)';
+  pctx.drawImage(imgCanvas,0,0,preview.width,preview.height);
+  pctx.filter='none';
+  pctx.globalAlpha=0.55;
+  pctx.fillStyle='#000';
+  pctx.fillRect(0,0,preview.width,preview.height);
+  pctx.globalAlpha=1;
+
+  const steps = parseInt($('steps').value);
+  const pitches = scaleNotesForRange();
+  const rows = pitches.length;
+  const {timeOnX, timeRev} = readDir();
+  lastNotes.forEach((arr,Li)=>{
+    pctx.fillStyle = layers[Li].color;
+    arr.forEach(n=>{
+      const pIdx = pitches.indexOf(n.midi);
+      if(pIdx < 0) return;
+      const tSlot = timeRev ? (steps-1-n.step) : n.step;
+      let cx, cy;
+      if(timeOnX){
+        cx = (tSlot+0.5)/steps * preview.width;
+        cy = ((rows-1-pIdx)+0.5)/rows * preview.height;
+      } else {
+        cy = (tSlot+0.5)/steps * preview.height;
+        cx = (pIdx+0.5)/rows * preview.width;
+      }
+      const rad = 2 + (n.vel/127)*4;
+      pctx.beginPath();
+      pctx.arc(cx,cy,rad,0,Math.PI*2);
+      pctx.fill();
+    });
+  });
+  pctx.restore();
+}
+
+/* ---- MIDI file export (SMF type 1, hand-written) ---- */
+function writeVarLen(value){
+  let buffer = value & 0x7F;
+  const bytes=[];
+  while((value >>=7) > 0){
+    buffer <<= 8;
+    buffer |= ((value & 0x7F) | 0x80);
+  }
+  while(true){
+    bytes.push(buffer & 0xFF);
+    if(buffer & 0x80) buffer >>=8; else break;
+  }
+  return bytes;
+}
+function u32(n){return [(n>>24)&255,(n>>16)&255,(n>>8)&255,n&255];}
+function u16(n){return [(n>>8)&255,n&255];}
+function str(s){return Array.from(s).map(c=>c.charCodeAt(0));}
+
+function buildMidi(){
+  const PPQ = 480;
+  const bars = parseInt($('bars').value);
+  const steps = parseInt($('steps').value);
+  const tempo = parseInt($('tempo').value);
+  const gatePct = parseInt($('gate').value)/100;
+  const totalTicks = bars*4*PPQ; // 4/4
+  const stepTicks = totalTicks/steps;
+  const noteDur = Math.max(10, Math.round(stepTicks*gatePct));
+
+  const tracks = [];
+
+  // tempo / meta track
+  {
+    let ev = [];
+    ev = ev.concat(writeVarLen(0), [0xFF,0x51,0x03, ...u32(Math.round(60000000/tempo)).slice(1)]);
+    ev = ev.concat(writeVarLen(0), [0xFF,0x2F,0x00]);
+    tracks.push(ev);
+  }
+
+  layers.forEach((L,Li)=>{
+    let events = []; // {tick, bytes}
+    const chan = Li % 16;
+    // program change at tick 0
+    events.push({tick:0, bytes:[0xC0|chan, L.program & 0x7F]});
+    lastNotes[Li].forEach(n=>{
+      const onTick = n.step*stepTicks;
+      const offTick = onTick + noteDur;
+      events.push({tick:onTick, bytes:[0x90|chan, n.midi & 0x7F, n.vel & 0x7F]});
+      events.push({tick:offTick, bytes:[0x80|chan, n.midi & 0x7F, 0]});
+    });
+    events.sort((a,b)=>a.tick-b.tick);
+
+    let trackBytes = [];
+    // track name
+    const nameBytes = str(L.name.slice(0,30));
+    trackBytes = trackBytes.concat(writeVarLen(0), [0xFF,0x03, nameBytes.length, ...nameBytes]);
+    let last=0;
+    events.forEach(e=>{
+      const delta = e.tick-last; last = e.tick;
+      trackBytes = trackBytes.concat(writeVarLen(Math.max(0,Math.round(delta))), e.bytes);
+    });
+    trackBytes = trackBytes.concat(writeVarLen(0), [0xFF,0x2F,0x00]);
+    tracks.push(trackBytes);
+  });
+
+  let file = [];
+  file = file.concat(str('MThd'), u32(6), u16(1), u16(tracks.length), u16(PPQ));
+  tracks.forEach(tr=>{
+    file = file.concat(str('MTrk'), u32(tr.length), tr);
+  });
+  return new Uint8Array(file);
+}
+
+$('exportBtn').addEventListener('click', ()=>{
+  const bytes = buildMidi();
+  const blob = new Blob([bytes], {type:'audio/midi'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='image-to-midi.mid';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+/* ============================================================
+   Web MIDI — real-time playback into a virtual port (IAC Driver)
+   ============================================================ */
+const playBtn = $('playBtn'), midiPortSel = $('midiPort');
+const midiDot = $('midiDot'), midiState = $('midiState');
+
+let midiAccess = null;   // MIDIAccess
+let midiOut = null;      // selected MIDIOutput
+let midiReady = false;   // requestMIDIAccess resolved
+let midiInitPromise = null;
+let playing = false;
+let schedTimer = null, rafId = null;
+let playStep = 0;            // next grid step to schedule
+let nextStepTime = 0;        // when that step should sound (performance.now clock)
+let hangingNotes = new Set(); // chan*128+note keys, to force-off on stop
+let usedChannels = new Set();
+
+// just-in-time scheduling: only the next ~150 ms is programmed, never the whole
+// loop, so any setting change is heard on the very next step.
+const LOOKAHEAD_MS = 150;
+const SCHED_INTERVAL_MS = 25;
+
+const midiSupported = () => typeof navigator !== 'undefined' && typeof navigator.requestMIDIAccess === 'function';
+
+// last status shown, kept so it can be re-rendered when the language changes
+let lastMidi = { key:'midiUninit', on:false, arg:'' };
+function setMidiState(key, on, arg){
+  lastMidi = { key, on:!!on, arg: arg || '' };
+  renderMidiState();
+}
+function renderMidiState(){
+  midiState.textContent = (t(lastMidi.key) || lastMidi.key).replace('{x}', lastMidi.arg);
+  midiDot.classList.toggle('on', lastMidi.on);
+}
+
+function updatePlayBtnState(){
+  if(!midiSupported()){
+    playBtn.disabled = true;
+    setMidiState('midiUnavail', false);
+    return;
+  }
+  playBtn.disabled = !img;
+}
+
+function ensureMidi(){
+  if(midiReady) return Promise.resolve(true);
+  if(midiInitPromise) return midiInitPromise;
+  if(!midiSupported()){
+    setMidiState('midiUnavail', false);
+    return Promise.resolve(false);
+  }
+  setMidiState('midiRequest', false);
+  midiInitPromise = navigator.requestMIDIAccess({sysex:false}).then(acc=>{
+    midiAccess = acc;
+    midiAccess.addEventListener('statechange', refreshPorts);
+    midiReady = true;
+    refreshPorts();
+    return true;
+  }).catch(()=>{
+    setMidiState('midiDenied', false);
+    midiInitPromise = null;
+    return false;
+  });
+  return midiInitPromise;
+}
+
+function refreshPorts(){
+  if(!midiAccess) return;
+  const outs = Array.from(midiAccess.outputs.values());
+  const prev = midiOut ? midiOut.id : midiPortSel.value;
+  midiPortSel.innerHTML = '';
+  if(!outs.length){
+    midiPortSel.appendChild(new Option(t('midiNoPortOpt'), ''));
+    midiOut = null;
+    setMidiState('midiNoPort', false);
+    return;
+  }
+  outs.forEach(p => midiPortSel.appendChild(new Option(p.name, p.id)));
+  const pick = outs.find(p=>p.id===prev)
+            || outs.find(p=>/\bIAC\b|bus/i.test(p.name))
+            || outs[0];
+  midiPortSel.value = pick.id;
+  midiOut = pick;
+  setMidiState(playing ? 'midiPlaying' : 'midiReady', playing, pick.name);
+}
+
+['mousedown','focus'].forEach(ev => midiPortSel.addEventListener(ev, ()=>{ if(!midiReady) ensureMidi(); }));
+midiPortSel.addEventListener('change', ()=>{
+  if(!midiAccess) return;
+  midiOut = Array.from(midiAccess.outputs.values()).find(p=>p.id===midiPortSel.value) || null;
+  if(midiOut) setMidiState(playing ? 'midiPlaying' : 'midiReady', playing, midiOut.name);
+});
+
+// duration of one grid step, read live from the tempo / bars / steps sliders
+function stepDurationMs(){
+  const bars = parseInt($('bars').value);
+  const steps = parseInt($('steps').value);
+  const tempo = parseInt($('tempo').value);
+  return (bars * 4 * (60000 / tempo)) / steps; // 4/4
+}
+
+// schedule every step falling within [now, now + LOOKAHEAD].
+// lastNotes, tempo, gate, scale... are re-read on each step → live editing.
+function scheduler(){
+  if(!playing || !midiOut) return;
+  const now = performance.now();
+  if(nextStepTime < now - 250) nextStepTime = now; // big lag (jank / tab): resync
+  const horizon = now + LOOKAHEAD_MS;
+  let guard = 0;
+  while(nextStepTime < horizon && guard++ < 512){
+    const steps = parseInt($('steps').value);
+    const stepDur = stepDurationMs();
+    // -3 ms so a re-triggered same note has room to breathe
+    const gateMs = Math.max(15, Math.min(stepDur - 3, stepDur * (parseInt($('gate').value) / 100)));
+    if(playStep >= steps) playStep = 0;
+    const s = playStep, at = nextStepTime;
+    lastNotes.forEach((arr, Li)=>{
+      const chan = Li % 16;
+      for(const n of arr){
+        if(n.step !== s) continue;
+        midiOut.send([0x90|chan, n.midi & 0x7F, n.vel & 0x7F], at);
+        midiOut.send([0x80|chan, n.midi & 0x7F, 0], at + gateMs);
+        hangingNotes.add(chan*128 + (n.midi & 0x7F));
+        usedChannels.add(chan);
+      }
+    });
+    nextStepTime = at + stepDur;
+    playStep = s + 1;
+  }
+}
+
+function drawPlayhead(){
+  if(!playing) return;
+  redrawPreview();
+  const steps = parseInt($('steps').value);
+  const stepDur = stepDurationMs();
+  const {timeOnX, timeRev} = readDir();
+  // playStep is the next step to sound, due at nextStepTime
+  let pos = playStep - (nextStepTime - performance.now()) / stepDur;
+  pos = ((pos % steps) + steps) % steps;
+  const slot = timeRev ? (steps - pos) : pos;   // position along the time axis, image-oriented
+  const f = slot / steps;
+  pctx.save();
+  pctx.strokeStyle = 'rgba(79,209,197,.9)';
+  pctx.lineWidth = 2;
+  pctx.beginPath();
+  if(timeOnX){ const x = f*preview.width;  pctx.moveTo(x, 0); pctx.lineTo(x, preview.height); }
+  else       { const y = f*preview.height; pctx.moveTo(0, y); pctx.lineTo(preview.width, y); }
+  pctx.stroke();
+  pctx.restore();
+  rafId = requestAnimationFrame(drawPlayhead);
+}
+
+function redrawPreview(){
+  if(img) drawPreview();
+}
+
+function startPlayback(){
+  playing = true;
+  playBtn.textContent = t('btnStop');
+  playBtn.classList.add('playing');
+  hangingNotes = new Set();
+  usedChannels = new Set();
+  // program change (once) on every channel in use
+  layers.forEach((L, Li)=>{
+    const chan = Li % 16;
+    usedChannels.add(chan);
+    midiOut.send([0xC0|chan, L.program & 0x7F]);
+  });
+  playStep = 0;
+  nextStepTime = performance.now() + 90; // small delay for a clean start
+  scheduler();
+  schedTimer = setInterval(scheduler, SCHED_INTERVAL_MS);
+  rafId = requestAnimationFrame(drawPlayhead);
+  setMidiState('midiPlaying', true, midiOut.name || t('portFallback'));
+}
+
+function stopPlayback(){
+  playing = false;
+  playBtn.textContent = t('btnPlay');
+  playBtn.classList.remove('playing');
+  if(schedTimer){ clearInterval(schedTimer); schedTimer = null; }
+  if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
+  if(midiOut){
+    try{ if(typeof midiOut.clear === 'function') midiOut.clear(); }catch(e){}
+    hangingNotes.forEach(key=>{
+      midiOut.send([0x80 | (key>>7 & 0x0F), key & 0x7F, 0]);
+    });
+    usedChannels.forEach(chan=>{
+      midiOut.send([0xB0|chan, 120, 0]); // All Sound Off
+      midiOut.send([0xB0|chan, 123, 0]); // All Notes Off
+    });
+  }
+  hangingNotes.clear();
+  if(midiOut) setMidiState('midiReady', false, midiOut.name || t('portFallback'));
+  redrawPreview();
+}
+
+playBtn.addEventListener('click', async ()=>{
+  if(playing){ stopPlayback(); return; }
+  if(!img) return;
+  const ok = await ensureMidi();
+  if(!ok) return;
+  if(!midiOut){
+    setMidiState('midiSelectPort', false);
+    return;
+  }
+  if(!lastNotes.length || lastNotes.every(a=>!a.length)){
+    setMidiState('midiNoNotes', false);
+    return;
+  }
+  startPlayback();
+});
+
+// tab hidden: stop MIDI playback (timers throttle) and pause the live grab loop
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    if(playing) stopPlayback();
+    if(grabTimer){ clearTimeout(grabTimer); grabTimer = null; }
+  } else if(!frozen && !grabTimer && (srcKind === 'video' || srcKind === 'webcam')){
+    liveLoop();
+  }
+});
+// page going away: stop playback and release the camera
+window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
+
+/* ---- wire up controls ---- */
+const liveIds = ['contrast','thresh','layers','sepMode','playDir','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
+function syncLabels(){
+  $('vContrast').textContent = $('contrast').value+'%';
+  $('vThresh').textContent = $('thresh').value;
+  $('vLayers').textContent = $('layers').value;
+  $('vOctLow').textContent = $('octLow').value;
+  $('vOctHigh').textContent = $('octHigh').value;
+  $('vSteps').textContent = $('steps').value;
+  $('vBars').textContent = $('bars').value;
+  $('vTempo').textContent = $('tempo').value+' bpm';
+  $('vGate').textContent = $('gate').value+'%';
+}
+const structureIds = ['layers','sepMode'];
+liveIds.forEach(id=>{
+  $(id).addEventListener('input', ()=>{
+    syncLabels();
+    if(structureIds.includes(id)) rebuildLayers();
+    process();
+  });
+});
+syncLabels();
+updatePlayBtnState();
+setLang(initialLang());
+</script>
+</body>
+</html>
