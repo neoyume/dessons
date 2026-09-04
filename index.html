@@ -151,6 +151,20 @@
   button#previewBtn:hover:not(:disabled){border-color:var(--amber);}
   button#previewBtn:disabled{color:var(--text-dim); cursor:not-allowed;}
   button#previewBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
+
+  .transportIcons{margin-top:10px; display:flex; flex-direction:column; gap:6px;}
+  .iconRow{display:flex; align-items:center; gap:8px;}
+  .iconLbl{font-size:11px; color:var(--text-dim); flex:none; width:70px;}
+  .iconGroup{display:flex; gap:3px;}
+  .iconGroup button{
+    width:24px; height:22px; padding:0; flex:none;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:4px; background:var(--panel-2);
+    color:var(--text-dim); cursor:pointer;
+  }
+  .iconGroup button:hover{color:var(--text); border-color:var(--amber);}
+  .iconGroup button.on{background:var(--amber); border-color:var(--amber); color:#1a1200;}
+  .iconGroup button svg{width:15px; height:15px; display:block;}
   .midiRow{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px;}
   .dot{width:8px; height:8px; border-radius:50%; background:var(--line); flex:none;}
   .dot.on{background:var(--cyan); box-shadow:0 0 6px var(--cyan);}
@@ -199,6 +213,12 @@
       <canvas id="preview" width="600" height="600"></canvas>
       <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
       <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
+      <div class="transportIcons">
+        <input type="hidden" id="playDir" value="lr">
+        <input type="hidden" id="curve" value="linear">
+        <div class="iconRow"><span class="iconLbl" data-i18n="lblDirShort">Sens</span><div class="iconGroup" id="dirIcons"></div></div>
+        <div class="iconRow"><span class="iconLbl" data-i18n="lblCurveShort">Courbe</span><div class="iconGroup" id="curveIcons"></div></div>
+      </div>
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
     </div>
 
@@ -231,28 +251,6 @@
 
       <div class="divider"></div>
       <h2 data-i18n="musicTitle">Musique</h2>
-
-      <div class="row2">
-        <div class="ctrl">
-          <label style="margin-bottom:6px;" data-i18n="lblDir">Sens de lecture</label>
-          <select id="playDir">
-            <option value="lr" selected data-i18n="dirLR">→  Gauche à droite</option>
-            <option value="rl" data-i18n="dirRL">←  Droite à gauche</option>
-            <option value="tb" data-i18n="dirTB">↓  Haut vers bas</option>
-            <option value="bt" data-i18n="dirBT">↑  Bas vers haut</option>
-          </select>
-        </div>
-        <div class="ctrl">
-          <label style="margin-bottom:6px;" data-i18n="lblCurve">Courbe de lecture</label>
-          <select id="curve">
-            <option value="linear" selected data-i18n="curveLinear">Linéaire (régulier)</option>
-            <option value="accel" data-i18n="curveAccel">Accéléré</option>
-            <option value="decel" data-i18n="curveDecel">Ralenti</option>
-            <option value="pulse" data-i18n="curvePulse">Pulsé (dense aux bords)</option>
-            <option value="swing" data-i18n="curveSwing">Swing</option>
-          </select>
-        </div>
-      </div>
 
       <div class="row2">
         <div class="ctrl">
@@ -362,12 +360,12 @@ const I18N = {
     optHue: "Par couleur (teinte)",
     optLum: "Par luminosité",
     musicTitle: "Musique",
-    lblDir: "Sens de lecture",
-    dirLR: "→  Gauche à droite",
-    dirRL: "←  Droite à gauche",
-    dirTB: "↓  Haut vers bas",
-    dirBT: "↑  Bas vers haut",
-    lblCurve: "Courbe de lecture",
+    lblDirShort: "Sens",
+    dirLR: "Gauche → droite",
+    dirRL: "Droite → gauche",
+    dirTB: "Haut → bas",
+    dirBT: "Bas → haut",
+    lblCurveShort: "Courbe",
     curveLinear: "Linéaire (régulier)",
     curveAccel: "Accéléré",
     curveDecel: "Ralenti",
@@ -440,12 +438,12 @@ const I18N = {
     optHue: "By color (hue)",
     optLum: "By brightness",
     musicTitle: "Music",
-    lblDir: "Playback direction",
-    dirLR: "→  Left to right",
-    dirRL: "←  Right to left",
-    dirTB: "↓  Top to bottom",
-    dirBT: "↑  Bottom to top",
-    lblCurve: "Playback curve",
+    lblDirShort: "Direction",
+    dirLR: "Left → right",
+    dirRL: "Right → left",
+    dirTB: "Top → bottom",
+    dirBT: "Bottom → top",
+    lblCurveShort: "Curve",
     curveLinear: "Linear (steady)",
     curveAccel: "Accelerating",
     curveDecel: "Decelerating",
@@ -533,6 +531,7 @@ function setLang(lang){
   if(layers.length) rebuildLayers();          // refresh auto layer names + instrument labels
   updateTransportButtons();
   updateSrcBtns();
+  renderTransportIcons();                      // refresh icon tooltips
   renderMidiState();
   if(img) process();
 }
@@ -888,11 +887,11 @@ function loopDurationMs(){
 // Playback curve: time-warp the playhead across the loop.
 // Returns, for grid step k of n, the fraction of the loop (0..1) at which it sounds.
 // Linear -> k/n. The others bend that so notes rush / drag / swing.
-function stepTimeFrac(k, n){
+function curveFrac(mode, k, n){
   if(k <= 0) return 0;
   if(k >= n) return 1;
   const p = k / n;
-  switch($('curve').value){
+  switch(mode){
     case 'accel': return 1 - (1 - p) * (1 - p);                 // slow start, fast end
     case 'decel': return p * p;                                 // fast start, slow end
     case 'pulse': return p < 0.5                                // dense at both edges of the loop
@@ -901,6 +900,52 @@ function stepTimeFrac(k, n){
     case 'swing': return Math.min(1, p + ((k % 2) ? 0.28 / n : 0)); // delay every other step
     default:      return p;                                     // linear
   }
+}
+function stepTimeFrac(k, n){ return curveFrac($('curve').value, k, n); }
+
+/* ---- icon controls (direction + curve) next to the preview button ---- */
+const DIRS = [
+  ['lr', 'M4 9H14M10 5l4 4-4 4'],
+  ['rl', 'M14 9H4M8 5l-4 4 4 4'],
+  ['tb', 'M9 4v10M5 10l4 4 4-4'],
+  ['bt', 'M9 14V4M5 8l4-4 4 4']
+];
+const CURVES = ['linear','accel','decel','pulse','swing'];
+
+function dirIconSVG(d){
+  const path = (DIRS.find(x => x[0] === d) || DIRS[0])[1];
+  return '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" '
+       + 'stroke-linecap="round" stroke-linejoin="round"><path d="' + path + '"/></svg>';
+}
+// the curve icon IS the loop: 6 ticks placed at their warped positions (like the preview edge)
+function curveIconSVG(mode){
+  let s = '';
+  for(let k = 0; k <= 6; k++){
+    const x = (2 + curveFrac(mode, k, 6) * 14).toFixed(1);
+    s += '<line x1="' + x + '" y1="5" x2="' + x + '" y2="13"/>';
+  }
+  return '<svg viewBox="0 0 18 18" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">' + s + '</svg>';
+}
+
+function renderTransportIcons(){
+  const dg = $('dirIcons'); dg.innerHTML = '';
+  DIRS.forEach(([d])=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.innerHTML = dirIconSVG(d);
+    b.title = t('dir' + d.toUpperCase());
+    b.classList.toggle('on', $('playDir').value === d);
+    b.addEventListener('click', ()=>{ $('playDir').value = d; renderTransportIcons(); process(); });
+    dg.appendChild(b);
+  });
+  const cg = $('curveIcons'); cg.innerHTML = '';
+  CURVES.forEach(c=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.innerHTML = curveIconSVG(c);
+    b.title = t('curve' + c[0].toUpperCase() + c.slice(1));
+    b.classList.toggle('on', $('curve').value === c);
+    b.addEventListener('click', ()=>{ $('curve').value = c; renderTransportIcons(); redrawPreview(); });
+    cg.appendChild(b);
+  });
 }
 
 function process(){
@@ -1546,7 +1591,7 @@ document.addEventListener('visibilitychange', ()=>{
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
 
 /* ---- wire up controls ---- */
-const liveIds = ['contrast','thresh','layers','sepMode','playDir','curve','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
+const liveIds = ['contrast','thresh','layers','sepMode','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
 function syncLabels(){
   $('vContrast').textContent = $('contrast').value+'%';
   $('vThresh').textContent = $('thresh').value;
