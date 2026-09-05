@@ -125,6 +125,8 @@
     border-radius:7px; pointer-events:none; image-rendering:pixelated; opacity:.55;
   }
   #sensMask[hidden]{display:none;}
+  #scanOverlay{position:absolute; inset:0; width:100%; height:100%; border-radius:7px; pointer-events:none;}
+  #scanOverlay[hidden]{display:none;}
   canvas#preview{
     width:100%; display:block; border-radius:7px;
     background:#0a0a0c; border:1px solid var(--line);
@@ -479,6 +481,7 @@
       <div class="previewWrap" id="previewWrap">
         <canvas id="preview" width="600" height="600" hidden></canvas>
         <canvas id="sensMask" hidden></canvas>
+        <canvas id="scanOverlay" hidden></canvas>
         <div class="previewPlaceholder" id="previewPlaceholder">
           <svg viewBox="0 0 48 36" width="44" height="33" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="1" y="1" width="46" height="34" rx="4"></rect><circle cx="14" cy="12" r="4"></circle><path d="M1 29l12-11 9 8 7-6 18 15"></path></svg>
           <p data-i18n="previewPlaceholder">Ton image ou ta vidéo apparaîtra ici</p>
@@ -2124,6 +2127,46 @@ function scheduler(){
   }
   stepWin = stepWin.filter(w => w.at + w.span > now - 150);
 }
+
+// Hover preview: sweeps a line across the actual loaded thumbnail in the
+// selected Direction, timed by the selected Curve — a demo of what the real
+// playhead will do, without needing playback running. Reuses dir.inv() and
+// curveFrac() (the exact functions drawPlayhead()/buildMidi() use) rather
+// than a parallel implementation, so the preview is never inconsistent with
+// the real thing. Only runs on hover (never a permanent background loop),
+// and steps aside the moment real playback starts.
+let scanRafId = null, scanStart = 0;
+const SCAN_DURATION_MS = 2200;
+function scanFrame(){
+  if(!img || playing){ stopScanAnim(); return; }
+  const canvas = $('scanOverlay');
+  canvas.width = preview.width; canvas.height = preview.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const p = ((performance.now()-scanStart) % SCAN_DURATION_MS) / SCAN_DURATION_MS;
+  const tau = curveFrac($('curve').value, p*1000, 1000);
+  const dir = readDir();
+  const [x0n,y0n] = dir.inv(tau,0), [x1n,y1n] = dir.inv(tau,1);
+  ctx.strokeStyle = 'rgba(0,255,255,.85)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x0n*canvas.width, y0n*canvas.height);
+  ctx.lineTo(x1n*canvas.width, y1n*canvas.height);
+  ctx.stroke();
+  scanRafId = requestAnimationFrame(scanFrame);
+}
+function startScanAnim(){
+  if(!img || playing || scanRafId) return;
+  $('scanOverlay').hidden = false;
+  scanStart = performance.now();
+  scanFrame();
+}
+function stopScanAnim(){
+  if(scanRafId){ cancelAnimationFrame(scanRafId); scanRafId = null; }
+  $('scanOverlay').hidden = true;
+}
+document.querySelector('.transportIcons').addEventListener('mouseenter', startScanAnim);
+document.querySelector('.transportIcons').addEventListener('mouseleave', stopScanAnim);
 
 // where the loop currently is, in fractional steps (e.g. 3.4 = 40% through
 // step 3) — shared by the image playhead and the piano-roll playhead so both
