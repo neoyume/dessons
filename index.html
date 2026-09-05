@@ -621,7 +621,7 @@
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
       <div class="badge warn" data-i18n="safariWarnBadge">⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.</div>
       <div class="ctrl checkboxCtrl">
-        <label class="checkboxLbl"><input type="checkbox" id="sustainToggle"> <span data-i18n="lblSustain">Sustain (pédale MIDI)</span></label>
+        <label class="checkboxLbl"><input type="checkbox" id="sustainToggle"> <span data-i18n="lblSustain">Sustain (aperçu & MIDI)</span></label>
       </div>
       <!-- no manual picker: ensureMidi()/refreshPorts() auto-select a port (IAC/bus
            preferred) the moment "Play in DAW" is clicked. Kept in the DOM (hidden)
@@ -731,7 +731,7 @@ const I18N = {
     presetImportOverwriteConfirm: "{x} preset(s) portent déjà ce nom et seront remplacés. Continuer ?",
     exportDisabledHint: "Importe une image pour activer l'export",
     safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
-    lblSustain: "Sustain (pédale MIDI)",
+    lblSustain: "Sustain (aperçu & MIDI)",
     midiHintToggle: "Comment connecter à Logic",
     srcTitle: "Source",
     btnImage: "Image",
@@ -856,7 +856,7 @@ const I18N = {
     presetImportOverwriteConfirm: "{x} preset(s) already use that name and will be overwritten. Continue?",
     exportDisabledHint: "Import an image to enable export",
     safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
-    lblSustain: "Sustain (MIDI pedal)",
+    lblSustain: "Sustain (preview & MIDI)",
     midiHintToggle: "How to connect to Logic",
     srcTitle: "Source",
     btnImage: "Image",
@@ -2278,6 +2278,15 @@ function scheduler(){
     const spanMs = Math.max(8, loopMs * (stepTimeFrac(s + 1, steps) - stepTimeFrac(s, steps)));
     // -3 ms so a re-triggered same note has room to breathe
     const gateMs = Math.max(15, Math.min(spanMs - 3, spanMs * gatePct));
+    // preview-synth sustain: ignore the Gate%-shortened duration and let the
+    // voice ring its full step slot instead (its own release tail on top of
+    // that still applies) — the closest a generative, always-looping step
+    // sequencer can get to "held past its written length" without voices
+    // piling up unbounded the way a literal "held until pedal-up" would.
+    // Real Web MIDI output is untouched: that sustain is a genuine CC64 sent
+    // to the receiving synth (see startPlayback()), which already handles
+    // holding notes on its own end regardless of Dessons' note-off timing.
+    const synthDurMs = ($('sustainToggle').checked && sink === 'synth') ? (spanMs - 3) : gateMs;
     lastNotes.forEach((arr, Li)=>{
       if(!layerAudible(Li)) return;         // Mute / Solo
       const chan = Li % 16;
@@ -2289,7 +2298,7 @@ function scheduler(){
           hangingNotes.add(chan*128 + (n.midi & 0x7F));
           usedChannels.add(chan);
         } else {
-          spawnVoice(n.midi, n.vel, audioEpoch + at / 1000, gateMs / 1000, Li);
+          spawnVoice(n.midi, n.vel, audioEpoch + at / 1000, synthDurMs / 1000, Li);
         }
       }
     });
