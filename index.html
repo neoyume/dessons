@@ -439,15 +439,6 @@
         </div>
       </div>
       <div class="metaTransportRow">
-        <div class="metaCol">
-          <div class="cropRow" id="cropRow">
-            <button type="button" class="miniBtn" id="cropBtn" disabled data-i18n="btnCrop">✂ Recadrer</button>
-            <button type="button" class="miniBtn" id="cropApplyBtn" hidden data-i18n="btnCropApply">✓ Valider</button>
-            <button type="button" class="miniBtn" id="cropResetBtn" hidden data-i18n="btnCropReset">↺ Réinitialiser</button>
-            <span class="hint" id="cropHint" hidden data-i18n="cropHint">Fais glisser sur l'image pour définir la zone à analyser.</span>
-          </div>
-          <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
-        </div>
         <div class="transportIcons">
           <input type="hidden" id="playDir" value="lr">
           <input type="hidden" id="curve" value="linear">
@@ -463,6 +454,19 @@
             </svg>
           </div>
         </div>
+        <div class="metaCol">
+          <div class="cropRow" id="cropRow">
+            <button type="button" class="miniBtn" id="cropBtn" disabled data-i18n="btnCrop">✂ Recadrer</button>
+            <button type="button" class="miniBtn" id="cropApplyBtn" hidden data-i18n="btnCropApply">✓ Valider</button>
+            <button type="button" class="miniBtn" id="cropResetBtn" hidden data-i18n="btnCropReset">↺ Réinitialiser</button>
+            <span class="hint" id="cropHint" hidden data-i18n="cropHint">Fais glisser sur l'image pour définir la zone à analyser.</span>
+          </div>
+          <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
+        </div>
+      </div>
+      <div class="ctrl" id="imgOpacityCtrl">
+        <label><span data-i18n="lblImgOpacity">Opacité image</span> <span class="val editable" id="vImgOpacity" data-for="imgOpacity">100%</span></label>
+        <input type="range" id="imgOpacity" min="0" max="100" value="100">
       </div>
       <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
 
@@ -611,6 +615,7 @@ const I18N = {
     btnAuto: "Auto",
     lblBlur: "Lissage",
     lblInvert: "Inverser",
+    lblImgOpacity: "Opacité image",
     lblLayers: "Séparation en calques",
     lblMethod: "Méthode",
     optHue: "Par couleur (teinte)",
@@ -732,6 +737,7 @@ const I18N = {
     btnAuto: "Auto",
     lblBlur: "Smoothing",
     lblInvert: "Invert",
+    lblImgOpacity: "Image opacity",
     lblLayers: "Split into layers",
     lblMethod: "Method",
     optHue: "By color (hue)",
@@ -1793,6 +1799,10 @@ function hexToRgb(hex){
 function drawPreview(){
   pctx.clearRect(0,0,preview.width,preview.height);
   pctx.save();
+  // 100% = today's default look (image dimmed under the black overlay below,
+  // notes already popping over it); dragging toward 0 fades the image out
+  // entirely so only the note dots remain, independent of that fixed overlay.
+  pctx.globalAlpha = parseInt($('imgOpacity').value)/100;
   pctx.drawImage(adjCanvas,0,0,preview.width,preview.height);
   pctx.globalAlpha=0.55;
   pctx.fillStyle='#000';
@@ -2497,7 +2507,11 @@ function syncLabels(){
   $('vBars').textContent = $('bars').value;
   $('vTempo').textContent = $('tempo').value+' bpm';
   $('vGate').textContent = $('gate').value+'%';
+  $('vImgOpacity').textContent = $('imgOpacity').value+'%';
 }
+// purely a preview display setting (doesn't touch note detection), so it
+// only redraws the canvas instead of running the whole analysis pipeline
+$('imgOpacity').addEventListener('input', ()=>{ syncLabels(); redrawPreview(); });
 const structureIds = ['layers','sepMode'];
 liveIds.forEach(id=>{
   $(id).addEventListener('input', ()=>{
@@ -2568,7 +2582,7 @@ function redrawOctaveHighlight(){
 
 /* ---- presets: save/load the full Image Analysis + Music + per-layer setup ---- */
 const PRESET_KEYS = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode',
-  'posterize','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate','playDir','curve'];
+  'posterize','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate','playDir','curve','imgOpacity'];
 
 function getUserPresets(){
   try{ return JSON.parse(localStorage.getItem('dessons.presets') || '{}'); }catch(e){ return {}; }
