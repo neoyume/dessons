@@ -53,13 +53,10 @@
   .flowSteps b{color:var(--accent); font-weight:700;}
   .flowSteps .stepArrow{color:var(--line); font-weight:700;}
 
-  .presetBar{
-    display:flex; align-items:center; gap:8px; margin:0 0 18px;
-    padding:10px 14px; background:var(--panel); border:1px solid var(--line); border-radius:8px;
-  }
-  .presetBar label{font-size:11px; color:var(--text-dim); flex:none;}
-  .presetBar select{flex:1; max-width:320px; padding:6px 8px; font-size:12px;}
-  .presetBar .miniBtn{flex:none;}
+  .presetBar label{font-size:11px; color:var(--text-dim); display:block; margin-bottom:6px;}
+  .presetBar select{width:100%; padding:6px 8px; font-size:12px; margin-bottom:8px;}
+  .presetBarBtns{display:flex; gap:8px;}
+  .presetBarBtns .miniBtn{flex:1;}
 
   /* language switch */
   .langToggle{
@@ -337,13 +334,6 @@
     </div>
   </header>
 
-  <div class="presetBar" id="presetBar">
-    <label for="presetSelect" data-i18n="lblPreset">Preset</label>
-    <select id="presetSelect"></select>
-    <button type="button" class="miniBtn" id="presetSaveBtn" data-i18n="btnPresetSave">💾 Enregistrer</button>
-    <button type="button" class="miniBtn" id="presetDeleteBtn" hidden data-i18n="btnPresetDelete">🗑 Supprimer</button>
-  </div>
-
   <div class="rack">
     <!-- LEFT (25%): Music -->
     <div class="panel panel-music">
@@ -395,6 +385,16 @@
       <div class="ctrl">
         <label><span data-i18n="lblGate">Gate (durée note)</span> <span class="val editable" id="vGate" data-for="gate">80%</span></label>
         <input type="range" id="gate" min="10" max="100" value="80">
+      </div>
+
+      <div class="divider"></div>
+      <div class="presetBar" id="presetBar">
+        <label for="presetSelect" data-i18n="lblPreset">Preset</label>
+        <select id="presetSelect"></select>
+        <div class="presetBarBtns">
+          <button type="button" class="miniBtn" id="presetSaveBtn" data-i18n="btnPresetSave">💾 Enregistrer</button>
+          <button type="button" class="miniBtn" id="presetDeleteBtn" hidden data-i18n="btnPresetDelete">🗑 Supprimer</button>
+        </div>
       </div>
     </div>
 
