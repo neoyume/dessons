@@ -620,6 +620,9 @@
       <div class="divider"></div>
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
       <div class="badge warn" data-i18n="safariWarnBadge">⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.</div>
+      <div class="ctrl checkboxCtrl">
+        <label class="checkboxLbl"><input type="checkbox" id="sustainToggle"> <span data-i18n="lblSustain">Sustain (pédale MIDI)</span></label>
+      </div>
       <!-- no manual picker: ensureMidi()/refreshPorts() auto-select a port (IAC/bus
            preferred) the moment "Play in DAW" is clicked. Kept in the DOM (hidden)
            since refreshPorts() still reads/writes it as the source of truth. -->
@@ -728,6 +731,7 @@ const I18N = {
     presetImportOverwriteConfirm: "{x} preset(s) portent déjà ce nom et seront remplacés. Continuer ?",
     exportDisabledHint: "Importe une image pour activer l'export",
     safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
+    lblSustain: "Sustain (pédale MIDI)",
     midiHintToggle: "Comment connecter à Logic",
     srcTitle: "Source",
     btnImage: "Image",
@@ -852,6 +856,7 @@ const I18N = {
     presetImportOverwriteConfirm: "{x} preset(s) already use that name and will be overwritten. Continue?",
     exportDisabledHint: "Import an image to enable export",
     safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
+    lblSustain: "Sustain (MIDI pedal)",
     midiHintToggle: "How to connect to Logic",
     srcTitle: "Source",
     btnImage: "Image",
@@ -2589,6 +2594,9 @@ function startPlayback(which){
       usedChannels.add(chan);
       midiOut.send([0xC0|chan, L.program & 0x7F]);
     });
+    if($('sustainToggle').checked){
+      usedChannels.forEach(chan => midiOut.send([0xB0|chan, 64, 127])); // sustain pedal down
+    }
     setMidiState('midiPlaying', true, midiOut.name || t('portFallback'));
   }
   playStep = 0;
@@ -2610,6 +2618,7 @@ function stopPlayback(){
       midiOut.send([0x80 | (key>>7 & 0x0F), key & 0x7F, 0]);
     });
     usedChannels.forEach(chan=>{
+      midiOut.send([0xB0|chan, 64, 0]);  // sustain pedal up — always, regardless of the toggle's current state, so it never stays stuck engaged on the receiving synth
       midiOut.send([0xB0|chan, 120, 0]); // All Sound Off
       midiOut.send([0xB0|chan, 123, 0]); // All Notes Off
     });
@@ -2620,6 +2629,16 @@ function stopPlayback(){
   updateTransportButtons();
   redrawPreview();
 }
+
+// live toggle mid-playback — same real MIDI CC the pedal down/up in
+// startPlayback()/stopPlayback() sends, so flipping it while "Play in DAW"
+// is already running behaves like pressing/releasing a physical pedal.
+$('sustainToggle').addEventListener('change', e=>{
+  if(playing && sink === 'midi' && midiOut){
+    const val = e.target.checked ? 127 : 0;
+    usedChannels.forEach(chan => midiOut.send([0xB0|chan, 64, val]));
+  }
+});
 
 playBtn.addEventListener('click', async ()=>{
   if(playing && sink === 'midi'){ stopPlayback(); return; }
