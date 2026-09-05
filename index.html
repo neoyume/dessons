@@ -30,6 +30,15 @@
   }
   header p{color:var(--text-dim); margin:0; font-size:13.5px; max-width:620px; line-height:1.5;}
 
+  .flowSteps{
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+    margin:0 0 18px; padding:10px 14px; background:var(--panel);
+    border:1px solid var(--line); border-radius:8px;
+    font-size:12px; color:var(--text-dim);
+  }
+  .flowSteps b{color:var(--amber); font-weight:700;}
+  .flowSteps .stepArrow{color:var(--line); font-weight:700;}
+
   /* language switch */
   .langToggle{
     position:absolute; top:0; right:0; display:flex;
@@ -55,6 +64,15 @@
     font-size:11px; text-transform:uppercase; letter-spacing:1.4px;
     color:var(--text-dim); margin:0 0 14px; font-weight:600;
   }
+  .sectionHead{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px;}
+  .sectionHead h2{margin-bottom:0;}
+  .resetBtn{
+    flex:none; background:none; border:1px solid var(--line); color:var(--text-dim);
+    font-size:10.5px; padding:4px 9px; border-radius:5px; cursor:pointer;
+    font-family:var(--sans); text-transform:none; letter-spacing:.2px;
+    transition:border-color .15s, color .15s;
+  }
+  .resetBtn:hover{color:var(--text); border-color:var(--amber);}
 
   /* dropzone */
   .drop{
@@ -74,11 +92,20 @@
   .srcBtns button:hover{border-color:var(--amber); color:var(--text);}
   .srcBtns button.active{background:var(--amber); color:#1a1200; border-color:var(--amber); font-weight:700;}
 
+  .previewWrap{margin-top:14px;}
   canvas#preview{
-    width:100%; display:block; border-radius:7px; margin-top:14px;
+    width:100%; display:block; border-radius:7px;
     background:#0a0a0c; border:1px solid var(--line);
     image-rendering:pixelated;
   }
+  canvas#preview[hidden]{display:none;}
+  .previewPlaceholder{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    height:130px; color:var(--text-dim); background:#0a0a0c; border:1px solid var(--line);
+    border-radius:7px; font-size:12px; text-align:center; padding:10px;
+  }
+  .previewPlaceholder svg{opacity:.5;}
+  .previewPlaceholder p{margin:0; max-width:220px; line-height:1.4;}
   .previewMeta{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-top:6px; font-family:var(--mono);}
 
   /* controls */
@@ -88,6 +115,13 @@
     margin-bottom:6px; color:var(--text);
   }
   .ctrl label span.val{color:var(--amber); font-family:var(--mono); font-size:12px;}
+  .ctrl label span.val.editable{cursor:text; border-bottom:1px dotted var(--amber-dim);}
+  .ctrl label span.val.editable:hover{color:#fff;}
+  .valEdit{
+    width:46px; background:var(--panel-2); border:1px solid var(--amber); color:var(--amber);
+    font-family:var(--mono); font-size:11.5px; padding:1px 4px; border-radius:3px;
+    text-align:right; outline:none;
+  }
   input[type=range]{
     -webkit-appearance:none; width:100%; height:3px; background:var(--line);
     border-radius:2px; outline:none;
@@ -102,6 +136,21 @@
     padding:7px 8px; border-radius:6px; font-size:12.5px; font-family:var(--sans);
   }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .sliderRow{display:flex; align-items:center; gap:8px;}
+  .sliderRow input[type=range]{flex:1;}
+  .miniBtn{
+    flex:none; background:var(--panel-2); border:1px solid var(--line); color:var(--text-dim);
+    font-size:10.5px; padding:5px 10px; border-radius:5px; cursor:pointer; font-family:var(--sans);
+    transition:border-color .15s, color .15s;
+  }
+  .miniBtn:hover{color:var(--text); border-color:var(--amber);}
+  .miniBtn.active{background:var(--amber); border-color:var(--amber); color:#1a1200;}
+  .cropRow{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px;}
+  .cropRow .hint{margin-top:0; flex-basis:100%;}
+  canvas#preview.cropping{cursor:crosshair;}
+  .checkboxCtrl{display:flex; align-items:flex-end;}
+  .ctrl label.checkboxLbl{justify-content:flex-start; gap:7px; cursor:pointer;}
+  .checkboxLbl input[type=checkbox]{width:15px; height:15px; accent-color:var(--amber); cursor:pointer; margin:0;}
 
   .divider{height:1px; background:var(--line); margin:18px 0;}
 
@@ -134,20 +183,22 @@
 
   button#exportBtn{
     width:100%; margin-top:18px; background:var(--amber); color:#1a1200;
-    border:none; padding:13px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
-    border-radius:7px; cursor:pointer; transition:filter .15s;
+    border:none; padding:15px; font-size:14.5px; font-weight:800; letter-spacing:.4px;
+    border-radius:8px; cursor:pointer; transition:filter .15s, transform .15s, box-shadow .15s;
+    box-shadow:0 4px 16px rgba(245,166,35,.32);
   }
-  button#exportBtn:hover{filter:brightness(1.08);}
-  button#exportBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed;}
+  button#exportBtn:hover:not(:disabled){filter:brightness(1.08); transform:translateY(-1px);}
+  button#exportBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed; box-shadow:none;}
+  .hint.exportDisabledHint{text-align:center; margin-top:8px;}
 
   button#playBtn{
-    width:100%; margin-top:12px; background:var(--cyan); color:#04211e;
-    border:none; padding:13px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
-    border-radius:7px; cursor:pointer; transition:filter .15s, background .15s;
+    width:100%; margin-top:12px; background:transparent; color:var(--cyan);
+    border:1.5px solid var(--cyan); padding:11.5px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
+    border-radius:7px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
-  button#playBtn:hover{filter:brightness(1.08);}
-  button#playBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed;}
-  button#playBtn.playing{background:#e5484d; color:#fff;}
+  button#playBtn:hover:not(:disabled){background:rgba(79,209,197,.12);}
+  button#playBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
+  button#playBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
 
   button#previewBtn{
     width:100%; margin-top:12px; background:var(--panel-2); color:var(--text);
@@ -186,6 +237,21 @@
   .hint.err{color:#e5484d;}
   .stat{font-family:var(--mono); font-size:11px; color:var(--cyan); margin-top:10px;}
 
+  .badge.warn{
+    display:flex; align-items:center; gap:7px; font-size:11.5px; color:#ff8a8e;
+    background:rgba(229,72,77,.12); border:1px solid rgba(229,72,77,.4);
+    border-radius:6px; padding:8px 10px; margin-bottom:14px; line-height:1.4;
+  }
+
+  .accordionBtn{
+    background:none; border:none; color:var(--cyan); font-size:11.5px; font-weight:600;
+    cursor:pointer; padding:0; margin-top:6px; display:flex; align-items:center; gap:5px;
+    font-family:var(--sans);
+  }
+  .accordionBtn::after{content:'▸'; font-size:9px; display:inline-block; transition:transform .15s;}
+  .accordionBtn[aria-expanded="true"]::after{transform:rotate(90deg);}
+  .accordionBtn:hover{color:var(--text);}
+
   footer{
     margin-top:34px; padding-top:18px;
     border-top:1px solid var(--line); text-align:center;
@@ -210,6 +276,8 @@
     <p data-i18n="tagline">Dépose une image ou une vidéo, ajuste le contraste et le seuil pour ne garder que les zones les plus marquées, sépare en calques (couleur ou luminosité) — chaque calque devient une piste MIDI avec son instrument. Exporte en .mid, ou joue la boucle en direct dans Logic via un port MIDI virtuel (IAC Driver).</p>
   </header>
 
+  <p class="flowSteps" data-i18n-html="flowSteps"></p>
+
   <div class="rack">
     <!-- LEFT: source + preview -->
     <div class="panel">
@@ -223,7 +291,19 @@
         <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
       </div>
       <div class="hint err" id="srcHint" hidden></div>
-      <canvas id="preview" width="600" height="600"></canvas>
+      <div class="previewWrap" id="previewWrap">
+        <canvas id="preview" width="600" height="600" hidden></canvas>
+        <div class="previewPlaceholder" id="previewPlaceholder">
+          <svg viewBox="0 0 48 36" width="44" height="33" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="1" y="1" width="46" height="34" rx="4"></rect><circle cx="14" cy="12" r="4"></circle><path d="M1 29l12-11 9 8 7-6 18 15"></path></svg>
+          <p data-i18n="previewPlaceholder">Ton image ou ta vidéo apparaîtra ici</p>
+        </div>
+      </div>
+      <div class="cropRow" id="cropRow">
+        <button type="button" class="miniBtn" id="cropBtn" disabled data-i18n="btnCrop">✂ Recadrer</button>
+        <button type="button" class="miniBtn" id="cropApplyBtn" hidden data-i18n="btnCropApply">✓ Valider</button>
+        <button type="button" class="miniBtn" id="cropResetBtn" hidden data-i18n="btnCropReset">↺ Réinitialiser</button>
+        <span class="hint" id="cropHint" hidden data-i18n="cropHint">Fais glisser sur l'image pour définir la zone à analyser.</span>
+      </div>
       <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
       <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
       <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
@@ -248,26 +328,51 @@
 
     <!-- RIGHT: controls -->
     <div class="panel">
-      <h2 data-i18n="analysisTitle">Analyse de l'image</h2>
+      <div class="sectionHead">
+        <h2 data-i18n="analysisTitle">Analyse de l'image</h2>
+        <button type="button" class="resetBtn" id="resetAnalysis" data-i18n="btnReset">Réinitialiser</button>
+      </div>
 
       <div class="row2">
         <div class="ctrl">
-          <label><span data-i18n="lblContrast">Contraste</span> <span class="val" id="vContrast">120%</span></label>
-          <input type="range" id="contrast" min="50" max="300" value="120">
+          <label><span data-i18n="lblBlackPt">Point noir</span> <span class="val editable" id="vBlackPt" data-for="blackPt">21</span></label>
+          <input type="range" id="blackPt" min="0" max="255" value="21">
         </div>
         <div class="ctrl">
-          <label><span data-i18n="lblSat">Saturation</span> <span class="val" id="vSat">100%</span></label>
+          <label><span data-i18n="lblWhitePt">Point blanc</span> <span class="val editable" id="vWhitePt" data-for="whitePt">234</span></label>
+          <input type="range" id="whitePt" min="0" max="255" value="234">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="ctrl">
+          <label><span data-i18n="lblGamma">Gamma</span> <span class="val editable" id="vGamma" data-for="gamma">1.00</span></label>
+          <input type="range" id="gamma" min="0.2" max="3" step="0.05" value="1">
+        </div>
+        <div class="ctrl">
+          <label><span data-i18n="lblSat">Saturation</span> <span class="val editable" id="vSat" data-for="sat">100%</span></label>
           <input type="range" id="sat" min="0" max="200" value="100">
         </div>
       </div>
       <div class="ctrl">
-        <label><span data-i18n="lblSensitivity">Sensibilité (garder les zones les + contrastées)</span> <span class="val" id="vThresh">55</span></label>
-        <input type="range" id="thresh" min="1" max="100" value="55">
+        <label><span data-i18n="lblSensitivity">Sensibilité (garder les zones les + contrastées)</span> <span class="val editable" id="vThresh" data-for="thresh">55</span></label>
+        <div class="sliderRow">
+          <input type="range" id="thresh" min="1" max="100" value="55">
+          <button type="button" class="miniBtn" id="autoThresh" data-i18n="btnAuto" title="Otsu">Auto</button>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="ctrl">
+          <label><span data-i18n="lblBlur">Lissage</span> <span class="val editable" id="vBlur" data-for="blur">0px</span></label>
+          <input type="range" id="blur" min="0" max="10" value="0">
+        </div>
+        <div class="ctrl checkboxCtrl">
+          <label class="checkboxLbl"><input type="checkbox" id="invert"> <span data-i18n="lblInvert">Inverser</span></label>
+        </div>
       </div>
 
       <div class="row2">
         <div class="ctrl">
-          <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val" id="vLayers">3</span></label>
+          <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val editable" id="vLayers" data-for="layers">3</span></label>
           <input type="range" id="layers" min="1" max="6" value="3">
         </div>
         <div class="ctrl">
@@ -276,16 +381,24 @@
             <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
             <option value="lum" data-i18n="optLum">Par luminosité</option>
             <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
+            <option value="sobel" data-i18n="optSobel">Par contours (Sobel)</option>
           </select>
         </div>
       </div>
+      <div class="ctrl" id="posterizeRow" hidden>
+        <label><span data-i18n="lblPosterize">Niveaux de couleur</span> <span class="val editable" id="vPosterize" data-for="posterize">32</span></label>
+        <input type="range" id="posterize" min="2" max="32" value="32">
+      </div>
       <div class="ctrl" id="pickTolRow" hidden>
-        <label><span data-i18n="lblPickTol">Tolérance couleur</span> <span class="val" id="vPickTol">60</span></label>
+        <label><span data-i18n="lblPickTol">Tolérance couleur</span> <span class="val editable" id="vPickTol" data-for="pickTol">60</span></label>
         <input type="range" id="pickTol" min="10" max="150" value="60">
       </div>
 
       <div class="divider"></div>
-      <h2 data-i18n="musicTitle">Musique</h2>
+      <div class="sectionHead">
+        <h2 data-i18n="musicTitle">Musique</h2>
+        <button type="button" class="resetBtn" id="resetMusic" data-i18n="btnReset">Réinitialiser</button>
+      </div>
 
       <div class="row2">
         <div class="ctrl">
@@ -313,33 +426,33 @@
 
       <div class="row2">
         <div class="ctrl">
-          <label><span data-i18n="lblOctLow">Octave basse</span> <span class="val" id="vOctLow">3</span></label>
+          <label><span data-i18n="lblOctLow">Octave basse</span> <span class="val editable" id="vOctLow" data-for="octLow">3</span></label>
           <input type="range" id="octLow" min="0" max="7" value="3">
         </div>
         <div class="ctrl">
-          <label><span data-i18n="lblOctHigh">Octave haute</span> <span class="val" id="vOctHigh">5</span></label>
+          <label><span data-i18n="lblOctHigh">Octave haute</span> <span class="val editable" id="vOctHigh" data-for="octHigh">5</span></label>
           <input type="range" id="octHigh" min="0" max="7" value="5">
         </div>
       </div>
 
       <div class="row2">
         <div class="ctrl">
-          <label><span data-i18n="lblSteps">Résolution rythmique (pas)</span> <span class="val" id="vSteps">16</span></label>
+          <label><span data-i18n="lblSteps">Résolution rythmique (pas)</span> <span class="val editable" id="vSteps" data-for="steps">16</span></label>
           <input type="range" id="steps" min="4" max="64" value="16">
         </div>
         <div class="ctrl">
-          <label><span data-i18n="lblBars">Longueur (mesures)</span> <span class="val" id="vBars">2</span></label>
+          <label><span data-i18n="lblBars">Longueur (mesures)</span> <span class="val editable" id="vBars" data-for="bars">2</span></label>
           <input type="range" id="bars" min="1" max="8" value="2">
         </div>
       </div>
 
       <div class="row2">
         <div class="ctrl">
-          <label><span data-i18n="lblTempo">Tempo</span> <span class="val" id="vTempo">100 bpm</span></label>
+          <label><span data-i18n="lblTempo">Tempo</span> <span class="val editable" id="vTempo" data-for="tempo">100 bpm</span></label>
           <input type="range" id="tempo" min="40" max="200" value="100">
         </div>
         <div class="ctrl">
-          <label><span data-i18n="lblGate">Gate (durée note)</span> <span class="val" id="vGate">80%</span></label>
+          <label><span data-i18n="lblGate">Gate (durée note)</span> <span class="val editable" id="vGate" data-for="gate">80%</span></label>
           <input type="range" id="gate" min="10" max="100" value="80">
         </div>
       </div>
@@ -349,18 +462,21 @@
       <div id="layerList"></div>
 
       <button id="exportBtn" disabled data-i18n="btnExport">Exporter le .mid</button>
+      <div class="hint exportDisabledHint" id="exportDisabledHint" data-i18n="exportDisabledHint">Importe une image pour activer l'export</div>
       <div class="stat" id="statLine"></div>
       <div class="hint" data-i18n="exportHint">Chaque calque = une piste MIDI (canal séparé, patch General MIDI). Importe le fichier dans Logic Pro : une piste par instrument sera créée automatiquement à la lecture du fichier multi-pistes.</div>
 
       <div class="divider"></div>
       <h2 data-i18n="rtTitle">Temps réel (Web MIDI)</h2>
+      <div class="badge warn" data-i18n="safariWarnBadge">⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.</div>
       <div class="ctrl">
         <label style="margin-bottom:6px;" data-i18n="lblPort">Port MIDI de sortie</label>
         <select id="midiPort"><option value="" data-i18n="portDetect">— clique pour détecter les ports —</option></select>
       </div>
       <button id="playBtn" disabled data-i18n="btnPlay">▶ Jouer dans Logic</button>
       <div class="midiRow"><span class="dot" id="midiDot"></span><span id="midiState">Web MIDI non initialisé</span></div>
-      <div class="hint" id="midiHint" data-i18n-html="midiHint">Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>. Chrome ou Edge requis (Safari ne gère pas Web MIDI).</div>
+      <button type="button" class="accordionBtn" id="midiHintToggle" aria-expanded="false" data-i18n="midiHintToggle">Comment connecter à Logic</button>
+      <div class="hint" id="midiHint" hidden data-i18n-html="midiHint">Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.</div>
     </div>
   </div>
 
@@ -381,6 +497,12 @@ const I18N = {
   fr: {
     docTitle: "Dessons · Générateur de loops image → MIDI",
     tagline: "Dépose une image ou une vidéo, ajuste le contraste et le seuil pour ne garder que les zones les plus marquées, sépare en calques (couleur ou luminosité) — chaque calque devient une piste MIDI avec son instrument. Exporte en .mid, ou joue la boucle en direct dans Logic via un port MIDI virtuel (IAC Driver).",
+    flowSteps: '<b>1.</b> Dépose une image <span class="stepArrow">→</span> <b>2.</b> Ajuste les réglages <span class="stepArrow">→</span> <b>3.</b> Exporte ou joue en direct',
+    previewPlaceholder: "Ton image ou ta vidéo apparaîtra ici",
+    btnReset: "Réinitialiser",
+    exportDisabledHint: "Importe une image pour activer l'export",
+    safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
+    midiHintToggle: "Comment connecter à Logic",
     srcTitle: "Source",
     dropText: 'Clique ou dépose une image ou une vidéo ici<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span>',
     btnWebcam: "Webcam",
@@ -388,17 +510,29 @@ const I18N = {
     btnFreeze: "Figer l'image",
     btnResume: "Reprendre",
     analysisTitle: "Analyse de l'image",
-    lblContrast: "Contraste",
+    lblBlackPt: "Point noir",
+    lblWhitePt: "Point blanc",
+    lblGamma: "Gamma",
     lblSat: "Saturation",
     lblSensitivity: "Sensibilité (garder les zones les + contrastées)",
+    btnAuto: "Auto",
+    lblBlur: "Lissage",
+    lblInvert: "Inverser",
     lblLayers: "Séparation en calques",
     lblMethod: "Méthode",
     optHue: "Par couleur (teinte)",
     optLum: "Par luminosité",
     optPick: "Par couleurs (pipette)",
+    optSobel: "Par contours (Sobel)",
+    lblPosterize: "Niveaux de couleur",
     pickArm: "Clique dans l'image pour isoler cette couleur — le reste restera silencieux.",
     swatchTitle: "Choisir la couleur dans l'image",
     lblPickTol: "Tolérance couleur",
+    btnCrop: "✂ Recadrer",
+    btnCropCancel: "✕ Annuler",
+    btnCropApply: "✓ Valider",
+    btnCropReset: "↺ Réinitialiser le cadrage",
+    cropHint: "Fais glisser sur l'image pour définir la zone à analyser.",
     musicTitle: "Musique",
     lblDirShort: "Sens",
     dirLR: "Gauche → droite",
@@ -439,7 +573,7 @@ const I18N = {
     portDetect: "— clique pour détecter les ports —",
     btnPlay: "▶ Jouer dans Logic",
     btnStop: "■ Stop",
-    midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>. Chrome ou Edge requis (Safari ne gère pas Web MIDI).",
+    midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.",
     footerFree: "Dessons est gratuit et open source.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
     btnPreview: "▶ Écouter l'aperçu",
@@ -473,6 +607,12 @@ const I18N = {
   en: {
     docTitle: "Dessons · Image → MIDI loop generator",
     tagline: "Drop an image or a video, adjust contrast and threshold to keep only the sharpest areas, split into layers (color or brightness) — each layer becomes a MIDI track with its own instrument. Export a .mid, or play the loop live into Logic through a virtual MIDI port (IAC Driver).",
+    flowSteps: '<b>1.</b> Drop an image <span class="stepArrow">→</span> <b>2.</b> Tweak the settings <span class="stepArrow">→</span> <b>3.</b> Export or play it live',
+    previewPlaceholder: "Your image or video will appear here",
+    btnReset: "Reset",
+    exportDisabledHint: "Import an image to enable export",
+    safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
+    midiHintToggle: "How to connect to Logic",
     srcTitle: "Source",
     dropText: 'Click or drop an image or a video here<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span>',
     btnWebcam: "Webcam",
@@ -480,17 +620,29 @@ const I18N = {
     btnFreeze: "Freeze frame",
     btnResume: "Resume",
     analysisTitle: "Image analysis",
-    lblContrast: "Contrast",
+    lblBlackPt: "Black point",
+    lblWhitePt: "White point",
+    lblGamma: "Gamma",
     lblSat: "Saturation",
     lblSensitivity: "Sensitivity (keep the most contrasted areas)",
+    btnAuto: "Auto",
+    lblBlur: "Smoothing",
+    lblInvert: "Invert",
     lblLayers: "Split into layers",
     lblMethod: "Method",
     optHue: "By color (hue)",
     optLum: "By brightness",
     optPick: "By picked colors (eyedropper)",
+    optSobel: "By edges (Sobel)",
+    lblPosterize: "Color levels",
     pickArm: "Click in the image to isolate that color — everything else stays silent.",
     swatchTitle: "Pick color from the image",
     lblPickTol: "Color tolerance",
+    btnCrop: "✂ Crop",
+    btnCropCancel: "✕ Cancel",
+    btnCropApply: "✓ Apply",
+    btnCropReset: "↺ Reset crop",
+    cropHint: "Drag on the image to define the area to analyze.",
     musicTitle: "Music",
     lblDirShort: "Direction",
     dirLR: "Left → right",
@@ -531,7 +683,7 @@ const I18N = {
     portDetect: "— click to detect ports —",
     btnPlay: "▶ Play into Logic",
     btnStop: "■ Stop",
-    midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>. Chrome or Edge required (Safari has no Web MIDI).",
+    midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>.",
     footerFree: "Dessons is free and open source.",
     footerKofi: "☕ Support me on Ko-fi",
     btnPreview: "▶ Preview sound",
@@ -594,6 +746,7 @@ function setLang(lang){
   if(layers.length) rebuildLayers();          // refresh auto layer names + instrument labels
   updateTransportButtons();
   updateSrcBtns();
+  updateCropUI();
   renderTransportIcons();                      // refresh icon tooltips
   renderMidiState();
   if(img) process();
@@ -634,9 +787,14 @@ const SCALES = {
 
 let img = null;                 // truthy once a source (image / video / webcam) is ready
 let imgCanvas = document.createElement('canvas'), imgCtx = imgCanvas.getContext('2d');
+// holds the fully adjusted image (invert + blur + tone curve + saturation baked in) —
+// what process() actually analyzes, and what drawPreview()/the eyedropper read back,
+// so "what you see" always matches "what gets detected".
+let adjCanvas = document.createElement('canvas'), adjCtx = adjCanvas.getContext('2d');
 let layers = [];                 // {color, pickColor, name, auto, program, mute, solo}
 let lastNotes = [];              // per layer: array of {step, midi, vel}
 let pickLayer = -1;              // index of the layer waiting for a click on the image ('pick' mode), -1 = none
+let lastEdgeArr = null, lastMaxEdge = 1;   // cached from the last process(), reused by the Otsu "Auto" button
 const MAXDIM = 260;
 
 /* ---- source state: image, video file, or live webcam ---- */
@@ -645,6 +803,12 @@ let srcKind = null;              // 'image' | 'video' | 'webcam'
 let camStream = null;            // MediaStream while the webcam is on
 let grabTimer = null;            // setTimeout id of the live re-analysis loop
 let frozen = false;              // live source paused on its current frame
+
+/* ---- crop (region of interest), normalized [0,1] against the full source frame ---- */
+let cropRect = null;             // {x,y,w,h} applied crop, null = analyze the full frame
+let cropEditing = false;         // crop-editor overlay active
+let pendingCropRect = null;      // rect being drawn/edited, committed to cropRect on "Apply"
+let cropDragStart = null;        // [nx,ny] where the current drag started, null = not dragging
 
 const $ = id => document.getElementById(id);
 const dropEl = $('drop'), fileInput = $('fileInput'), preview = $('preview'), pctx = preview.getContext('2d');
@@ -669,7 +833,9 @@ function stopSource(){
     try{ srcEl.pause(); srcEl.removeAttribute('src'); srcEl.srcObject = null; srcEl.load(); }catch(e){}
   }
   srcEl = null; srcKind = null; frozen = false;
+  cropRect = null; cropEditing = false; pendingCropRect = null;   // a new source starts uncropped
   updateSrcBtns();
+  updateCropUI();
 }
 
 function sourceDims(){
@@ -678,10 +844,11 @@ function sourceDims(){
   return [srcEl.videoWidth, srcEl.videoHeight];
 }
 
-// size the analysis + preview canvases to the current source
+// size the analysis + preview canvases to the current source (or its crop, if one is set)
 function fitCanvas(){
   let [w,h] = sourceDims();
   if(!w || !h) return false;
+  if(cropRect){ w = Math.round(w*cropRect.w); h = Math.round(h*cropRect.h); }
   const s = Math.min(1, MAXDIM/Math.max(w,h));
   w = Math.round(w*s); h = Math.round(h*s);
   imgCanvas.width = w; imgCanvas.height = h;
@@ -689,17 +856,25 @@ function fitCanvas(){
   return true;
 }
 
-// copy the current source frame into the analysis canvas
+// copy the current source frame (or its crop) into the analysis canvas
 function grabFrame(){
   if(!srcEl || !imgCanvas.width) return;
-  try{ imgCtx.drawImage(srcEl, 0, 0, imgCanvas.width, imgCanvas.height); }catch(e){}
+  try{
+    if(cropRect){
+      const [sw,sh] = sourceDims();
+      imgCtx.drawImage(srcEl, cropRect.x*sw, cropRect.y*sh, cropRect.w*sw, cropRect.h*sh, 0, 0, imgCanvas.width, imgCanvas.height);
+    } else {
+      imgCtx.drawImage(srcEl, 0, 0, imgCanvas.width, imgCanvas.height);
+    }
+  }catch(e){}
 }
 
 // live re-analysis loop for video / webcam (~15 fps)
 function liveLoop(){
   grabTimer = null;
   if(srcKind !== 'video' && srcKind !== 'webcam') return;
-  if(!frozen){ grabFrame(); process(); }
+  if(cropEditing) drawCropEditor();
+  else if(!frozen){ grabFrame(); process(); }
   grabTimer = setTimeout(liveLoop, 66);
 }
 
@@ -708,6 +883,12 @@ function clearPreview(){
   $('dims').textContent = '—';
   $('noteCount').textContent = '0 ' + t('notesWord');
   $('statLine').textContent = '';
+}
+
+// swap the canvas for a placeholder graphic until a source is actually loaded
+function setPreviewEmpty(empty){
+  preview.hidden = empty;
+  $('previewPlaceholder').hidden = !empty;
 }
 
 function loadFile(file){
@@ -725,8 +906,11 @@ function loadFile(file){
     v.addEventListener('loadeddata', ()=>{
       srcEl = v; srcKind = 'video'; img = v; frozen = false;
       if(!fitCanvas()){ showSrcError(t('videoErr')); return; }
+      setPreviewEmpty(false);
       $('exportBtn').disabled = false;
+      $('exportDisabledHint').hidden = true;
       updateSrcBtns();
+      updateCropUI();
       updatePlayBtnState();
       rebuildLayers();
       v.play().catch(()=>{});
@@ -738,8 +922,11 @@ function loadFile(file){
     image.onload = ()=>{
       srcEl = image; srcKind = 'image'; img = image; frozen = false;
       if(!fitCanvas()) return;
+      setPreviewEmpty(false);
       $('exportBtn').disabled = false;
+      $('exportDisabledHint').hidden = true;
       updateSrcBtns();
+      updateCropUI();
       updatePlayBtnState();
       rebuildLayers();
       grabFrame();
@@ -756,8 +943,10 @@ async function toggleWebcam(){
     img = null;
     if(playing) stopPlayback();
     $('exportBtn').disabled = true;
+    $('exportDisabledHint').hidden = false;
     updatePlayBtnState();
     clearPreview();
+    setPreviewEmpty(true);
     return;
   }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
@@ -783,8 +972,11 @@ async function toggleWebcam(){
     if(!v.videoWidth){ requestAnimationFrame(ready); return; }
     srcEl = v; srcKind = 'webcam'; img = v; frozen = false;
     fitCanvas();
+    setPreviewEmpty(false);
     $('exportBtn').disabled = false;
+    $('exportDisabledHint').hidden = true;
     updateSrcBtns();
+    updateCropUI();
     updatePlayBtnState();
     rebuildLayers();
     liveLoop();
@@ -817,13 +1009,12 @@ function updatePickUI(){
 }
 
 preview.addEventListener('click', e=>{
-  if(pickLayer < 0 || !img || !imgCanvas.width) return;
+  if(pickLayer < 0 || !img || !imgCanvas.width || cropEditing) return;
   const rect = preview.getBoundingClientRect();
   const ix = Math.round(clamp((e.clientX - rect.left) / rect.width * imgCanvas.width, 0, imgCanvas.width - 1));
   const iy = Math.round(clamp((e.clientY - rect.top) / rect.height * imgCanvas.height, 0, imgCanvas.height - 1));
-  const px = imgCtx.getImageData(ix, iy, 1, 1).data;
-  const [r,g,b] = adjustRGB(px[0], px[1], px[2]);   // sample what you see, not the raw pixel
-  const hex = rgbToHex(r,g,b);
+  const px = adjCtx.getImageData(ix, iy, 1, 1).data;   // sample what you see, not the raw pixel
+  const hex = rgbToHex(px[0], px[1], px[2]);
   layers[pickLayer].color = hex;
   layers[pickLayer].pickColor = hex;
   layers[pickLayer].picked = true;
@@ -851,7 +1042,7 @@ function rebuildLayers(){
   for(let i=0;i<n;i++){
     const keep = oldLayers[i];
     let color;
-    if(mode==='hue') color = hslToHex(Math.round(360*i/n), 70, 55);
+    if(mode==='hue' || mode==='sobel') color = hslToHex(Math.round(360*i/n), 70, 55);
     else if(mode==='lum') color = hslToHex(0, 0, Math.round(20 + 60*i/(Math.max(n-1,1))));
     else color = (keep && keep.pickColor) || hslToHex(Math.round(360*i/n), 70, 55); // 'pick': keep the last picked color
     const isAuto = keep ? keep.auto !== false : true;   // auto name unless the user renamed it
@@ -868,6 +1059,7 @@ function rebuildLayers(){
   }
   renderLayerList();
   $('pickTolRow').hidden = mode !== 'pick';
+  $('posterizeRow').hidden = mode !== 'hue';
   // already playing: re-send the channel patches for the current layers
   if(playing && midiOut){
     layers.forEach((L,i)=> midiOut.send([0xC0|(i%16), L.program & 0x7F]));
@@ -1071,6 +1263,7 @@ function renderTransportIcons(){
     const b = document.createElement('button');
     b.type = 'button'; b.innerHTML = dirIconSVG(d);
     b.title = t('dir' + d.toUpperCase());
+    b.setAttribute('aria-label', t('dir' + d.toUpperCase()));
     b.classList.toggle('on', $('playDir').value === d);
     b.addEventListener('click', ()=>{ $('playDir').value = d; renderTransportIcons(); process(); });
     dg.appendChild(b);
@@ -1080,6 +1273,7 @@ function renderTransportIcons(){
     const b = document.createElement('button');
     b.type = 'button'; b.innerHTML = curveIconSVG(c);
     b.title = t('curve' + c[0].toUpperCase() + c.slice(1));
+    b.setAttribute('aria-label', t('curve' + c[0].toUpperCase() + c.slice(1)));
     b.classList.toggle('on', $('curve').value === c);
     b.addEventListener('click', ()=>{
       const prev = $('curve').value;
@@ -1139,11 +1333,113 @@ function initCurveEditor(){
   redrawCurveEditor();
 }
 
+// box blur approximates a gaussian in 3 passes (horizontal+vertical each) —
+// visually near-identical to a true gaussian, much cheaper in plain JS.
+// Sliding-window sum keeps each pass O(w*h) regardless of radius.
+function boxBlurPass(data, w, h, r, horizontal){
+  const out = new Uint8ClampedArray(data.length);
+  const size = r*2+1;
+  if(horizontal){
+    for(let y=0;y<h;y++){
+      const row = y*w*4;
+      for(let c=0;c<4;c++){
+        let sum=0;
+        for(let k=-r;k<=r;k++) sum += data[row + clamp(k,0,w-1)*4 + c];
+        for(let x=0;x<w;x++){
+          out[row + x*4 + c] = sum/size;
+          sum += data[row + clamp(x+r+1,0,w-1)*4+c] - data[row + clamp(x-r,0,w-1)*4+c];
+        }
+      }
+    }
+  } else {
+    for(let x=0;x<w;x++){
+      for(let c=0;c<4;c++){
+        let sum=0;
+        for(let k=-r;k<=r;k++) sum += data[(clamp(k,0,h-1)*w+x)*4+c];
+        for(let y=0;y<h;y++){
+          out[(y*w+x)*4+c] = sum/size;
+          sum += data[(clamp(y+r+1,0,h-1)*w+x)*4+c] - data[(clamp(y-r,0,h-1)*w+x)*4+c];
+        }
+      }
+    }
+  }
+  return out;
+}
+function boxBlur(data, w, h, radius, passes){
+  let cur = data;
+  for(let p=0;p<passes;p++){
+    cur = boxBlurPass(cur, w, h, radius, true);
+    cur = boxBlurPass(cur, w, h, radius, false);
+  }
+  return cur;
+}
+
+// tone curve: black point / white point / gamma -> a 256-entry lookup table.
+// Applied via direct index (data[i] -> lut[data[i]]), so it's O(1) per pixel
+// however elaborate the curve. Defaults (21 / 234 / 1.00) reproduce the old
+// fixed "Contrast 120%" slider almost exactly.
+function buildToneLUT(blackPt, whitePt, gamma){
+  const lut = new Uint8Array(256);
+  const range = Math.max(1, whitePt - blackPt);
+  for(let i=0;i<256;i++){
+    let v = clamp((i - blackPt) / range, 0, 1);
+    if(gamma !== 1) v = Math.pow(v, 1/gamma);
+    lut[i] = Math.round(v*255);
+  }
+  return lut;
+}
+// tone curve + saturation for one pixel — the single place both the analysis
+// (process) and the preview/eyedropper (via adjCanvas) get their colors from.
+function adjustPixel(r,g,b,lut,satPct){
+  r=lut[r]; g=lut[g]; b=lut[b];
+  const y = 0.299*r + 0.587*g + 0.114*b;
+  return [clamp(y+(r-y)*satPct,0,255), clamp(y+(g-y)*satPct,0,255), clamp(y+(b-y)*satPct,0,255)];
+}
+
+// Sobel gradient at one pixel (edges clamped/replicated) — returns [gx,gy].
+function sobelAt(lum, w, h, x, y){
+  const xm = x>0?x-1:0, xp = x<w-1?x+1:w-1;
+  const ym = y>0?y-1:0, yp = y<h-1?y+1:h-1;
+  const tl=lum[ym*w+xm], tc=lum[ym*w+x], tr=lum[ym*w+xp];
+  const ml=lum[y*w+xm],                 mr=lum[y*w+xp];
+  const bl=lum[yp*w+xm], bc=lum[yp*w+x], br=lum[yp*w+xp];
+  return [ (tr+2*mr+br) - (tl+2*ml+bl), (bl+2*bc+br) - (tl+2*tc+tr) ];
+}
+
+// Otsu's method on an arbitrary histogram: the threshold bin that maximizes
+// between-class variance. Standard algorithm, ~15 lines.
+function otsuThreshold(hist, total){
+  let sum=0; for(let i=0;i<256;i++) sum += i*hist[i];
+  let sumB=0, wB=0, varMax=0, threshold=0;
+  for(let t=0;t<256;t++){
+    wB += hist[t]; if(wB===0) continue;
+    const wF = total - wB; if(wF===0) break;
+    sumB += t*hist[t];
+    const mB = sumB/wB, mF = (sum-sumB)/wF;
+    const varBetween = wB*wF*(mB-mF)*(mB-mF);
+    if(varBetween > varMax){ varMax = varBetween; threshold = t; }
+  }
+  return threshold;
+}
+
 function process(){
   if(!img) return;
   const w = imgCanvas.width, h = imgCanvas.height;
   if(!w || !h) return;
-  const data = imgCtx.getImageData(0,0,w,h).data;
+  let data = imgCtx.getImageData(0,0,w,h).data;
+
+  // pre-pass on the raw pixels, in the requested order: invert -> blur.
+  // Both need neighbour-free / neighbour-aware full-buffer access, so they
+  // run before the per-pixel tone curve + saturation below.
+  const invert = $('invert').checked;
+  const blurR = Math.round(parseFloat($('blur').value));
+  if(invert || blurR>0){
+    data = new Uint8ClampedArray(data);
+    if(invert){
+      for(let i=0;i<data.length;i+=4){ data[i]=255-data[i]; data[i+1]=255-data[i+1]; data[i+2]=255-data[i+2]; }
+    }
+    if(blurR>0) data = boxBlur(data, w, h, blurR, 3);
+  }
 
   const threshPct = parseInt($('thresh').value)/100;
   const nLayers = layers.length;
@@ -1151,32 +1447,64 @@ function process(){
   const steps = parseInt($('steps').value);
   const pitches = scaleNotesForRange(); // low->high, index 0 = lowest
 
-  // per-pixel: contrast+saturation-adjusted RGB, luminance and hue
+  const blackPt = parseInt($('blackPt').value);
+  const whitePt = Math.max(blackPt+1, parseInt($('whitePt').value));
+  const toneLUT = buildToneLUT(blackPt, whitePt, parseFloat($('gamma').value));
+  const satPct = parseInt($('sat').value)/100;
+
+  // per-pixel: tone-curve+saturation-adjusted RGB, luminance and hue
   const lum = new Float32Array(w*h);
   const hue = new Float32Array(w*h);
   const pr = new Uint8ClampedArray(w*h), pg = new Uint8ClampedArray(w*h), pb = new Uint8ClampedArray(w*h);
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
       const idx = (y*w+x)*4;
-      const [r,g,b] = adjustRGB(data[idx], data[idx+1], data[idx+2]);
+      const [r,g,b] = adjustPixel(data[idx], data[idx+1], data[idx+2], toneLUT, satPct);
       const px = y*w+x;
       pr[px]=r; pg[px]=g; pb[px]=b;
       lum[px] = 0.299*r+0.587*g+0.114*b;
       hue[px] = rgbToHue(r,g,b);
     }
   }
-  // edge magnitude (simple gradient)
+
+  // bake the fully adjusted image so drawPreview() and the eyedropper show/sample
+  // exactly what was analyzed — no separate CSS-filter approximation anymore.
+  adjCanvas.width = w; adjCanvas.height = h;
+  const adjData = adjCtx.createImageData(w,h);
+  for(let px=0; px<w*h; px++){
+    adjData.data[px*4]=pr[px]; adjData.data[px*4+1]=pg[px]; adjData.data[px*4+2]=pb[px]; adjData.data[px*4+3]=255;
+  }
+  adjCtx.putImageData(adjData,0,0);
+
+  // edge detection: the classic cheap gradient for hue/lum/pick (unchanged,
+  // byte-for-byte, from before Sobel existed), or a real Sobel convolution
+  // — magnitude *and* orientation — for the 'sobel' method, which also uses
+  // the orientation to sort pixels into layers (contours by angle).
   const edge = new Float32Array(w*h);
+  const angle = sepMode==='sobel' ? new Float32Array(w*h) : null;
   let maxEdge = 1;
-  for(let y=0;y<h;y++){
-    for(let x=0;x<w;x++){
-      const gx = x<w-1 ? Math.abs(lum[y*w+x+1]-lum[y*w+x]) : 0;
-      const gy = y<h-1 ? Math.abs(lum[(y+1)*w+x]-lum[y*w+x]) : 0;
-      const m = gx+gy;
-      edge[y*w+x]=m;
-      if(m>maxEdge) maxEdge=m;
+  if(sepMode==='sobel'){
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const [gx,gy] = sobelAt(lum,w,h,x,y);
+        const m = Math.sqrt(gx*gx+gy*gy);
+        const px = y*w+x;
+        edge[px]=m; angle[px]=Math.atan2(gy,gx);
+        if(m>maxEdge) maxEdge=m;
+      }
+    }
+  } else {
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const gx = x<w-1 ? Math.abs(lum[y*w+x+1]-lum[y*w+x]) : 0;
+        const gy = y<h-1 ? Math.abs(lum[(y+1)*w+x]-lum[y*w+x]) : 0;
+        const m = gx+gy;
+        edge[y*w+x]=m;
+        if(m>maxEdge) maxEdge=m;
+      }
     }
   }
+  lastEdgeArr = edge; lastMaxEdge = maxEdge;   // cached for the Otsu "Auto" button
 
   // 'pick' mode: each layer isolates one picked color. A pixel joins the
   // closest picked layer within tolerance; if none is close enough (or no
@@ -1185,8 +1513,12 @@ function process(){
   // *only* the green leaves, not "everything, sorted by nearest hue".
   const pickTargets = sepMode==='pick' ? layers.map(L => hexToRgb(L.color)) : null;
   const pickTolSq = (parseInt($('pickTol').value) || 60) ** 2;
+  // hue-separation only: quantize hue into N steps first, so the layer split
+  // is predictable/controllable instead of riding the source image's noise.
+  const posterizeLevels = parseInt($('posterize').value);
+  const hueStep = 360/posterizeLevels;
 
-  // pick a layer for a pixel (by hue bin, brightness bin, or nearest picked color)
+  // pick a layer for a pixel (by hue bin, brightness bin, edge orientation, or nearest picked color)
   function layerOf(px){
     if(sepMode==='pick'){
       let best=-1, bestD=pickTolSq;
@@ -1199,9 +1531,15 @@ function process(){
       }
       return best;   // -1 = no picked color close enough
     }
+    if(sepMode==='sobel'){
+      if(nLayers===1) return 0;
+      let a = angle[px] % Math.PI; if(a<0) a+=Math.PI;   // orientation only, mod π
+      return Math.min(nLayers-1, Math.floor((a/Math.PI)*nLayers));
+    }
     if(nLayers===1) return 0;
     if(sepMode==='hue'){
-      return Math.floor((hue[px]/360)*nLayers) % nLayers;
+      const hh = posterizeLevels<32 ? Math.floor(hue[px]/hueStep)*hueStep : hue[px];
+      return Math.floor((hh/360)*nLayers) % nLayers;
     } else {
       return Math.min(nLayers-1, Math.floor((lum[px]/256)*nLayers));
     }
@@ -1242,7 +1580,7 @@ function process(){
     }
   }
 
-  drawPreview();
+  redrawPreview();   // skips the analysis view in favor of the crop overlay while editing a crop
   const total = lastNotes.reduce((a,arr)=>a+arr.length,0);
   const srcLabel = srcKind === 'webcam' ? ' · ' + t('srcWebcamLabel')
                  : srcKind === 'video'  ? ' · ' + t('srcVideoLabel')
@@ -1265,18 +1603,6 @@ function rgbToHue(r,g,b){
 }
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
-// contrast + saturation, read live from the sliders — the single place both
-// the analysis (process) and the eyedropper sample colors from, so what you
-// click is what gets analyzed.
-function adjustRGB(r,g,b){
-  const c = parseInt($('contrast').value)/100;
-  const s = parseInt($('sat').value)/100;
-  r = clamp((r-128)*c+128, 0, 255);
-  g = clamp((g-128)*c+128, 0, 255);
-  b = clamp((b-128)*c+128, 0, 255);
-  const y = 0.299*r + 0.587*g + 0.114*b;
-  return [clamp(y+(r-y)*s,0,255), clamp(y+(g-y)*s,0,255), clamp(y+(b-y)*s,0,255)];
-}
 function rgbToHex(r,g,b){
   const h = x => Math.round(clamp(x,0,255)).toString(16).padStart(2,'0');
   return '#'+h(r)+h(g)+h(b);
@@ -1289,9 +1615,7 @@ function hexToRgb(hex){
 function drawPreview(){
   pctx.clearRect(0,0,preview.width,preview.height);
   pctx.save();
-  pctx.filter = 'contrast('+($('contrast').value)+'%)';
-  pctx.drawImage(imgCanvas,0,0,preview.width,preview.height);
-  pctx.filter='none';
+  pctx.drawImage(adjCanvas,0,0,preview.width,preview.height);
   pctx.globalAlpha=0.55;
   pctx.fillStyle='#000';
   pctx.fillRect(0,0,preview.width,preview.height);
@@ -1595,8 +1919,102 @@ function drawPlayhead(){
 }
 
 function redrawPreview(){
-  if(img) drawPreview();
+  if(cropEditing) drawCropEditor();
+  else if(img) drawPreview();
 }
+
+// crop editor: shows the FULL uncropped frame (not the analyzed/adjusted one —
+// the point is to see what's currently excluded) dimmed outside pendingCropRect,
+// with a bright outline + corner marks. Drag-anywhere-to-redraw, no resize handles.
+function drawCropEditor(){
+  if(!srcEl || !pendingCropRect) return;
+  const [sw,sh] = sourceDims();
+  if(!sw || !sh) return;
+  pctx.clearRect(0,0,preview.width,preview.height);
+  try{ pctx.drawImage(srcEl, 0,0,sw,sh, 0,0,preview.width,preview.height); }catch(e){}
+  const r = pendingCropRect;
+  const rx=r.x*preview.width, ry=r.y*preview.height, rw=r.w*preview.width, rh=r.h*preview.height;
+  pctx.fillStyle = 'rgba(0,0,0,.62)';
+  pctx.fillRect(0,0,preview.width,ry);
+  pctx.fillRect(0,ry+rh,preview.width,preview.height-ry-rh);
+  pctx.fillRect(0,ry,rx,rh);
+  pctx.fillRect(rx+rw,ry,preview.width-rx-rw,rh);
+  pctx.strokeStyle = '#f5a623';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(rx,ry,rw,rh);
+  pctx.fillStyle = '#f5a623';
+  const hs = 5;
+  [[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([hx,hy])=>{ pctx.fillRect(hx-hs,hy-hs,hs*2,hs*2); });
+}
+
+function normPointFromEvent(e){
+  const rect = preview.getBoundingClientRect();
+  return [ clamp((e.clientX-rect.left)/rect.width, 0, 1), clamp((e.clientY-rect.top)/rect.height, 0, 1) ];
+}
+function rectFromPoints(a, b){
+  const x = Math.min(a[0],b[0]), y = Math.min(a[1],b[1]);
+  const w = Math.max(0.03, Math.abs(a[0]-b[0])), h = Math.max(0.03, Math.abs(a[1]-b[1]));
+  return { x: Math.min(x, 1-w), y: Math.min(y, 1-h), w, h };
+}
+preview.addEventListener('pointerdown', e=>{
+  if(!cropEditing) return;
+  cropDragStart = normPointFromEvent(e);
+  pendingCropRect = rectFromPoints(cropDragStart, cropDragStart);
+  preview.setPointerCapture(e.pointerId);
+  drawCropEditor();
+});
+preview.addEventListener('pointermove', e=>{
+  if(!cropEditing || !cropDragStart) return;
+  pendingCropRect = rectFromPoints(cropDragStart, normPointFromEvent(e));
+  drawCropEditor();
+});
+preview.addEventListener('pointerup', e=>{
+  if(!cropEditing) return;
+  cropDragStart = null;
+  try{ preview.releasePointerCapture(e.pointerId); }catch(err){}
+});
+
+function updateCropUI(){
+  $('cropBtn').disabled = !img;
+  $('cropBtn').textContent = cropEditing ? t('btnCropCancel') : t('btnCrop');
+  $('cropBtn').classList.toggle('active', cropEditing);
+  $('cropApplyBtn').hidden = !cropEditing;
+  $('cropResetBtn').hidden = !cropRect;
+  $('cropHint').hidden = !cropEditing;
+  preview.classList.toggle('cropping', cropEditing);
+}
+function onCropChanged(){
+  if(!img) return;
+  fitCanvas();
+  grabFrame();
+  process();
+}
+$('cropBtn').addEventListener('click', ()=>{
+  if(!img) return;
+  if(cropEditing){
+    cropEditing = false; pendingCropRect = null;
+    updateCropUI();
+    redrawPreview();
+    return;
+  }
+  if(playing) stopPlayback();
+  pickLayer = -1; updatePickUI();
+  cropEditing = true;
+  pendingCropRect = cropRect || { x:0.15, y:0.15, w:0.7, h:0.7 };
+  updateCropUI();
+  drawCropEditor();
+});
+$('cropApplyBtn').addEventListener('click', ()=>{
+  cropRect = pendingCropRect || cropRect;
+  cropEditing = false; pendingCropRect = null;
+  updateCropUI();
+  onCropChanged();
+});
+$('cropResetBtn').addEventListener('click', ()=>{
+  cropRect = null; cropEditing = false; pendingCropRect = null;
+  updateCropUI();
+  onCropChanged();
+});
 
 function updateTransportButtons(){
   const midiOn  = playing && sink === 'midi';
@@ -1884,11 +2302,15 @@ document.addEventListener('visibilitychange', ()=>{
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
 
 /* ---- wire up controls ---- */
-const liveIds = ['contrast','sat','thresh','layers','sepMode','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
+const liveIds = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode','posterize','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
 function syncLabels(){
-  $('vContrast').textContent = $('contrast').value+'%';
+  $('vBlackPt').textContent = $('blackPt').value;
+  $('vWhitePt').textContent = $('whitePt').value;
+  $('vGamma').textContent = parseFloat($('gamma').value).toFixed(2);
   $('vSat').textContent = $('sat').value+'%';
   $('vThresh').textContent = $('thresh').value;
+  $('vBlur').textContent = $('blur').value+'px';
+  $('vPosterize').textContent = $('posterize').value;
   $('vPickTol').textContent = $('pickTol').value;
   $('vLayers').textContent = $('layers').value;
   $('vOctLow').textContent = $('octLow').value;
@@ -1906,6 +2328,75 @@ liveIds.forEach(id=>{
     process();
   });
 });
+
+/* ---- Otsu's method: auto-pick the Sensitivity value from the current edge histogram ---- */
+$('autoThresh').addEventListener('click', ()=>{
+  if(!img || !lastEdgeArr || !lastEdgeArr.length) return;
+  const hist = new Array(256).fill(0);
+  const scale = 255/lastMaxEdge;
+  for(let i=0;i<lastEdgeArr.length;i++) hist[clamp(Math.round(lastEdgeArr[i]*scale),0,255)]++;
+  const bin = otsuThreshold(hist, lastEdgeArr.length);
+  // cutoff = (1-threshPct)*maxEdge, and bin/scale is that cutoff in edge units
+  $('thresh').value = clamp(Math.round((1 - bin/255)*100), 1, 100);
+  $('thresh').dispatchEvent(new Event('input', {bubbles:true}));
+});
+
+/* ---- accordion: collapsed "how to connect" MIDI setup text ---- */
+$('midiHintToggle').addEventListener('click', ()=>{
+  const willOpen = $('midiHint').hidden;
+  $('midiHint').hidden = !willOpen;
+  $('midiHintToggle').setAttribute('aria-expanded', String(willOpen));
+});
+
+/* ---- reset a section's controls to their factory defaults ---- */
+const CONTROL_DEFAULTS = {
+  blackPt:21, whitePt:234, gamma:1, sat:100, thresh:55, blur:0, invert:false,
+  layers:3, sepMode:'hue', posterize:32, pickTol:60,
+  scale:'minPenta', root:'0', octLow:3, octHigh:5, steps:16, bars:2, tempo:100, gate:80
+};
+function resetControls(ids){
+  ids.forEach(id=>{
+    const el = $(id), def = CONTROL_DEFAULTS[id];
+    if(el.type === 'checkbox') el.checked = def; else el.value = def;
+  });
+  // dispatch after all values are set, so process() only ever sees a consistent state
+  ids.forEach(id=>{ $(id).dispatchEvent(new Event('input', {bubbles:true})); });
+}
+$('resetAnalysis').addEventListener('click', ()=> resetControls(['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode','posterize','pickTol']));
+$('resetMusic').addEventListener('click', ()=> resetControls(['scale','root','octLow','octHigh','steps','bars','tempo','gate']));
+
+/* ---- click a slider's value to type an exact number, clamped to its range ---- */
+function beginEditVal(span){
+  if(span.querySelector('input')) return;   // already editing
+  const input = $(span.dataset.for);
+  const min = parseFloat(input.min), max = parseFloat(input.max);
+  const step = parseFloat(input.step) || 1;
+  const decimals = step < 1 ? (String(step).split('.')[1] || '').length : 0;
+  span.innerHTML = '';
+  const box = document.createElement('input');
+  box.type = 'text'; box.inputMode = 'decimal'; box.className = 'valEdit';
+  box.value = input.value;
+  span.appendChild(box);
+  box.focus(); box.select();
+  const commit = ()=>{
+    let v = parseFloat(box.value.replace(',', '.'));
+    if(isNaN(v)) v = parseFloat(input.value);
+    v = clamp(v, min, max);
+    input.value = decimals ? v.toFixed(decimals) : Math.round(v);
+    input.dispatchEvent(new Event('input', {bubbles:true}));   // resyncs the label, re-processes
+  };
+  box.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){ e.preventDefault(); box.blur(); }
+    else if(e.key === 'Escape'){ box.dataset.cancel = '1'; box.blur(); }
+  });
+  box.addEventListener('blur', ()=>{
+    if(box.dataset.cancel) syncLabels(); else commit();
+  });
+}
+document.querySelectorAll('.val.editable[data-for]').forEach(span=>{
+  span.addEventListener('click', ()=> beginEditVal(span));
+});
+
 syncLabels();
 updatePlayBtnState();
 initCurveEditor();
