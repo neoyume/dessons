@@ -272,9 +272,14 @@
 
   /* layer legend */
   .layer{
-    padding:8px 0; border-bottom:1px solid var(--line); font-size:12px;
+    padding:8px 8px; margin:0 -8px; border-bottom:1px solid var(--line); font-size:12px;
+    border-radius:6px; cursor:pointer; transition:background-color .1s;
   }
   .layer:last-child{border-bottom:none;}
+  /* hover/pin cross-link with the image dots + piano roll (see
+     onLayerIsolationChange()) — a "look at this one" highlight, distinct
+     from .muted below which is a real mix state. */
+  .layer.isolated{background:rgba(0,255,255,.07);}
   .layerMain{
     display:grid; grid-template-columns:13px 13px 46px 1fr 32px; gap:6px; align-items:center;
   }
@@ -293,7 +298,18 @@
   canvas#preview.picking{cursor:crosshair;}
   .layer input[type=text]{padding:5px 7px; font-size:12px;}
   .layer select{padding:5px 7px; font-size:12px;}
-  .layer.muted input[type=text], .layer.muted select, .layer.muted .swatch, .layer.muted .instrPicker{opacity:.4;}
+  .layer.muted input[type=text], .layer.muted select, .layer.muted .swatch, .layer.muted .instrPicker, .layer.muted .layerNameLabel{opacity:.4;}
+  /* layer name: plain label at rest (also doubles as click-to-isolate real
+     estate, see the row's click handler), swaps to a real <input> on
+     double-click — same beginEditVal()-style pattern as the numeric slider
+     values, just for text. */
+  .layerNameLabel{
+    display:block; padding:5px 7px; font-size:12px; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:6px;
+    border:1px solid transparent;
+  }
+  .layerNameLabel:hover{border-color:var(--line);}
+  .layerNameEdit{width:100%; padding:5px 7px; font-size:12px; background:var(--panel-2); border:1px solid var(--accent); border-radius:6px; color:var(--text); font-family:inherit;}
   /* instrument picker: only an emoji shows at rest — the real <select> (full
      GM instrument names, native dropdown) sits on top, fully transparent
      and stretched over the icon, so every click/keyboard interaction still
@@ -338,6 +354,7 @@
   .layerThreshReset:hover:not(:disabled){color:var(--text); border-color:var(--accent);}
   .layerThreshReset:disabled{opacity:.3; cursor:default;}
   .layer.muted .layerThresh{opacity:.4;}
+  .layerNoteCount{flex:none; font-family:var(--mono); color:var(--text-dim); font-size:10.5px; margin-left:auto; padding-left:6px;}
 
   button#exportBtn{
     width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
@@ -417,6 +434,15 @@
   .accordionBtn::after{content:'▸'; font-size:9px; display:inline-block; transition:transform .15s;}
   .accordionBtn[aria-expanded="true"]::after{transform:rotate(90deg);}
   .accordionBtn:hover{color:var(--text);}
+
+  /* section-level accordions (Image Analysis): same button/arrow as the
+     "How to connect to Logic" hint above, just grouping whole .ctrl blocks
+     instead of one paragraph — open by default (see initSectionAccordion())
+     so a first-time user isn't hiding controls from themselves. */
+  .accordionSection{margin-bottom:6px;}
+  .accordionSection + .accordionSection{border-top:1px solid var(--line); padding-top:14px; margin-top:14px;}
+  .sectionAccordionBtn{font-size:12px; text-transform:uppercase; letter-spacing:.6px; margin-top:0; margin-bottom:14px;}
+  .accordionBody[hidden]{display:none;}
 
   footer{
     margin-top:34px; padding-top:18px;
@@ -638,60 +664,71 @@
         <button type="button" class="resetBtn" id="resetAnalysis" data-i18n="btnReset">Réinitialiser</button>
       </div>
 
-      <div class="ctrl">
-        <label style="margin-bottom:6px;" data-i18n="lblMethod">Méthode</label>
-        <select id="sepMode">
-          <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
-          <option value="lum" data-i18n="optLum">Par luminosité</option>
-          <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
-          <option value="sobel" data-i18n="optSobel">Par contours (Sobel)</option>
-        </select>
-      </div>
-      <div class="ctrl">
-        <div class="toneCurveHead">
-          <span data-i18n="lblToneCurve">Courbe de tons</span>
-          <span class="toneCurveVals">
-            <span class="val editable" id="vBlackPt" data-for="blackPt">21</span>
-            <span class="val editable" id="vGamma" data-for="gamma">1.00</span>
-            <span class="val editable" id="vWhitePt" data-for="whitePt">234</span>
-          </span>
+      <div class="accordionSection">
+        <button type="button" class="accordionBtn sectionAccordionBtn" id="colorSectionToggle" aria-expanded="true" data-i18n="analysisColorTitle">Couleur & tons</button>
+        <div class="accordionBody" id="colorSectionBody">
+          <div class="ctrl">
+            <label style="margin-bottom:6px;" data-i18n="lblMethod">Méthode</label>
+            <select id="sepMode">
+              <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
+              <option value="lum" data-i18n="optLum">Par luminosité</option>
+              <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
+              <option value="sobel" data-i18n="optSobel">Par contours (Sobel)</option>
+            </select>
+          </div>
+          <div class="ctrl">
+            <div class="toneCurveHead">
+              <span data-i18n="lblToneCurve">Courbe de tons</span>
+              <span class="toneCurveVals">
+                <span class="val editable" id="vBlackPt" data-for="blackPt">21</span>
+                <span class="val editable" id="vGamma" data-for="gamma">1.00</span>
+                <span class="val editable" id="vWhitePt" data-for="whitePt">234</span>
+              </span>
+            </div>
+            <canvas id="toneCurveGraph" class="toneCurveGraph" width="256" height="120"></canvas>
+            <input type="hidden" id="blackPt" min="0" max="255" value="21">
+            <input type="hidden" id="whitePt" min="0" max="255" value="234">
+            <input type="hidden" id="gamma" min="0.2" max="3" step="0.05" value="1">
+          </div>
+          <div class="ctrl">
+            <label><span data-i18n="lblSat">Saturation</span> <span class="val editable" id="vSat" data-for="sat">100%</span></label>
+            <input type="range" id="sat" min="0" max="200" value="100">
+          </div>
+          <div class="ctrl checkboxCtrl">
+            <label class="checkboxLbl"><input type="checkbox" id="invert"> <span data-i18n="lblInvert">Inverser</span></label>
+          </div>
         </div>
-        <canvas id="toneCurveGraph" class="toneCurveGraph" width="256" height="120"></canvas>
-        <input type="hidden" id="blackPt" min="0" max="255" value="21">
-        <input type="hidden" id="whitePt" min="0" max="255" value="234">
-        <input type="hidden" id="gamma" min="0.2" max="3" step="0.05" value="1">
       </div>
-      <div class="ctrl">
-        <label><span data-i18n="lblSat">Saturation</span> <span class="val editable" id="vSat" data-for="sat">100%</span></label>
-        <input type="range" id="sat" min="0" max="200" value="100">
-      </div>
-      <div class="ctrl">
-        <label><span data-i18n="lblSensitivity">Sensibilité (garder les zones les + contrastées)</span> <span class="val editable" id="vThresh" data-for="thresh">55</span></label>
-        <div class="sliderRow">
-          <input type="range" id="thresh" min="1" max="100" value="55">
-          <button type="button" class="miniBtn" id="autoThresh" data-i18n="btnAuto" title="Otsu">Auto</button>
-          <button type="button" class="miniBtn" id="maskToggleBtn" data-i18n="btnMaskToggle">◐ Masque</button>
+
+      <div class="accordionSection">
+        <button type="button" class="accordionBtn sectionAccordionBtn" id="detectionSectionToggle" aria-expanded="true" data-i18n="analysisDetectionTitle">Détection</button>
+        <div class="accordionBody" id="detectionSectionBody">
+          <div class="ctrl">
+            <label><span data-i18n="lblSensitivity">Sensibilité (garder les zones les + contrastées)</span> <span class="val editable" id="vThresh" data-for="thresh">55</span></label>
+            <div class="sliderRow">
+              <input type="range" id="thresh" min="1" max="100" value="55">
+              <button type="button" class="miniBtn" id="autoThresh" data-i18n="btnAuto" title="Otsu">Auto</button>
+              <button type="button" class="miniBtn" id="maskToggleBtn" data-i18n="btnMaskToggle">◐ Masque</button>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label><span data-i18n="lblBlur">Lissage</span> <span class="val editable" id="vBlur" data-for="blur">0px</span></label>
+            <input type="range" id="blur" min="0" max="10" value="0">
+          </div>
+          <div class="ctrl">
+            <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val editable" id="vLayers" data-for="layers">3</span></label>
+            <input type="range" id="layers" min="1" max="6" value="3">
+            <div id="layerSwatchStrip" class="layerSwatchStrip"></div>
+          </div>
+          <div class="ctrl" id="pickTolRow" hidden>
+            <label><span data-i18n="lblPickTol">Tolérance couleur</span> <span class="val editable" id="vPickTol" data-for="pickTol">60</span></label>
+            <input type="range" id="pickTol" min="10" max="150" value="60">
+          </div>
+          <div class="ctrl" id="imgOpacityCtrl">
+            <label><span data-i18n="lblImgOpacity">Opacité image</span> <span class="val editable" id="vImgOpacity" data-for="imgOpacity">100%</span></label>
+            <input type="range" id="imgOpacity" min="0" max="100" value="100">
+          </div>
         </div>
-      </div>
-      <div class="ctrl">
-        <label><span data-i18n="lblBlur">Lissage</span> <span class="val editable" id="vBlur" data-for="blur">0px</span></label>
-        <input type="range" id="blur" min="0" max="10" value="0">
-      </div>
-      <div class="ctrl checkboxCtrl">
-        <label class="checkboxLbl"><input type="checkbox" id="invert"> <span data-i18n="lblInvert">Inverser</span></label>
-      </div>
-      <div class="ctrl">
-        <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val editable" id="vLayers" data-for="layers">3</span></label>
-        <input type="range" id="layers" min="1" max="6" value="3">
-        <div id="layerSwatchStrip" class="layerSwatchStrip"></div>
-      </div>
-      <div class="ctrl" id="pickTolRow" hidden>
-        <label><span data-i18n="lblPickTol">Tolérance couleur</span> <span class="val editable" id="vPickTol" data-for="pickTol">60</span></label>
-        <input type="range" id="pickTol" min="10" max="150" value="60">
-      </div>
-      <div class="ctrl" id="imgOpacityCtrl">
-        <label><span data-i18n="lblImgOpacity">Opacité image</span> <span class="val editable" id="vImgOpacity" data-for="imgOpacity">100%</span></label>
-        <input type="range" id="imgOpacity" min="0" max="100" value="100">
       </div>
     </div>
   </div>
@@ -742,6 +779,8 @@ const I18N = {
     btnFreeze: "Figer l'image",
     btnResume: "Reprendre",
     analysisTitle: "Analyse de l'image",
+    analysisColorTitle: "Couleur & tons",
+    analysisDetectionTitle: "Détection",
     lblToneCurve: "Courbe de tons",
     lblSat: "Saturation",
     lblSensitivity: "Sensibilité (garder les zones les + contrastées)",
@@ -813,6 +852,9 @@ const I18N = {
     synthPlaying: "Lecture ({x})",
     muteTitle: "Muet — couper ce calque (aperçu + Web MIDI, pas l'export .mid)",
     soloTitle: "Solo — n'entendre que ce(s) calque(s)",
+    swatchIdentityTitle: "Couleur d'affichage (identité du calque)",
+    layerRenameTitle: "Double-clic pour renommer",
+    layerRoleRhythm: "Rythme",
     lblLayerThresh: "Seuil",
     layerThreshResetTitle: "Revenir au seuil global",
     notesWord: "notes",
@@ -867,6 +909,8 @@ const I18N = {
     btnFreeze: "Freeze frame",
     btnResume: "Resume",
     analysisTitle: "Image analysis",
+    analysisColorTitle: "Color & tone",
+    analysisDetectionTitle: "Detection",
     lblToneCurve: "Tone curve",
     lblSat: "Saturation",
     lblSensitivity: "Sensitivity (keep the most contrasted areas)",
@@ -938,6 +982,9 @@ const I18N = {
     synthPlaying: "Playing ({x})",
     muteTitle: "Mute — silence this layer (preview + Web MIDI, not the .mid export)",
     soloTitle: "Solo — hear only this / these layer(s)",
+    swatchIdentityTitle: "Display color (layer identity)",
+    layerRenameTitle: "Double-click to rename",
+    layerRoleRhythm: "Rhythm",
     lblLayerThresh: "Threshold",
     layerThreshResetTitle: "Reset to the global threshold",
     notesWord: "notes",
@@ -1026,6 +1073,9 @@ const GM_INSTR = [
   {fr:"Flûte",             en:"Flute",             prog:73,  emoji:'🪈'},
   {fr:"Steel drums",       en:"Steel Drums",       prog:114, emoji:'🪘'}
 ];
+// used to suggest "Rhythm" instead of "Layer N" for a freshly-created layer
+// that already has a percussion instrument assigned — see rebuildLayers().
+const PERCUSSIVE_PROGRAMS = new Set([11, 114]); // Vibraphone, Steel Drums
 
 const SCALES = {
   majPenta:[0,2,4,7,9], minPenta:[0,3,5,7,10],
@@ -1353,13 +1403,18 @@ function rebuildLayers(){
     else if(mode==='lum') color = hslToHex(0, 0, Math.round(20 + 60*i/(Math.max(n-1,1))));
     else color = (keep && keep.pickColor) || hslToHex(wheelHue, 70, 55); // 'pick': keep the last picked color
     const isAuto = keep ? keep.auto !== false : true;   // auto name unless the user renamed it
+    const program = keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog;
+    // suggested auto-name: "Rhythm" for a fresh layer that lands on a
+    // percussion instrument, "Layer N" otherwise — purely a starting
+    // suggestion, never overrides a name the user actually typed (isAuto).
+    const autoName = PERCUSSIVE_PROGRAMS.has(program) ? t('layerRoleRhythm') : (base + ' ' + (i+1));
     layers.push({
       color,
       pickColor: (keep && keep.pickColor) || color,      // remembered even when not in 'pick' mode
       picked: keep ? !!keep.picked : false,               // has the user actually chosen a color yet?
-      name: isAuto ? (base + ' ' + (i+1)) : keep.name,
+      name: isAuto ? autoName : keep.name,
       auto: isAuto,
-      program: keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog,
+      program,
       mute: keep ? !!keep.mute : false,
       solo: keep ? !!keep.solo : false,
       // per-layer sensitivity: tracks the global slider until the user drags
@@ -1378,11 +1433,14 @@ function rebuildLayers(){
 
 function renderLayerList(){
   if($('sepMode').value !== 'pick') pickLayer = -1;   // leaving 'pick' mode always disarms
+  if(lockedLayer >= layers.length) lockedLayer = -1;  // stale index after a layer-count drop
+  hoverLayer = -1;                                    // the mouse isn't over any (fresh) row yet
   const list = $('layerList');
   list.innerHTML = '';
   layers.forEach((L,i)=>{
     const row = document.createElement('div');
     row.className='layer';
+    if(lockedLayer === i) row.classList.add('isolated');
     const main = document.createElement('div');
     main.className='layerMain';
     const sw = document.createElement('button');
@@ -1391,29 +1449,64 @@ function renderLayerList(){
       sw.classList.add('pickable');
       sw.classList.toggle('picked', !!L.picked);
       sw.title = t('swatchTitle');
+      sw.setAttribute('aria-label', t('swatchTitle'));
       sw.classList.toggle('arming', pickLayer === i);
       sw.addEventListener('click', ()=>{ pickLayer = (pickLayer === i) ? -1 : i; renderLayerList(); });
     } else {
       sw.disabled = true;
+      sw.title = t('swatchIdentityTitle');
+      sw.setAttribute('aria-label', t('swatchIdentityTitle'));
     }
     const swDetected = document.createElement('div');
     swDetected.className = 'swatchDetected';
     swDetected.title = t('swatchDetectedTitle');
+    swDetected.setAttribute('aria-label', t('swatchDetectedTitle'));
     if(L.detectedColor) swDetected.style.background = L.detectedColor;
 
     const ms = document.createElement('div');
     ms.className = 'layerMS';
     const mBtn = document.createElement('button');
     mBtn.type='button'; mBtn.className='m'; mBtn.textContent='M'; mBtn.title = t('muteTitle');
+    mBtn.setAttribute('aria-label', t('muteTitle'));
     mBtn.addEventListener('click', ()=>{ layers[i].mute = !layers[i].mute; onMixChange(); });
     const sBtn = document.createElement('button');
     sBtn.type='button'; sBtn.className='s'; sBtn.textContent='S'; sBtn.title = t('soloTitle');
+    sBtn.setAttribute('aria-label', t('soloTitle'));
     sBtn.addEventListener('click', ()=>{ layers[i].solo = !layers[i].solo; onMixChange(); });
     ms.appendChild(mBtn); ms.appendChild(sBtn);
 
-    const nameInput = document.createElement('input');
-    nameInput.type='text'; nameInput.value = L.name;
-    nameInput.addEventListener('input', e=>{ layers[i].name = e.target.value; layers[i].auto = false; });
+    // display-then-edit, same pattern as beginEditVal() for slider values:
+    // a plain label at rest (also doubles as click-to-isolate real estate,
+    // see the row listener below — a <span> isn't excluded by its
+    // closest('button, input, select') check) that swaps to a real text
+    // input on double-click, committed on Enter/blur, cancelled on Escape.
+    const nameLabel = document.createElement('span');
+    nameLabel.className = 'layerNameLabel';
+    nameLabel.textContent = L.name;
+    nameLabel.tabIndex = 0;
+    nameLabel.title = t('layerRenameTitle');
+    const beginEditName = ()=>{
+      if(nameLabel.querySelector('input')) return;
+      const box = document.createElement('input');
+      box.type = 'text'; box.className = 'layerNameEdit'; box.value = layers[i].name;
+      nameLabel.textContent = '';
+      nameLabel.appendChild(box);
+      box.focus(); box.select();
+      const commit = ()=>{
+        const v = box.value.trim();
+        if(v){ layers[i].name = v; layers[i].auto = false; }
+        nameLabel.textContent = layers[i].name;
+      };
+      box.addEventListener('keydown', e=>{
+        if(e.key === 'Enter'){ e.preventDefault(); box.blur(); }
+        else if(e.key === 'Escape'){ box.dataset.cancel = '1'; box.blur(); }
+      });
+      box.addEventListener('blur', ()=>{
+        if(box.dataset.cancel) nameLabel.textContent = layers[i].name; else commit();
+      });
+    };
+    nameLabel.addEventListener('dblclick', ()=> beginEditName());
+    nameLabel.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); beginEditName(); } });
 
     // instrument picker: shows only an icon at rest (see .instrPicker CSS) —
     // the real <select> is still there underneath, fully native (keyboard,
@@ -1444,7 +1537,7 @@ function renderLayerList(){
     });
     syncInstrIcon();
     instrPicker.appendChild(instrIcon); instrPicker.appendChild(sel);
-    main.appendChild(sw); main.appendChild(swDetected); main.appendChild(ms); main.appendChild(nameInput); main.appendChild(instrPicker);
+    main.appendChild(sw); main.appendChild(swDetected); main.appendChild(ms); main.appendChild(nameLabel); main.appendChild(instrPicker);
 
     // per-layer sensitivity: independent from the global slider once touched
     const threshRow = document.createElement('div');
@@ -1474,8 +1567,29 @@ function renderLayerList(){
       threshReset.disabled = true;
       process();
     });
+    // per-layer note count: lastNotes[i].length is already exactly what
+    // buildMidi()/the scheduler use, just displayed — no separate count to
+    // keep in sync. Filled in by updateLayerNoteCounts() (called from the
+    // end of process(), same lightweight DOM-only-update pattern as
+    // updateLayerSwatches()) rather than here, since lastNotes may not yet
+    // reflect this exact layer set at row-creation time (e.g. right after
+    // a layer-count change, before the next process() pass runs).
+    const noteCountEl = document.createElement('span');
+    noteCountEl.className = 'layerNoteCount';
     threshRow.appendChild(threshLbl); threshRow.appendChild(threshInput);
-    threshRow.appendChild(threshVal); threshRow.appendChild(threshReset);
+    threshRow.appendChild(threshVal); threshRow.appendChild(threshReset); threshRow.appendChild(noteCountEl);
+
+    // cross-link with the image dots / piano roll: hover the row to isolate
+    // this layer, click to pin it (click again, or click another row, to
+    // unpin) — ignore clicks on the row's own interactive controls so they
+    // keep working normally instead of also toggling the pin.
+    row.addEventListener('mouseenter', ()=>{ hoverLayer = i; onLayerIsolationChange(); });
+    row.addEventListener('mouseleave', ()=>{ hoverLayer = -1; onLayerIsolationChange(); });
+    row.addEventListener('click', e=>{
+      if(e.target.closest('button, input, select')) return;
+      lockedLayer = (lockedLayer === i) ? -1 : i;
+      onLayerIsolationChange();
+    });
 
     row.appendChild(main); row.appendChild(threshRow);
     list.appendChild(row);
@@ -1511,6 +1625,18 @@ function updateLayerSwatches(){
   });
 }
 
+// per-layer note count, straight from lastNotes[i].length (the exact array
+// buildMidi()/the scheduler consume — nothing recomputed) — same cheap
+// DOM-only-update pattern as updateLayerSwatches(), called from process().
+function updateLayerNoteCounts(){
+  const rows = $('layerList').children;
+  lastNotes.forEach((arr,i)=>{
+    const row = rows[i]; if(!row) return;
+    const el = row.querySelector('.layerNoteCount');
+    if(el) el.textContent = arr.length + ' ' + t('notesWord');
+  });
+}
+
 // Solo overrides Mute (DAW convention): if anything is soloed, only soloed
 // layers are audible; otherwise everything except the muted ones.
 function anySolo(){ return layers.some(L => L.solo); }
@@ -1518,6 +1644,42 @@ function layerAudible(i){
   const L = layers[i];
   if(!L) return false;
   return anySolo() ? !!L.solo : !L.mute;
+}
+
+// Cross-link between the layer list, the image dots and the piano roll: hover
+// a "Layer N" row (or click to pin it while comparing without holding the
+// mouse still) and every OTHER layer's dots/notes dim on both the image and
+// the piano roll, independent of mute/solo — a pure "look at this one" aid,
+// not a mix state. lockedLayer wins over hoverLayer so hovering elsewhere
+// while pinned doesn't fight the pin.
+let hoverLayer = -1, lockedLayer = -1;
+function isolatedLayer(){ return lockedLayer >= 0 ? lockedLayer : hoverLayer; }
+function layerVisualAlpha(i){
+  const iso = isolatedLayer();
+  if(iso >= 0) return iso === i ? 1 : 0.2;
+  return layerAudible(i) ? 1 : 0.22;
+}
+function onLayerIsolationChange(){
+  redrawPreview();
+  drawPianoRoll();
+  const iso = isolatedLayer();
+  const rows = $('layerList').children;
+  layers.forEach((L,i)=>{ const row = rows[i]; if(row) row.classList.toggle('isolated', iso === i); });
+}
+
+// Note-level cross-link (image dots <-> piano roll): hovering one highlights
+// the exact same note ({layerIdx, step, midi}) on the other, drawn with a
+// bright ring/outline in drawPreview()/drawPianoRoll(). Independent of the
+// layer-level isolation above — this only ever emphasizes one note, it
+// never dims anything. Listeners are wired further down, right after
+// drawPianoRoll()'s own declaration (needs the pianoRoll canvas to exist).
+let hoverNote = null;
+function sameNote(a,b){ return a && b && a.layerIdx===b.layerIdx && a.step===b.step && a.midi===b.midi; }
+function setHoverNote(n){
+  if(sameNote(n, hoverNote)) return;
+  hoverNote = n;
+  redrawPreview();
+  drawPianoRoll();
 }
 
 function refreshMixUI(){
@@ -1988,6 +2150,7 @@ function process(){
     L.detectedColor = swCount[i] > 0 ? rgbToHex(sumR[i]/swCount[i], sumG[i]/swCount[i], sumB[i]/swCount[i]) : null;
   });
   updateLayerSwatches();
+  updateLayerNoteCounts();
 
   redrawPreview();   // skips the analysis view in favor of the crop overlay while editing a crop
   drawPianoRoll();
@@ -2041,7 +2204,7 @@ function drawPreview(){
   const dir = readDir();
   lastNotes.forEach((arr,Li)=>{
     pctx.fillStyle = layers[Li].color;
-    pctx.globalAlpha = layerAudible(Li) ? 1 : 0.22;   // dim muted / non-soloed layers
+    pctx.globalAlpha = layerVisualAlpha(Li);   // dims muted/non-soloed layers, or all-but-isolated on hover/pin
     arr.forEach(n=>{
       const pIdx = pitches.indexOf(n.midi);
       if(pIdx < 0) return;
@@ -2049,10 +2212,24 @@ function drawPreview(){
       // back to image space, reversal and diagonals included — no extra bookkeeping.
       const [nx, ny] = dir.inv((n.step+0.5)/steps, (pIdx+0.5)/rows);
       const cx = nx*preview.width, cy = ny*preview.height;
-      const rad = 2 + (n.vel/127)*4;
+      const isHover = hoverNote && hoverNote.layerIdx===Li && hoverNote.step===n.step && hoverNote.midi===n.midi;
+      const rad = (2 + (n.vel/127)*4) * (isHover ? 1.7 : 1);
       pctx.beginPath();
       pctx.arc(cx,cy,rad,0,Math.PI*2);
       pctx.fill();
+      // cross-link with the piano roll: the note under the mouse (there or
+      // here) gets a bright ring, at full opacity regardless of isolation
+      // dimming, so it's findable even if its layer is currently dimmed.
+      if(isHover){
+        pctx.save();
+        pctx.globalAlpha = 1;
+        pctx.strokeStyle = '#fff';
+        pctx.lineWidth = 2;
+        pctx.beginPath();
+        pctx.arc(cx,cy,rad+3,0,Math.PI*2);
+        pctx.stroke();
+        pctx.restore();
+      }
     });
   });
   pctx.globalAlpha = 1;
@@ -2456,13 +2633,23 @@ function drawPianoRoll(){
   lastNotes.forEach((arr,Li)=>{
     const L = layers[Li]; if(!L) return;
     prCtx.fillStyle = L.color;
-    prCtx.globalAlpha = layerAudible(Li) ? 1 : 0.25;   // same dimming convention as drawPreview()
+    prCtx.globalAlpha = layerVisualAlpha(Li);   // same dimming convention as drawPreview()
     arr.forEach(n=>{
       const pIdx = pitches.indexOf(n.midi);
       if(pIdx < 0) return;
       const x = n.step*colW;
       const y = (rows-1-pIdx)*rowH;   // top/high row = highest pitch, same convention as note dots
-      prCtx.fillRect(x+0.5, y+0.5, Math.max(1, colW*gatePct-1), Math.max(1, rowH-1));
+      const w = Math.max(1, colW*gatePct-1), h = Math.max(1, rowH-1);
+      prCtx.fillRect(x+0.5, y+0.5, w, h);
+      // cross-link with the image dots: same note, same white outline treatment
+      if(hoverNote && hoverNote.layerIdx===Li && hoverNote.step===n.step && hoverNote.midi===n.midi){
+        prCtx.save();
+        prCtx.globalAlpha = 1;
+        prCtx.strokeStyle = '#fff';
+        prCtx.lineWidth = 2;
+        prCtx.strokeRect(x+0.5, y+0.5, w, h);
+        prCtx.restore();
+      }
     });
   });
   prCtx.globalAlpha = 1;
@@ -2474,6 +2661,56 @@ function drawPianoRoll(){
     prCtx.beginPath(); prCtx.moveTo(x,0); prCtx.lineTo(x,H); prCtx.stroke();
   }
 }
+
+// note-level cross-link listeners (see hoverNote/setHoverNote() above) —
+// image side: nearest dot within a small pixel radius on the 2x-resolution
+// canvas; piano-roll side: exact grid cell, same math drawPianoRoll() uses.
+preview.addEventListener('mousemove', e=>{
+  if(cropEditing || pickLayer >= 0 || !img || !lastNotes.length) return;
+  const steps = parseInt($('steps').value);
+  const pitches = scaleNotesForRange();
+  const rows = pitches.length;
+  if(!rows) return;
+  const dir = readDir();
+  const rect = preview.getBoundingClientRect();
+  const mx = (e.clientX-rect.left)/rect.width*preview.width;
+  const my = (e.clientY-rect.top)/rect.height*preview.height;
+  let best = null, bestD = 15*15;   // px^2 hit radius on the 2x-resolution canvas
+  lastNotes.forEach((arr,Li)=>{
+    arr.forEach(n=>{
+      const pIdx = pitches.indexOf(n.midi);
+      if(pIdx < 0) return;
+      const [nx,ny] = dir.inv((n.step+0.5)/steps, (pIdx+0.5)/rows);
+      const dx = nx*preview.width-mx, dy = ny*preview.height-my, d = dx*dx+dy*dy;
+      if(d < bestD){ bestD = d; best = {layerIdx:Li, step:n.step, midi:n.midi}; }
+    });
+  });
+  setHoverNote(best);
+});
+preview.addEventListener('mouseleave', ()=> setHoverNote(null));
+
+pianoRoll.addEventListener('mousemove', e=>{
+  if(!img || !layers.length) return;
+  const steps = parseInt($('steps').value);
+  const pitches = scaleNotesForRange();
+  const rows = pitches.length;
+  if(!rows) return;
+  const rect = pianoRoll.getBoundingClientRect();
+  const x = (e.clientX-rect.left)/rect.width*pianoRoll.width;
+  const y = (e.clientY-rect.top)/rect.height*pianoRoll.height;
+  const colW = pianoRoll.width/steps, rowH = pianoRoll.height/rows;
+  const step = Math.floor(x/colW), pIdx = rows-1-Math.floor(y/rowH);
+  if(step < 0 || step >= steps || pIdx < 0 || pIdx >= rows){ setHoverNote(null); return; }
+  const midi = pitches[pIdx];
+  let found = null;
+  lastNotes.forEach((arr,Li)=>{
+    if(found) return;
+    const n = arr.find(nn => nn.step === step && nn.midi === midi);
+    if(n) found = {layerIdx:Li, step, midi};
+  });
+  setHoverNote(found);
+});
+pianoRoll.addEventListener('mouseleave', ()=> setHoverNote(null));
 
 function redrawPreview(){
   if(cropEditing) drawCropEditor();
@@ -3143,7 +3380,7 @@ function currentPresetValues(){
     values[id] = el.type === 'checkbox' ? el.checked : el.value;
   });
   // per layer: instrument + individual sensitivity, applied back by index on load
-  const layerOverrides = layers.map(L => ({ program:L.program, thresh:L.thresh, threshCustom:L.threshCustom }));
+  const layerOverrides = layers.map(L => ({ program:L.program, thresh:L.thresh, threshCustom:L.threshCustom, name:L.name, auto:L.auto }));
   return { values, layerOverrides };
 }
 
@@ -3176,6 +3413,7 @@ function applyPreset(data){
       if(!layers[i]) return;
       if(ov.program != null) layers[i].program = ov.program;
       if(ov.thresh != null){ layers[i].thresh = ov.thresh; layers[i].threshCustom = !!ov.threshCustom; }
+      if(ov.name != null){ layers[i].name = ov.name; layers[i].auto = !!ov.auto; }
     });
     renderLayerList();
   }
@@ -3300,6 +3538,31 @@ $('midiHintToggle').addEventListener('click', ()=>{
   $('midiHint').hidden = !willOpen;
   $('midiHintToggle').setAttribute('aria-expanded', String(willOpen));
 });
+
+/* ---- section accordions (Image Analysis: Color & tone / Detection) ----
+   Open by default on every load — only the collapsed/expanded *choice*,
+   once a user actually makes one, is remembered locally (so it doesn't
+   hide controls from someone who never touched it). */
+function loadSectionAccordionState(){
+  try{ return JSON.parse(localStorage.getItem('dessons.sections')) || {}; }catch(e){ return {}; }
+}
+function initSectionAccordion(btnId, bodyId){
+  const btn = $(btnId), body = $(bodyId);
+  const saved = loadSectionAccordionState()[btnId];
+  const isOpen = saved !== false;   // no saved choice yet, or saved "open" -> open
+  body.hidden = !isOpen;
+  btn.setAttribute('aria-expanded', String(isOpen));
+  btn.addEventListener('click', ()=>{
+    const willOpen = body.hidden;
+    body.hidden = !willOpen;
+    btn.setAttribute('aria-expanded', String(willOpen));
+    const state = loadSectionAccordionState();
+    state[btnId] = willOpen;
+    try{ localStorage.setItem('dessons.sections', JSON.stringify(state)); }catch(e){}
+  });
+}
+initSectionAccordion('colorSectionToggle', 'colorSectionBody');
+initSectionAccordion('detectionSectionToggle', 'detectionSectionBody');
 
 /* ---- reset a section's controls to their factory defaults ---- */
 const CONTROL_DEFAULTS = {
