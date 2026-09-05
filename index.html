@@ -203,6 +203,13 @@
   .octaveStrip .octHi{fill:var(--accent); opacity:.32; pointer-events:none;}
   .octaveLabels{display:flex; justify-content:space-between; margin-top:4px; font-size:10px; color:var(--text-dim); font-family:var(--mono);}
 
+  /* tone curve: histogram + draggable black/white/gamma points, replaces the
+     3 separate sliders (values stay editable, just moved next to the graph) */
+  .toneCurveHead{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:12.5px; color:var(--text);}
+  .toneCurveVals{display:flex; gap:10px; font-family:var(--mono); font-size:12px;}
+  .toneCurveVals .val{color:var(--accent);}
+  .toneCurveGraph{width:100%; height:120px; display:block; cursor:pointer; touch-action:none; border-radius:4px; border:1px solid var(--line); background:var(--panel-2);}
+
   .divider{height:1px; background:var(--line); margin:18px 0;}
 
   /* layer legend */
@@ -540,16 +547,18 @@
         </select>
       </div>
       <div class="ctrl">
-        <label><span data-i18n="lblBlackPt">Point noir</span> <span class="val editable" id="vBlackPt" data-for="blackPt">21</span></label>
-        <input type="range" id="blackPt" min="0" max="255" value="21">
-      </div>
-      <div class="ctrl">
-        <label><span data-i18n="lblWhitePt">Point blanc</span> <span class="val editable" id="vWhitePt" data-for="whitePt">234</span></label>
-        <input type="range" id="whitePt" min="0" max="255" value="234">
-      </div>
-      <div class="ctrl">
-        <label><span data-i18n="lblGamma">Gamma</span> <span class="val editable" id="vGamma" data-for="gamma">1.00</span></label>
-        <input type="range" id="gamma" min="0.2" max="3" step="0.05" value="1">
+        <div class="toneCurveHead">
+          <span data-i18n="lblToneCurve">Courbe de tons</span>
+          <span class="toneCurveVals">
+            <span class="val editable" id="vBlackPt" data-for="blackPt">21</span>
+            <span class="val editable" id="vGamma" data-for="gamma">1.00</span>
+            <span class="val editable" id="vWhitePt" data-for="whitePt">234</span>
+          </span>
+        </div>
+        <canvas id="toneCurveGraph" class="toneCurveGraph" width="256" height="120"></canvas>
+        <input type="hidden" id="blackPt" min="0" max="255" value="21">
+        <input type="hidden" id="whitePt" min="0" max="255" value="234">
+        <input type="hidden" id="gamma" min="0.2" max="3" step="0.05" value="1">
       </div>
       <div class="ctrl">
         <label><span data-i18n="lblSat">Saturation</span> <span class="val editable" id="vSat" data-for="sat">100%</span></label>
@@ -638,9 +647,7 @@ const I18N = {
     btnFreeze: "Figer l'image",
     btnResume: "Reprendre",
     analysisTitle: "Analyse de l'image",
-    lblBlackPt: "Point noir",
-    lblWhitePt: "Point blanc",
-    lblGamma: "Gamma",
+    lblToneCurve: "Courbe de tons",
     lblSat: "Saturation",
     lblSensitivity: "Sensibilité (garder les zones les + contrastées)",
     btnAuto: "Auto",
@@ -764,9 +771,7 @@ const I18N = {
     btnFreeze: "Freeze frame",
     btnResume: "Resume",
     analysisTitle: "Image analysis",
-    lblBlackPt: "Black point",
-    lblWhitePt: "White point",
-    lblGamma: "Gamma",
+    lblToneCurve: "Tone curve",
     lblSat: "Saturation",
     lblSensitivity: "Sensitivity (keep the most contrasted areas)",
     btnAuto: "Auto",
@@ -1083,6 +1088,9 @@ function loadFile(file){
       updateCropUI();
       updatePlayBtnState();
       rebuildLayers();
+      grabFrame();
+      computeHistogram();
+      drawToneCurveGraph();
       v.play().catch(()=>{});
       liveLoop();
     }, {once:true});
@@ -1100,6 +1108,8 @@ function loadFile(file){
       updatePlayBtnState();
       rebuildLayers();
       grabFrame();
+      computeHistogram();
+      drawToneCurveGraph();
       process();
     };
     image.onerror = ()=> showSrcError(t('videoErr'));
@@ -1149,6 +1159,9 @@ async function toggleWebcam(){
     updateCropUI();
     updatePlayBtnState();
     rebuildLayers();
+    grabFrame();
+    computeHistogram();
+    drawToneCurveGraph();
     liveLoop();
   };
   ready();
@@ -2638,6 +2651,7 @@ liveIds.forEach(id=>{
     syncLabels();
     if(id === 'thresh') syncLayerThreshFromGlobal();
     if(id === 'octLow' || id === 'octHigh') redrawOctaveHighlight();
+    if(id === 'blackPt' || id === 'whitePt' || id === 'gamma') drawToneCurveGraph();
     if(structureIds.includes(id)) rebuildLayers();
     process();
   });
@@ -2699,6 +2713,102 @@ function redrawOctaveHighlight(){
   hi.setAttribute('x', lo*octW);
   hi.setAttribute('width', (high-lo+1)*octW);
 }
+
+/* ---- tone curve graph: histogram + draggable black/white/gamma handles ----
+   The curve is *only* ever built via buildToneLUT() — the exact same function
+   process() calls — so whatever the graph shows is guaranteed to match what
+   gets analyzed, and dragging a handle just writes blackPt/whitePt/gamma and
+   dispatches 'input' like a real slider would, no parallel logic. */
+let lastHistogram = null;
+function computeHistogram(){
+  if(!img || !imgCanvas.width){ lastHistogram = null; return; }
+  const w = imgCanvas.width, h = imgCanvas.height;
+  const data = imgCtx.getImageData(0,0,w,h).data;
+  const hist = new Uint32Array(256);
+  for(let i=0;i<data.length;i+=4){
+    hist[clamp(Math.round(0.299*data[i]+0.587*data[i+1]+0.114*data[i+2]),0,255)]++;
+  }
+  lastHistogram = hist;
+}
+
+const toneCurveGraph = document.getElementById('toneCurveGraph'), tcCtx = toneCurveGraph.getContext('2d');
+function drawToneCurveGraph(){
+  const W = toneCurveGraph.width, H = toneCurveGraph.height;
+  tcCtx.clearRect(0,0,W,H);
+  if(lastHistogram){
+    let maxCount = 1;
+    for(let i=0;i<256;i++) if(lastHistogram[i]>maxCount) maxCount = lastHistogram[i];
+    const maxRoot = Math.sqrt(maxCount);   // sqrt scale so one huge spike doesn't flatten the rest
+    tcCtx.fillStyle = 'rgba(255,255,255,.14)';
+    for(let i=0;i<256;i++){
+      const barH = (Math.sqrt(lastHistogram[i])/maxRoot) * H;
+      if(barH>0) tcCtx.fillRect(i, H-barH, 1, barH);
+    }
+  }
+
+  const bp = parseInt($('blackPt').value), wp = Math.max(bp+1, parseInt($('whitePt').value)), gamma = parseFloat($('gamma').value);
+  const lut = buildToneLUT(bp, wp, gamma);
+  tcCtx.strokeStyle = '#00ffff';   // matches --accent (canvas can't read CSS vars)
+  tcCtx.lineWidth = 1.5;
+  tcCtx.beginPath();
+  for(let x=0;x<256;x++){
+    const y = H - (lut[x]/255)*H;
+    if(x===0) tcCtx.moveTo(x,y); else tcCtx.lineTo(x,y);
+  }
+  tcCtx.stroke();
+
+  const midX = (bp+wp)/2;
+  const midY = H - (lut[clamp(Math.round(midX),0,255)]/255)*H;
+  const drawHandle = (x,y)=>{
+    tcCtx.fillStyle = '#0e0f12'; tcCtx.strokeStyle = '#00ffff'; tcCtx.lineWidth = 1.5;
+    tcCtx.beginPath(); tcCtx.arc(x,y,4,0,Math.PI*2); tcCtx.fill(); tcCtx.stroke();
+  };
+  drawHandle(bp, H);
+  drawHandle(wp, 0);
+  drawHandle(midX, midY);
+}
+
+function tcPointFromEvent(e){
+  const rect = toneCurveGraph.getBoundingClientRect();
+  return [ (e.clientX-rect.left)/rect.width*toneCurveGraph.width, (e.clientY-rect.top)/rect.height*toneCurveGraph.height ];
+}
+let tcDrag = null; // 'black' | 'white' | 'gamma' | null
+toneCurveGraph.addEventListener('pointerdown', e=>{
+  const [x,y] = tcPointFromEvent(e);
+  const H = toneCurveGraph.height;
+  const bp = parseInt($('blackPt').value), wp = Math.max(bp+1, parseInt($('whitePt').value)), gamma = parseFloat($('gamma').value);
+  const midX = (bp+wp)/2;
+  const midY = H - (buildToneLUT(bp,wp,gamma)[clamp(Math.round(midX),0,255)]/255)*H;
+  const dBlack = Math.hypot(x-bp, y-H), dWhite = Math.hypot(x-wp, y-0), dGamma = Math.hypot(x-midX, y-midY);
+  const closest = Math.min(dBlack, dWhite, dGamma);
+  if(closest > 20) return;   // missed all three handles
+  tcDrag = closest===dBlack ? 'black' : closest===dWhite ? 'white' : 'gamma';
+  toneCurveGraph.setPointerCapture(e.pointerId);
+  tcDragMove(e);
+});
+function tcDragMove(e){
+  if(!tcDrag) return;
+  const [x,y] = tcPointFromEvent(e);
+  const H = toneCurveGraph.height;
+  if(tcDrag==='black'){
+    const wp = parseInt($('whitePt').value);
+    $('blackPt').value = clamp(Math.round(x), 0, wp-1);
+    $('blackPt').dispatchEvent(new Event('input',{bubbles:true}));
+  } else if(tcDrag==='white'){
+    const bp = parseInt($('blackPt').value);
+    $('whitePt').value = clamp(Math.round(x), bp+1, 255);
+    $('whitePt').dispatchEvent(new Event('input',{bubbles:true}));
+  } else if(tcDrag==='gamma'){
+    // midpoint of [bp,wp] normalizes to exactly 0.5, so solving
+    // yNorm = 0.5^(1/gamma) for gamma is exact — same formula buildToneLUT() uses.
+    const yNorm = clamp(1 - y/H, 0.02, 0.98);
+    const g = clamp(Math.log(0.5)/Math.log(yNorm), 0.2, 3);
+    $('gamma').value = g.toFixed(2);
+    $('gamma').dispatchEvent(new Event('input',{bubbles:true}));
+  }
+}
+toneCurveGraph.addEventListener('pointermove', tcDragMove);
+toneCurveGraph.addEventListener('pointerup', e=>{ tcDrag=null; try{ toneCurveGraph.releasePointerCapture(e.pointerId); }catch(err){} });
 
 /* ---- presets: save/load the full Image Analysis + Music + per-layer setup ---- */
 const PRESET_KEYS = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode',
@@ -2929,6 +3039,7 @@ syncLabels();
 updatePlayBtnState();
 initCurveEditor();
 buildOctaveStrip();
+drawToneCurveGraph();
 setLang(initialLang());
 </script>
 
