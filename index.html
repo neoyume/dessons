@@ -2286,7 +2286,8 @@ function scheduler(){
     // Real Web MIDI output is untouched: that sustain is a genuine CC64 sent
     // to the receiving synth (see startPlayback()), which already handles
     // holding notes on its own end regardless of Dessons' note-off timing.
-    const synthDurMs = ($('sustainToggle').checked && sink === 'synth') ? (spanMs - 3) : gateMs;
+    const sustainOn = $('sustainToggle').checked;
+    const synthDurMs = (sustainOn && sink === 'synth') ? (spanMs - 3) : gateMs;
     lastNotes.forEach((arr, Li)=>{
       if(!layerAudible(Li)) return;         // Mute / Solo
       const chan = Li % 16;
@@ -2298,7 +2299,7 @@ function scheduler(){
           hangingNotes.add(chan*128 + (n.midi & 0x7F));
           usedChannels.add(chan);
         } else {
-          spawnVoice(n.midi, n.vel, audioEpoch + at / 1000, synthDurMs / 1000, Li);
+          spawnVoice(n.midi, n.vel, audioEpoch + at / 1000, synthDurMs / 1000, Li, sustainOn);
         }
       }
     });
@@ -2772,7 +2773,7 @@ function timbreFor(prog){
   return {wave:'triangle', atk:0.004, dec:0.3, sus:0.22, rel:0.25, cut:3400, q:0.6, gain:0.23};                                          // piano-ish default
 }
 
-function spawnVoice(midi, vel, whenSec, durSec, layerIdx){
+function spawnVoice(midi, vel, whenSec, durSec, layerIdx, sustain){
   if(!ac || voices.size > 96) return;
   const L = layers[layerIdx];
   const tb = timbreFor(L ? L.program : 0);
@@ -2780,9 +2781,16 @@ function spawnVoice(midi, vel, whenSec, durSec, layerIdx){
   const amp = tb.gain * Math.max(0.06, vel / 127);
   const t0 = Math.max(whenSec, ac.currentTime + 0.003);
   const off = Math.max(t0 + durSec, t0 + tb.atk + 0.03);
-  const end = off + tb.rel;
+  // sustain "pedal" feel for the preview synth: besides ringing the full step
+  // (durSec, set by the caller), boost the held level and stretch the release
+  // tail — this is what actually makes it audible, since most timbres decay
+  // to near-silence during their hold (sus:0 on mallets/steel drums) and have
+  // a short release; a longer note-on time alone barely changes what you hear.
+  const rel = sustain ? tb.rel * 4 : tb.rel;
+  const sus = sustain ? Math.max(tb.sus, 0.55) : tb.sus;
+  const end = off + rel;
   const decEnd = Math.min(t0 + tb.atk + tb.dec, off);
-  const susLvl = Math.max(0.0002, amp * tb.sus);
+  const susLvl = Math.max(0.0002, amp * sus);
 
   const osc = ac.createOscillator();
   osc.type = tb.wave;
