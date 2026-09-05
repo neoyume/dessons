@@ -97,6 +97,14 @@ Dessons est gratuit, sans aucune fonctionnalité payante — jamais. S'il te ser
 
 Les issues et pull requests sont les bienvenues — que ce soit pour des bugs, de nouvelles méthodes de séparation de calques, d'autres formats d'export, etc. En proposant une contribution, tu acceptes qu'elle soit sous licence PolyForm Noncommercial 1.0.0, comme le reste du projet.
 
+## Usage commercial
+
+Dessons reste gratuit pour un usage non commercial sous licence PolyForm Noncommercial 1.0.0 (voir Licence ci-dessous) — et le restera toujours pour un usage personnel non commercial.
+
+Si tu souhaites utiliser Dessons dans un cadre commercial — au sein d'un produit ou service payant, d'un pipeline de studio de jeu, d'un projet d'agence, ou tout autre usage sortant du cadre non commercial — ouvre une discussion et discutons d'une licence commerciale.
+
+À noter : ceci ne concerne que l'outil lui-même. La musique que tu crées avec Dessons, même sous la licence gratuite non commerciale, t'appartient entièrement — voir ci-dessous.
+
 ## Licence
 
 [PolyForm Noncommercial 1.0.0](LICENSE) © [neoyume](https://github.com/neoyume).

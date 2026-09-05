@@ -97,6 +97,14 @@ Dessons is free, with no paywalled features — ever. If it's useful to you, you
 
 Issues and pull requests are welcome — bugs, new layer-separation methods, other export formats, and so on. By submitting a contribution you agree to license it under PolyForm Noncommercial 1.0.0, like the rest of the project.
 
+## Commercial use
+
+Dessons itself is free for non-commercial use under PolyForm Noncommercial 1.0.0 (see License below) — and it always will be for personal, non-commercial use.
+
+If you'd like to use Dessons commercially — inside a paid product or service, a game studio pipeline, an agency project, or anything else that falls outside non-commercial use — open a discussion and let's talk about a commercial license.
+
+Note: this only concerns the tool itself. Music you make with Dessons, even under the free non-commercial license, is entirely yours — see below.
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) © [neoyume](https://github.com/neoyume).
