@@ -205,6 +205,14 @@
   .octaveStrip .octHi{fill:var(--accent); opacity:.32; pointer-events:none;}
   .octaveLabels{display:flex; justify-content:space-between; margin-top:4px; font-size:10px; color:var(--text-dim); font-family:var(--mono);}
 
+  /* mini keyboard under Scale/Root: read-only, one octave, highlights scale degrees + root */
+  .scaleKeyboard{width:100%; height:40px; display:block; border-radius:4px; overflow:hidden; border:1px solid var(--line); margin-top:2px;}
+  .scaleKeyboard .pw{fill:var(--panel-2); stroke:var(--line); stroke-width:0.5;}
+  .scaleKeyboard .pb{fill:var(--text-dim);}
+  .scaleKeyboard .pw.scaleKey{fill:var(--accent); opacity:.5;}
+  .scaleKeyboard .pb.scaleKey{fill:var(--accent); opacity:.75;}
+  .scaleKeyboard .pw.rootKey, .scaleKeyboard .pb.rootKey{fill:var(--cyan); opacity:1;}
+
   /* tone curve: histogram + draggable black/white/gamma points, replaces the
      3 separate sliders (values stay editable, just moved next to the graph) */
   .toneCurveHead{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:12.5px; color:var(--text);}
@@ -416,6 +424,7 @@
           <option value="6">F#</option><option value="7">G</option><option value="8">G#</option>
           <option value="9">A</option><option value="10">A#</option><option value="11">B</option>
         </select>
+        <svg id="scaleKeyboard" class="scaleKeyboard" viewBox="0 0 210 60" preserveAspectRatio="none"></svg>
       </div>
       <div class="ctrl">
         <label><span data-i18n="lblOctRange">Plage d'octaves</span> <span class="val" id="vOctRange">3–5</span></label>
@@ -2694,6 +2703,7 @@ liveIds.forEach(id=>{
     syncLabels();
     if(id === 'thresh') syncLayerThreshFromGlobal();
     if(id === 'octLow' || id === 'octHigh') redrawOctaveHighlight();
+    if(id === 'scale' || id === 'root') redrawScaleKeyboard();
     if(id === 'blackPt' || id === 'whitePt' || id === 'gamma') drawToneCurveGraph();
     if(structureIds.includes(id)) rebuildLayers();
     process();
@@ -2755,6 +2765,38 @@ function redrawOctaveHighlight(){
   const lo = parseInt($('octLow').value), high = parseInt($('octHigh').value);
   hi.setAttribute('x', lo*octW);
   hi.setAttribute('width', (high-lo+1)*octW);
+}
+
+/* ---- mini keyboard under Scale/Root: read-only, one octave (12 semitones),
+   built once then just re-tinted on every Scale/Root change via data-semi
+   attributes — no image processing involved, pure scale+root -> key lookup. ---- */
+function buildScaleKeyboard(){
+  const svg = $('scaleKeyboard');
+  const W = 210, H = 60, whiteW = W/7;
+  const whiteSemis = [0,2,4,5,7,9,11];
+  const blackSemis = [1,3,6,8,10], blackAfterWi = [0,1,3,4,5];
+  let html = '';
+  whiteSemis.forEach((semi,wi)=>{
+    html += `<rect class="pw" data-semi="${semi}" x="${wi*whiteW}" y="0" width="${whiteW}" height="${H}"></rect>`;
+  });
+  blackAfterWi.forEach((wi,i)=>{
+    const bx = (wi+1)*whiteW - whiteW*0.3;
+    html += `<rect class="pb" data-semi="${blackSemis[i]}" x="${bx}" y="0" width="${whiteW*0.6}" height="${H*0.62}"></rect>`;
+  });
+  svg.innerHTML = html;
+  redrawScaleKeyboard();
+}
+function redrawScaleKeyboard(){
+  const svg = $('scaleKeyboard'); if(!svg) return;
+  const root = parseInt($('root').value);
+  const degrees = SCALES[$('scale').value] || [];
+  const inScale = new Set(degrees.map(d => (root+d)%12));
+  svg.querySelectorAll('rect[data-semi]').forEach(rect=>{
+    const semi = parseInt(rect.dataset.semi);
+    rect.classList.remove('scaleKey','rootKey');
+    if(semi === ((root%12)+12)%12) rect.classList.add('rootKey');
+    else if(inScale.has(semi)) rect.classList.add('scaleKey');
+  });
 }
 
 /* ---- tone curve graph: histogram + draggable black/white/gamma handles ----
@@ -3082,6 +3124,7 @@ syncLabels();
 updatePlayBtnState();
 initCurveEditor();
 buildOctaveStrip();
+buildScaleKeyboard();
 drawToneCurveGraph();
 setLang(initialLang());
 </script>
