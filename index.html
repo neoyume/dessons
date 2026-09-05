@@ -133,6 +133,13 @@
   .previewPlaceholder p{margin:0; max-width:220px; line-height:1.4;}
   .previewMeta{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-top:6px; font-family:var(--mono);}
 
+  /* crop + size/notes info sit to the left of Direction/Curve instead of
+     stacked above them — saves vertical space. */
+  .metaTransportRow{display:flex; justify-content:space-between; gap:16px; margin-top:10px;}
+  .metaCol{flex:1; min-width:0;}
+  .metaCol .cropRow{margin-top:0;}
+  .metaCol .previewMeta{margin-top:8px;}
+
   /* controls */
   .ctrl{margin-bottom:16px;}
   .ctrl label{
@@ -265,7 +272,7 @@
   .actionCol .midiRow{margin-top:8px;}
   @media (max-width: 640px){ .actionRow{grid-template-columns:1fr;} }
 
-  .transportIcons{margin-top:10px; display:flex; flex-direction:column; gap:6px;}
+  .transportIcons{display:flex; flex-direction:column; gap:6px; flex:none;}
   .iconRow{display:flex; align-items:center; gap:8px;}
   .iconLbl{font-size:11px; color:var(--text-dim); flex:none; width:70px;}
   .iconGroup{display:flex; gap:3px; flex-wrap:wrap;}
@@ -431,29 +438,33 @@
           <p data-i18n="previewPlaceholder">Ton image ou ta vidéo apparaîtra ici</p>
         </div>
       </div>
-      <div class="transportIcons">
-        <input type="hidden" id="playDir" value="lr">
-        <input type="hidden" id="curve" value="linear">
-        <div class="iconRow"><span class="iconLbl" data-i18n="lblDirShort">Sens</span><div class="iconGroup" id="dirIcons"></div></div>
-        <div class="iconRow"><span class="iconLbl" data-i18n="lblCurveShort">Courbe</span><div class="iconGroup" id="curveIcons"></div></div>
-        <div class="curveEditor" id="curveEditor" hidden>
-          <svg id="curveGraph" viewBox="0 0 140 70" width="140" height="70" preserveAspectRatio="none">
-            <rect x="0.5" y="0.5" width="139" height="69" rx="4"></rect>
-            <polyline id="curvePoly" points=""></polyline>
-            <circle class="cp" data-i="1" r="5"></circle>
-            <circle class="cp" data-i="2" r="5"></circle>
-            <circle class="cp" data-i="3" r="5"></circle>
-          </svg>
+      <div class="metaTransportRow">
+        <div class="metaCol">
+          <div class="cropRow" id="cropRow">
+            <button type="button" class="miniBtn" id="cropBtn" disabled data-i18n="btnCrop">✂ Recadrer</button>
+            <button type="button" class="miniBtn" id="cropApplyBtn" hidden data-i18n="btnCropApply">✓ Valider</button>
+            <button type="button" class="miniBtn" id="cropResetBtn" hidden data-i18n="btnCropReset">↺ Réinitialiser</button>
+            <span class="hint" id="cropHint" hidden data-i18n="cropHint">Fais glisser sur l'image pour définir la zone à analyser.</span>
+          </div>
+          <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
+        </div>
+        <div class="transportIcons">
+          <input type="hidden" id="playDir" value="lr">
+          <input type="hidden" id="curve" value="linear">
+          <div class="iconRow"><span class="iconLbl" data-i18n="lblDirShort">Sens</span><div class="iconGroup" id="dirIcons"></div></div>
+          <div class="iconRow"><span class="iconLbl" data-i18n="lblCurveShort">Courbe</span><div class="iconGroup" id="curveIcons"></div></div>
+          <div class="curveEditor" id="curveEditor" hidden>
+            <svg id="curveGraph" viewBox="0 0 140 70" width="140" height="70" preserveAspectRatio="none">
+              <rect x="0.5" y="0.5" width="139" height="69" rx="4"></rect>
+              <polyline id="curvePoly" points=""></polyline>
+              <circle class="cp" data-i="1" r="5"></circle>
+              <circle class="cp" data-i="2" r="5"></circle>
+              <circle class="cp" data-i="3" r="5"></circle>
+            </svg>
+          </div>
         </div>
       </div>
-      <div class="cropRow" id="cropRow">
-        <button type="button" class="miniBtn" id="cropBtn" disabled data-i18n="btnCrop">✂ Recadrer</button>
-        <button type="button" class="miniBtn" id="cropApplyBtn" hidden data-i18n="btnCropApply">✓ Valider</button>
-        <button type="button" class="miniBtn" id="cropResetBtn" hidden data-i18n="btnCropReset">↺ Réinitialiser</button>
-        <span class="hint" id="cropHint" hidden data-i18n="cropHint">Fais glisser sur l'image pour définir la zone à analyser.</span>
-      </div>
       <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
-      <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
 
       <div class="divider"></div>
       <div class="actionRow">
