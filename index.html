@@ -4,57 +4,79 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dessons · Générateur de loops image → MIDI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0e0f12;
-    --panel:#17181d;
-    --panel-2:#1e2027;
-    --line:#2b2e37;
-    --text:#e8e6df;
-    --text-dim:#8b8d97;
-    --amber:#f5a623;
-    --amber-dim:#8a621c;
-    --cyan:#4fd1c5;
+    /* palette matched to neoyume.com: void/ink/accent tokens, same hexes */
+    --bg:#0c0a10;
+    --glow:#1c1424;
+    --panel:#15111c;
+    --panel-2:#1c1620;
+    --line:#2a2432;
+    --text:#f3efe9;
+    --text-dim:#a9a3ac;
+    --accent:#00ffff;
+    --accent-dim:#0a6670;
+    --cyan:#4dd9c9;
     --mono: 'SF Mono', 'Roboto Mono', Consolas, monospace;
-    --sans: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --sans: 'DotGothic16', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   }
   *{box-sizing:border-box;}
+  /* form controls don't inherit font-family in any browser's UA stylesheet —
+     without this every button/input/select would silently render in the
+     system default (Arial) instead of the site's pixel font. */
+  button, input, select, textarea{font-family:inherit;}
   body{
-    margin:0; background:var(--bg); color:var(--text);
+    margin:0; background:radial-gradient(120% 100% at 15% -10%, var(--glow) 0%, var(--bg) 55%);
+    color:var(--text);
     font-family:var(--sans); padding:28px 20px 60px; min-height:100vh;
   }
+  ::selection{background:var(--cyan); color:var(--bg);}
   .wrap{max-width:1180px; margin:0 auto;}
-  header{margin-bottom:26px; position:relative; padding-right:70px;}
-  header h1{
-    font-size:22px; font-weight:600; letter-spacing:.2px; margin:0 0 4px;
+  header{
+    margin-bottom:26px; display:flex; align-items:center; flex-wrap:wrap; gap:20px;
   }
-  header p{color:var(--text-dim); margin:0; font-size:13.5px; max-width:620px; line-height:1.5;}
+  header h1{
+    font-size:44px; font-weight:600; letter-spacing:.2px; margin:0; flex:none;
+    color:var(--accent);
+  }
 
   .flowSteps{
+    flex:1 1 260px;
     display:flex; flex-wrap:wrap; align-items:center; gap:8px;
-    margin:0 0 18px; padding:10px 14px; background:var(--panel);
+    margin:0; padding:10px 14px; background:var(--panel);
     border:1px solid var(--line); border-radius:8px;
     font-size:12px; color:var(--text-dim);
   }
-  .flowSteps b{color:var(--amber); font-weight:700;}
+  .flowSteps b{color:var(--accent); font-weight:700;}
   .flowSteps .stepArrow{color:var(--line); font-weight:700;}
 
   /* language switch */
   .langToggle{
-    position:absolute; top:0; right:0; display:flex;
+    display:flex; flex:none;
     border:1px solid var(--line); border-radius:6px; overflow:hidden;
   }
   .langToggle button{
     background:var(--panel); color:var(--text-dim); border:none; cursor:pointer;
     padding:5px 9px; font-size:11px; font-family:var(--mono); letter-spacing:.6px;
   }
-  .langToggle button.active{background:var(--amber); color:#1a1200;}
+  .langToggle button.active{background:var(--accent); color:var(--bg);}
   .langToggle button:not(.active):hover{color:var(--text);}
 
   .rack{
-    display:grid; grid-template-columns: 1.15fr 1fr; gap:16px;
+    display:grid; grid-template-columns: 1fr 3fr 1fr; gap:16px;
   }
-  @media (max-width: 880px){ .rack{grid-template-columns:1fr;} }
+  /* narrower than 3 usable columns: stack, but keep the reading order
+     source/preview -> analysis -> music instead of the DOM order (which puts
+     Music first so it sits to the left of the image on desktop). */
+  @media (max-width: 1080px){
+    .rack{grid-template-columns:1fr;}
+    .panel-source{order:1;}
+    .panel-analysis{order:2;}
+    .panel-music{order:3;}
+  }
 
   .panel{
     background:var(--panel); border:1px solid var(--line); border-radius:10px;
@@ -72,25 +94,22 @@
     font-family:var(--sans); text-transform:none; letter-spacing:.2px;
     transition:border-color .15s, color .15s;
   }
-  .resetBtn:hover{color:var(--text); border-color:var(--amber);}
+  .resetBtn:hover{color:var(--text); border-color:var(--accent);}
 
-  /* dropzone */
-  .drop{
-    border:1.5px dashed var(--line); border-radius:8px; padding:22px;
-    text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
-    color:var(--text-dim); font-size:13px;
-  }
-  .drop:hover, .drop.drag{border-color:var(--amber); background:rgba(245,166,35,.05); color:var(--text);}
-  .drop input{display:none;}
-
-  .srcBtns{display:flex; gap:8px; margin-top:10px;}
-  .srcBtns button{
-    flex:1; background:var(--panel-2); color:var(--text-dim); border:1px solid var(--line);
-    padding:8px; border-radius:6px; font-size:12px; cursor:pointer; font-family:var(--sans);
+  /* source picker: 3 equal buttons (image / video / webcam), icon + label on one line */
+  .srcBtns3{display:flex; gap:8px;}
+  .srcBtn{
+    flex:1; display:flex; flex-direction:row; align-items:center; justify-content:center; gap:7px;
+    background:var(--panel-2); color:var(--text-dim); border:1px solid var(--line);
+    padding:9px 8px; border-radius:8px; font-size:12px; cursor:pointer;
     transition:border-color .15s, color .15s;
   }
-  .srcBtns button:hover{border-color:var(--amber); color:var(--text);}
-  .srcBtns button.active{background:var(--amber); color:#1a1200; border-color:var(--amber); font-weight:700;}
+  .srcBtn svg{width:16px; height:16px; display:block; flex:none;}
+  .srcBtn:hover{border-color:var(--accent); color:var(--text);}
+  .srcBtn.active{background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700;}
+  .srcBtn:disabled{opacity:.4; cursor:not-allowed;}
+  /* whole Source panel doubles as a drop target — no separate dropzone box */
+  .panel-source.drag{outline:1.5px dashed var(--accent); outline-offset:-1.5px; background:rgba(0,255,255,.04);}
 
   .previewWrap{margin-top:14px;}
   canvas#preview{
@@ -114,11 +133,11 @@
     display:flex; justify-content:space-between; font-size:12.5px;
     margin-bottom:6px; color:var(--text);
   }
-  .ctrl label span.val{color:var(--amber); font-family:var(--mono); font-size:12px;}
-  .ctrl label span.val.editable{cursor:text; border-bottom:1px dotted var(--amber-dim);}
+  .ctrl label span.val{color:var(--accent); font-family:var(--mono); font-size:12px;}
+  .ctrl label span.val.editable{cursor:text; border-bottom:1px dotted var(--accent-dim);}
   .ctrl label span.val.editable:hover{color:#fff;}
   .valEdit{
-    width:46px; background:var(--panel-2); border:1px solid var(--amber); color:var(--amber);
+    width:46px; background:var(--panel-2); border:1px solid var(--accent); color:var(--accent);
     font-family:var(--mono); font-size:11.5px; padding:1px 4px; border-radius:3px;
     text-align:right; outline:none;
   }
@@ -128,14 +147,13 @@
   }
   input[type=range]::-webkit-slider-thumb{
     -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
-    background:var(--amber); cursor:pointer; border:2px solid #0e0f12;
-    box-shadow:0 0 0 1px var(--amber-dim);
+    background:var(--accent); cursor:pointer; border:2px solid var(--bg);
+    box-shadow:0 0 0 1px var(--accent-dim);
   }
   select, input[type=text]{
     width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
     padding:7px 8px; border-radius:6px; font-size:12.5px; font-family:var(--sans);
   }
-  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .sliderRow{display:flex; align-items:center; gap:8px;}
   .sliderRow input[type=range]{flex:1;}
   .miniBtn{
@@ -143,28 +161,37 @@
     font-size:10.5px; padding:5px 10px; border-radius:5px; cursor:pointer; font-family:var(--sans);
     transition:border-color .15s, color .15s;
   }
-  .miniBtn:hover{color:var(--text); border-color:var(--amber);}
-  .miniBtn.active{background:var(--amber); border-color:var(--amber); color:#1a1200;}
+  .miniBtn:hover{color:var(--text); border-color:var(--accent);}
+  .miniBtn.active{background:var(--accent); border-color:var(--accent); color:var(--bg);}
   .cropRow{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px;}
   .cropRow .hint{margin-top:0; flex-basis:100%;}
   canvas#preview.cropping{cursor:crosshair;}
   .checkboxCtrl{display:flex; align-items:flex-end;}
   .ctrl label.checkboxLbl{justify-content:flex-start; gap:7px; cursor:pointer;}
-  .checkboxLbl input[type=checkbox]{width:15px; height:15px; accent-color:var(--amber); cursor:pointer; margin:0;}
+  .checkboxLbl input[type=checkbox]{width:15px; height:15px; accent-color:var(--accent); cursor:pointer; margin:0;}
+
+  /* octave range: a top-down piano strip you drag across, instead of two sliders */
+  .octaveStrip{width:100%; height:46px; display:block; cursor:pointer; touch-action:none; border-radius:4px; overflow:hidden; border:1px solid var(--line);}
+  .octaveStrip .pw{fill:var(--panel-2); stroke:var(--line); stroke-width:0.5;}
+  .octaveStrip .pb{fill:var(--text-dim);}
+  .octaveStrip .octHi{fill:var(--accent); opacity:.32; pointer-events:none;}
+  .octaveLabels{display:flex; justify-content:space-between; margin-top:4px; font-size:10px; color:var(--text-dim); font-family:var(--mono);}
 
   .divider{height:1px; background:var(--line); margin:18px 0;}
 
   /* layer legend */
   .layer{
-    display:grid; grid-template-columns:13px 46px 1fr 1fr; gap:6px; align-items:center;
     padding:8px 0; border-bottom:1px solid var(--line); font-size:12px;
   }
   .layer:last-child{border-bottom:none;}
+  .layerMain{
+    display:grid; grid-template-columns:13px 46px 1fr 1fr; gap:6px; align-items:center;
+  }
   .swatch{-webkit-appearance:none; appearance:none; width:13px; height:13px; border-radius:3px; border:1px solid rgba(255,255,255,.15); padding:0; cursor:default;}
   .swatch.pickable{cursor:pointer;}
-  .swatch.pickable:hover{border-color:var(--amber);}
+  .swatch.pickable:hover{border-color:var(--accent);}
   .swatch.pickable:not(.picked){border-style:dashed; border-color:var(--text-dim);}
-  .swatch.arming{border-color:var(--amber); box-shadow:0 0 0 2px var(--amber); animation:swatchPulse .9s ease-in-out infinite;}
+  .swatch.arming{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); animation:swatchPulse .9s ease-in-out infinite;}
   @keyframes swatchPulse{50%{opacity:.4;}}
   canvas#preview.picking{cursor:crosshair;}
   .layer input[type=text]{padding:5px 7px; font-size:12px;}
@@ -179,35 +206,54 @@
   }
   .layerMS button:hover{color:var(--text);}
   .layerMS button.m.on{background:#e5484d; border-color:#e5484d; color:#fff;}
-  .layerMS button.s.on{background:var(--amber); border-color:var(--amber); color:#1a1200;}
+  .layerMS button.s.on{background:var(--accent); border-color:var(--accent); color:var(--bg);}
+
+  .layerThresh{display:flex; align-items:center; gap:6px; margin-top:6px;}
+  .layerThreshLbl{font-size:11px; color:var(--text-dim); flex:none;}
+  .layerThresh input[type=range]{flex:1;}
+  .layerThresh .val{font-family:var(--mono); color:var(--accent); font-size:11px; width:24px; text-align:right; flex:none;}
+  .layerThreshReset{
+    flex:none; width:18px; height:18px; padding:0; border:1px solid var(--line); border-radius:4px;
+    background:var(--panel-2); color:var(--text-dim); cursor:pointer; font-size:10px; line-height:1;
+    font-family:var(--sans);
+  }
+  .layerThreshReset:hover:not(:disabled){color:var(--text); border-color:var(--accent);}
+  .layerThreshReset:disabled{opacity:.3; cursor:default;}
+  .layer.muted .layerThresh{opacity:.4;}
 
   button#exportBtn{
-    width:100%; margin-top:18px; background:var(--amber); color:#1a1200;
+    width:100%; background:var(--accent); color:var(--bg);
     border:none; padding:15px; font-size:14.5px; font-weight:800; letter-spacing:.4px;
     border-radius:8px; cursor:pointer; transition:filter .15s, transform .15s, box-shadow .15s;
-    box-shadow:0 4px 16px rgba(245,166,35,.32);
+    box-shadow:0 4px 16px rgba(0,255,255,.32);
   }
   button#exportBtn:hover:not(:disabled){filter:brightness(1.08); transform:translateY(-1px);}
   button#exportBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed; box-shadow:none;}
   .hint.exportDisabledHint{text-align:center; margin-top:8px;}
 
   button#playBtn{
-    width:100%; margin-top:12px; background:transparent; color:var(--cyan);
+    width:100%; background:transparent; color:var(--cyan);
     border:1.5px solid var(--cyan); padding:11.5px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
     border-radius:7px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
-  button#playBtn:hover:not(:disabled){background:rgba(79,209,197,.12);}
+  button#playBtn:hover:not(:disabled){background:rgba(77,217,201,.12);}
   button#playBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
   button#playBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
 
   button#previewBtn{
-    width:100%; margin-top:12px; background:var(--panel-2); color:var(--text);
+    width:100%; background:var(--panel-2); color:var(--text);
     border:1px solid var(--line); padding:11px; font-size:13px; font-weight:600;
     border-radius:7px; cursor:pointer; transition:border-color .15s, background .15s;
   }
-  button#previewBtn:hover:not(:disabled){border-color:var(--amber);}
+  button#previewBtn:hover:not(:disabled){border-color:var(--accent);}
   button#previewBtn:disabled{color:var(--text-dim); cursor:not-allowed;}
   button#previewBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
+
+  /* Export / Preview / Play, side by side instead of stacked */
+  .actionRow{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:18px;}
+  .actionCol{display:flex; flex-direction:column;}
+  .actionCol .midiRow{margin-top:8px;}
+  @media (max-width: 640px){ .actionRow{grid-template-columns:1fr;} }
 
   .transportIcons{margin-top:10px; display:flex; flex-direction:column; gap:6px;}
   .iconRow{display:flex; align-items:center; gap:8px;}
@@ -219,15 +265,15 @@
     border:1px solid var(--line); border-radius:4px; background:var(--panel-2);
     color:var(--text-dim); cursor:pointer;
   }
-  .iconGroup button:hover{color:var(--text); border-color:var(--amber);}
-  .iconGroup button.on{background:var(--amber); border-color:var(--amber); color:#1a1200;}
+  .iconGroup button:hover{color:var(--text); border-color:var(--accent);}
+  .iconGroup button.on{background:var(--accent); border-color:var(--accent); color:var(--bg);}
   .iconGroup button svg{width:15px; height:15px; display:block;}
 
   .curveEditor{margin-left:78px;}
   .curveEditor svg{display:block; touch-action:none;}
   .curveEditor rect{fill:var(--panel-2); stroke:var(--line);}
   .curveEditor polyline{fill:none; stroke:var(--cyan); stroke-width:1.6;}
-  .curveEditor circle.cp{fill:var(--amber); stroke:#1a1200; stroke-width:1; cursor:grab;}
+  .curveEditor circle.cp{fill:var(--accent); stroke:var(--bg); stroke-width:1; cursor:grab;}
   .curveEditor circle.cp:active{cursor:grabbing;}
   .midiRow{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px;}
   .dot{width:8px; height:8px; border-radius:50%; background:var(--line); flex:none;}
@@ -263,33 +309,100 @@
     border:1px solid #13C3FF44; font-weight:600;
   }
   footer a.kofi:hover{background:#13C3FF2e; border-color:var(--cyan);}
+
+  #ny-noise{
+    position:fixed; inset:0; width:100%; height:100%;
+    z-index:9998; pointer-events:none;
+    mix-blend-mode:overlay; opacity:0.1; image-rendering:pixelated;
+  }
+  @media (prefers-reduced-motion: reduce){ #ny-noise{opacity:0.075;} }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
+    <h1>Dessons</h1>
+    <p class="flowSteps" data-i18n-html="flowSteps"></p>
     <div class="langToggle" id="langToggle">
       <button type="button" data-lang="fr">FR</button>
       <button type="button" data-lang="en">EN</button>
     </div>
-    <h1>Dessons</h1>
-    <p data-i18n="tagline">Dépose une image ou une vidéo, ajuste le contraste et le seuil pour ne garder que les zones les plus marquées, sépare en calques (couleur ou luminosité) — chaque calque devient une piste MIDI avec son instrument. Exporte en .mid, ou joue la boucle en direct dans Logic via un port MIDI virtuel (IAC Driver).</p>
   </header>
 
-  <p class="flowSteps" data-i18n-html="flowSteps"></p>
-
   <div class="rack">
-    <!-- LEFT: source + preview -->
-    <div class="panel">
+    <!-- LEFT (25%): Music -->
+    <div class="panel panel-music">
+      <div class="sectionHead">
+        <h2 data-i18n="musicTitle">Musique</h2>
+        <button type="button" class="resetBtn" id="resetMusic" data-i18n="btnReset">Réinitialiser</button>
+      </div>
+
+      <div class="ctrl">
+        <label style="margin-bottom:6px;" data-i18n="lblScale">Gamme</label>
+        <select id="scale">
+          <option value="majPenta" data-i18n="scMajPenta">Pentatonique majeure</option>
+          <option value="minPenta" selected data-i18n="scMinPenta">Pentatonique mineure</option>
+          <option value="major" data-i18n="scMajor">Majeure</option>
+          <option value="minor" data-i18n="scMinor">Mineure naturelle</option>
+          <option value="dorian" data-i18n="scDorian">Dorien</option>
+          <option value="wholetone" data-i18n="scWhole">Ton par ton</option>
+          <option value="chromatic" data-i18n="scChromatic">Chromatique</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label style="margin-bottom:6px;" data-i18n="lblRoot">Note fondamentale</label>
+        <select id="root">
+          <option value="0">C</option><option value="1">C#</option><option value="2">D</option>
+          <option value="3">D#</option><option value="4">E</option><option value="5">F</option>
+          <option value="6">F#</option><option value="7">G</option><option value="8">G#</option>
+          <option value="9">A</option><option value="10">A#</option><option value="11">B</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblOctRange">Plage d'octaves</span> <span class="val" id="vOctRange">3–5</span></label>
+        <svg id="octaveStrip" class="octaveStrip" viewBox="0 0 320 60" preserveAspectRatio="none"></svg>
+        <div class="octaveLabels" id="octaveLabels"></div>
+        <input type="hidden" id="octLow" min="0" max="7" value="3">
+        <input type="hidden" id="octHigh" min="0" max="7" value="5">
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblSteps">Résolution rythmique (pas)</span> <span class="val editable" id="vSteps" data-for="steps">16</span></label>
+        <input type="range" id="steps" min="4" max="64" value="16">
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblBars">Longueur (mesures)</span> <span class="val editable" id="vBars" data-for="bars">2</span></label>
+        <input type="range" id="bars" min="1" max="8" value="2">
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblTempo">Tempo</span> <span class="val editable" id="vTempo" data-for="tempo">100 bpm</span></label>
+        <input type="range" id="tempo" min="40" max="200" value="100">
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblGate">Gate (durée note)</span> <span class="val editable" id="vGate" data-for="gate">80%</span></label>
+        <input type="range" id="gate" min="10" max="100" value="80">
+      </div>
+    </div>
+
+    <!-- CENTER (50%): source + preview, then layers/export/real-time -->
+    <div class="panel panel-source">
       <h2 data-i18n="srcTitle">Source</h2>
-      <div class="drop" id="drop">
-        <span data-i18n-html="dropText">Clique ou dépose une image ou une vidéo ici<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span></span>
-        <input type="file" id="fileInput" accept="image/*,video/*">
+      <div class="srcBtns3" id="srcBtns3">
+        <button type="button" class="srcBtn" id="imageBtn">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="2.5" width="15" height="13" rx="1.5"></rect><circle cx="6" cy="7" r="1.5"></circle><path d="M1.5 12.5l4-4 3 3 2.5-2.5 6 6"></path></svg>
+          <span data-i18n="btnImage">Image</span>
+        </button>
+        <button type="button" class="srcBtn" id="videoBtn">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="4" width="10" height="10" rx="1.5"></rect><path d="M11.5 7.5l5-2.5v8l-5-2.5z"></path></svg>
+          <span data-i18n="btnVideoSrc">Vidéo</span>
+        </button>
+        <button type="button" class="srcBtn" id="webcamBtn">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><circle cx="9" cy="7" r="5"></circle><circle cx="9" cy="7" r="1.8" fill="currentColor" stroke="none"></circle><path d="M5 15h8M9 12v3"></path></svg>
+          <span data-i18n="btnWebcam">Webcam</span>
+        </button>
       </div>
-      <div class="srcBtns">
-        <button type="button" id="webcamBtn" data-i18n="btnWebcam">Webcam</button>
-        <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
-      </div>
+      <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+      <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
+      <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
       <div class="hint err" id="srcHint" hidden></div>
       <div class="previewWrap" id="previewWrap">
         <canvas id="preview" width="600" height="600" hidden></canvas>
@@ -298,15 +411,6 @@
           <p data-i18n="previewPlaceholder">Ton image ou ta vidéo apparaîtra ici</p>
         </div>
       </div>
-      <div class="cropRow" id="cropRow">
-        <button type="button" class="miniBtn" id="cropBtn" disabled data-i18n="btnCrop">✂ Recadrer</button>
-        <button type="button" class="miniBtn" id="cropApplyBtn" hidden data-i18n="btnCropApply">✓ Valider</button>
-        <button type="button" class="miniBtn" id="cropResetBtn" hidden data-i18n="btnCropReset">↺ Réinitialiser</button>
-        <span class="hint" id="cropHint" hidden data-i18n="cropHint">Fais glisser sur l'image pour définir la zone à analyser.</span>
-      </div>
-      <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
-      <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
-      <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
       <div class="transportIcons">
         <input type="hidden" id="playDir" value="lr">
         <input type="hidden" id="curve" value="linear">
@@ -322,36 +426,64 @@
           </svg>
         </div>
       </div>
-      <div class="midiRow"><span class="dot" id="synthDot"></span><span id="synthState">—</span></div>
+      <div class="cropRow" id="cropRow">
+        <button type="button" class="miniBtn" id="cropBtn" disabled data-i18n="btnCrop">✂ Recadrer</button>
+        <button type="button" class="miniBtn" id="cropApplyBtn" hidden data-i18n="btnCropApply">✓ Valider</button>
+        <button type="button" class="miniBtn" id="cropResetBtn" hidden data-i18n="btnCropReset">↺ Réinitialiser</button>
+        <span class="hint" id="cropHint" hidden data-i18n="cropHint">Fais glisser sur l'image pour définir la zone à analyser.</span>
+      </div>
+      <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
+      <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
+
+      <div class="divider"></div>
+      <div class="actionRow">
+        <div class="actionCol">
+          <button id="exportBtn" disabled data-i18n="btnExport">Exporter le .mid</button>
+          <div class="hint exportDisabledHint" id="exportDisabledHint" data-i18n="exportDisabledHint">Importe une image pour activer l'export</div>
+        </div>
+        <div class="actionCol">
+          <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
+          <div class="midiRow"><span class="dot" id="synthDot"></span><span id="synthState">—</span></div>
+        </div>
+        <div class="actionCol">
+          <button id="playBtn" disabled data-i18n="btnPlay">▶ Jouer dans Logic</button>
+          <div class="midiRow"><span class="dot" id="midiDot"></span><span id="midiState">Web MIDI non initialisé</span></div>
+        </div>
+      </div>
+      <div class="stat" id="statLine"></div>
+      <div class="hint" data-i18n="exportHint">Chaque calque = une piste MIDI (canal séparé, patch General MIDI). Importe le fichier dans Logic Pro : une piste par instrument sera créée automatiquement à la lecture du fichier multi-pistes.</div>
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
+      <div class="badge warn" data-i18n="safariWarnBadge">⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.</div>
+      <div class="ctrl">
+        <label style="margin-bottom:6px;" data-i18n="lblPort">Port MIDI de sortie</label>
+        <select id="midiPort"><option value="" data-i18n="portDetect">— clique pour détecter les ports —</option></select>
+      </div>
+      <button type="button" class="accordionBtn" id="midiHintToggle" aria-expanded="false" data-i18n="midiHintToggle">Comment connecter à Logic</button>
+      <div class="hint" id="midiHint" hidden data-i18n-html="midiHint">Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.</div>
     </div>
 
-    <!-- RIGHT: controls -->
-    <div class="panel">
+    <!-- RIGHT (25%): Image Analysis -->
+    <div class="panel panel-analysis">
       <div class="sectionHead">
         <h2 data-i18n="analysisTitle">Analyse de l'image</h2>
         <button type="button" class="resetBtn" id="resetAnalysis" data-i18n="btnReset">Réinitialiser</button>
       </div>
 
-      <div class="row2">
-        <div class="ctrl">
-          <label><span data-i18n="lblBlackPt">Point noir</span> <span class="val editable" id="vBlackPt" data-for="blackPt">21</span></label>
-          <input type="range" id="blackPt" min="0" max="255" value="21">
-        </div>
-        <div class="ctrl">
-          <label><span data-i18n="lblWhitePt">Point blanc</span> <span class="val editable" id="vWhitePt" data-for="whitePt">234</span></label>
-          <input type="range" id="whitePt" min="0" max="255" value="234">
-        </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblBlackPt">Point noir</span> <span class="val editable" id="vBlackPt" data-for="blackPt">21</span></label>
+        <input type="range" id="blackPt" min="0" max="255" value="21">
       </div>
-      <div class="row2">
-        <div class="ctrl">
-          <label><span data-i18n="lblGamma">Gamma</span> <span class="val editable" id="vGamma" data-for="gamma">1.00</span></label>
-          <input type="range" id="gamma" min="0.2" max="3" step="0.05" value="1">
-        </div>
-        <div class="ctrl">
-          <label><span data-i18n="lblSat">Saturation</span> <span class="val editable" id="vSat" data-for="sat">100%</span></label>
-          <input type="range" id="sat" min="0" max="200" value="100">
-        </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblWhitePt">Point blanc</span> <span class="val editable" id="vWhitePt" data-for="whitePt">234</span></label>
+        <input type="range" id="whitePt" min="0" max="255" value="234">
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblGamma">Gamma</span> <span class="val editable" id="vGamma" data-for="gamma">1.00</span></label>
+        <input type="range" id="gamma" min="0.2" max="3" step="0.05" value="1">
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblSat">Saturation</span> <span class="val editable" id="vSat" data-for="sat">100%</span></label>
+        <input type="range" id="sat" min="0" max="200" value="100">
       </div>
       <div class="ctrl">
         <label><span data-i18n="lblSensitivity">Sensibilité (garder les zones les + contrastées)</span> <span class="val editable" id="vThresh" data-for="thresh">55</span></label>
@@ -360,30 +492,25 @@
           <button type="button" class="miniBtn" id="autoThresh" data-i18n="btnAuto" title="Otsu">Auto</button>
         </div>
       </div>
-      <div class="row2">
-        <div class="ctrl">
-          <label><span data-i18n="lblBlur">Lissage</span> <span class="val editable" id="vBlur" data-for="blur">0px</span></label>
-          <input type="range" id="blur" min="0" max="10" value="0">
-        </div>
-        <div class="ctrl checkboxCtrl">
-          <label class="checkboxLbl"><input type="checkbox" id="invert"> <span data-i18n="lblInvert">Inverser</span></label>
-        </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblBlur">Lissage</span> <span class="val editable" id="vBlur" data-for="blur">0px</span></label>
+        <input type="range" id="blur" min="0" max="10" value="0">
       </div>
-
-      <div class="row2">
-        <div class="ctrl">
-          <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val editable" id="vLayers" data-for="layers">3</span></label>
-          <input type="range" id="layers" min="1" max="6" value="3">
-        </div>
-        <div class="ctrl">
-          <label style="margin-bottom:6px;" data-i18n="lblMethod">Méthode</label>
-          <select id="sepMode">
-            <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
-            <option value="lum" data-i18n="optLum">Par luminosité</option>
-            <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
-            <option value="sobel" data-i18n="optSobel">Par contours (Sobel)</option>
-          </select>
-        </div>
+      <div class="ctrl checkboxCtrl">
+        <label class="checkboxLbl"><input type="checkbox" id="invert"> <span data-i18n="lblInvert">Inverser</span></label>
+      </div>
+      <div class="ctrl">
+        <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val editable" id="vLayers" data-for="layers">3</span></label>
+        <input type="range" id="layers" min="1" max="6" value="3">
+      </div>
+      <div class="ctrl">
+        <label style="margin-bottom:6px;" data-i18n="lblMethod">Méthode</label>
+        <select id="sepMode">
+          <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
+          <option value="lum" data-i18n="optLum">Par luminosité</option>
+          <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
+          <option value="sobel" data-i18n="optSobel">Par contours (Sobel)</option>
+        </select>
       </div>
       <div class="ctrl" id="posterizeRow" hidden>
         <label><span data-i18n="lblPosterize">Niveaux de couleur</span> <span class="val editable" id="vPosterize" data-for="posterize">32</span></label>
@@ -395,88 +522,8 @@
       </div>
 
       <div class="divider"></div>
-      <div class="sectionHead">
-        <h2 data-i18n="musicTitle">Musique</h2>
-        <button type="button" class="resetBtn" id="resetMusic" data-i18n="btnReset">Réinitialiser</button>
-      </div>
-
-      <div class="row2">
-        <div class="ctrl">
-          <label style="margin-bottom:6px;" data-i18n="lblScale">Gamme</label>
-          <select id="scale">
-            <option value="majPenta" data-i18n="scMajPenta">Pentatonique majeure</option>
-            <option value="minPenta" selected data-i18n="scMinPenta">Pentatonique mineure</option>
-            <option value="major" data-i18n="scMajor">Majeure</option>
-            <option value="minor" data-i18n="scMinor">Mineure naturelle</option>
-            <option value="dorian" data-i18n="scDorian">Dorien</option>
-            <option value="wholetone" data-i18n="scWhole">Ton par ton</option>
-            <option value="chromatic" data-i18n="scChromatic">Chromatique</option>
-          </select>
-        </div>
-        <div class="ctrl">
-          <label style="margin-bottom:6px;" data-i18n="lblRoot">Note fondamentale</label>
-          <select id="root">
-            <option value="0">C</option><option value="1">C#</option><option value="2">D</option>
-            <option value="3">D#</option><option value="4">E</option><option value="5">F</option>
-            <option value="6">F#</option><option value="7">G</option><option value="8">G#</option>
-            <option value="9">A</option><option value="10">A#</option><option value="11">B</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row2">
-        <div class="ctrl">
-          <label><span data-i18n="lblOctLow">Octave basse</span> <span class="val editable" id="vOctLow" data-for="octLow">3</span></label>
-          <input type="range" id="octLow" min="0" max="7" value="3">
-        </div>
-        <div class="ctrl">
-          <label><span data-i18n="lblOctHigh">Octave haute</span> <span class="val editable" id="vOctHigh" data-for="octHigh">5</span></label>
-          <input type="range" id="octHigh" min="0" max="7" value="5">
-        </div>
-      </div>
-
-      <div class="row2">
-        <div class="ctrl">
-          <label><span data-i18n="lblSteps">Résolution rythmique (pas)</span> <span class="val editable" id="vSteps" data-for="steps">16</span></label>
-          <input type="range" id="steps" min="4" max="64" value="16">
-        </div>
-        <div class="ctrl">
-          <label><span data-i18n="lblBars">Longueur (mesures)</span> <span class="val editable" id="vBars" data-for="bars">2</span></label>
-          <input type="range" id="bars" min="1" max="8" value="2">
-        </div>
-      </div>
-
-      <div class="row2">
-        <div class="ctrl">
-          <label><span data-i18n="lblTempo">Tempo</span> <span class="val editable" id="vTempo" data-for="tempo">100 bpm</span></label>
-          <input type="range" id="tempo" min="40" max="200" value="100">
-        </div>
-        <div class="ctrl">
-          <label><span data-i18n="lblGate">Gate (durée note)</span> <span class="val editable" id="vGate" data-for="gate">80%</span></label>
-          <input type="range" id="gate" min="10" max="100" value="80">
-        </div>
-      </div>
-
-      <div class="divider"></div>
       <h2 data-i18n="layersTitle">Calques / Instruments</h2>
       <div id="layerList"></div>
-
-      <button id="exportBtn" disabled data-i18n="btnExport">Exporter le .mid</button>
-      <div class="hint exportDisabledHint" id="exportDisabledHint" data-i18n="exportDisabledHint">Importe une image pour activer l'export</div>
-      <div class="stat" id="statLine"></div>
-      <div class="hint" data-i18n="exportHint">Chaque calque = une piste MIDI (canal séparé, patch General MIDI). Importe le fichier dans Logic Pro : une piste par instrument sera créée automatiquement à la lecture du fichier multi-pistes.</div>
-
-      <div class="divider"></div>
-      <h2 data-i18n="rtTitle">Temps réel (Web MIDI)</h2>
-      <div class="badge warn" data-i18n="safariWarnBadge">⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.</div>
-      <div class="ctrl">
-        <label style="margin-bottom:6px;" data-i18n="lblPort">Port MIDI de sortie</label>
-        <select id="midiPort"><option value="" data-i18n="portDetect">— clique pour détecter les ports —</option></select>
-      </div>
-      <button id="playBtn" disabled data-i18n="btnPlay">▶ Jouer dans Logic</button>
-      <div class="midiRow"><span class="dot" id="midiDot"></span><span id="midiState">Web MIDI non initialisé</span></div>
-      <button type="button" class="accordionBtn" id="midiHintToggle" aria-expanded="false" data-i18n="midiHintToggle">Comment connecter à Logic</button>
-      <div class="hint" id="midiHint" hidden data-i18n-html="midiHint">Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.</div>
     </div>
   </div>
 
@@ -496,7 +543,6 @@
 const I18N = {
   fr: {
     docTitle: "Dessons · Générateur de loops image → MIDI",
-    tagline: "Dépose une image ou une vidéo, ajuste le contraste et le seuil pour ne garder que les zones les plus marquées, sépare en calques (couleur ou luminosité) — chaque calque devient une piste MIDI avec son instrument. Exporte en .mid, ou joue la boucle en direct dans Logic via un port MIDI virtuel (IAC Driver).",
     flowSteps: '<b>1.</b> Dépose une image <span class="stepArrow">→</span> <b>2.</b> Ajuste les réglages <span class="stepArrow">→</span> <b>3.</b> Exporte ou joue en direct',
     previewPlaceholder: "Ton image ou ta vidéo apparaîtra ici",
     btnReset: "Réinitialiser",
@@ -504,7 +550,9 @@ const I18N = {
     safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
     midiHintToggle: "Comment connecter à Logic",
     srcTitle: "Source",
-    dropText: 'Clique ou dépose une image ou une vidéo ici<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span>',
+    btnImage: "Image",
+    btnVideoSrc: "Vidéo",
+    dropHint: "...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)",
     btnWebcam: "Webcam",
     btnWebcamStop: "Arrêter la webcam",
     btnFreeze: "Figer l'image",
@@ -559,8 +607,7 @@ const I18N = {
     scWhole: "Ton par ton",
     scChromatic: "Chromatique",
     lblRoot: "Note fondamentale",
-    lblOctLow: "Octave basse",
-    lblOctHigh: "Octave haute",
+    lblOctRange: "Plage d'octaves",
     lblSteps: "Résolution rythmique (pas)",
     lblBars: "Longueur (mesures)",
     lblTempo: "Tempo",
@@ -584,6 +631,8 @@ const I18N = {
     synthPlaying: "Lecture ({x})",
     muteTitle: "Muet — couper ce calque (aperçu + Web MIDI, pas l'export .mid)",
     soloTitle: "Solo — n'entendre que ce(s) calque(s)",
+    lblLayerThresh: "Seuil",
+    layerThreshResetTitle: "Revenir au seuil global",
     notesWord: "notes",
     unitPx: "px",
     srcVideoLabel: "vidéo",
@@ -606,7 +655,6 @@ const I18N = {
   },
   en: {
     docTitle: "Dessons · Image → MIDI loop generator",
-    tagline: "Drop an image or a video, adjust contrast and threshold to keep only the sharpest areas, split into layers (color or brightness) — each layer becomes a MIDI track with its own instrument. Export a .mid, or play the loop live into Logic through a virtual MIDI port (IAC Driver).",
     flowSteps: '<b>1.</b> Drop an image <span class="stepArrow">→</span> <b>2.</b> Tweak the settings <span class="stepArrow">→</span> <b>3.</b> Export or play it live',
     previewPlaceholder: "Your image or video will appear here",
     btnReset: "Reset",
@@ -614,7 +662,9 @@ const I18N = {
     safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
     midiHintToggle: "How to connect to Logic",
     srcTitle: "Source",
-    dropText: 'Click or drop an image or a video here<br><span style="font-size:11px;">JPG / PNG / WebP · MP4 / WebM / MOV</span>',
+    btnImage: "Image",
+    btnVideoSrc: "Video",
+    dropHint: "...or drag and drop an image or a video here (JPG / PNG / WebP · MP4 / WebM / MOV)",
     btnWebcam: "Webcam",
     btnWebcamStop: "Stop webcam",
     btnFreeze: "Freeze frame",
@@ -669,8 +719,7 @@ const I18N = {
     scWhole: "Whole tone",
     scChromatic: "Chromatic",
     lblRoot: "Root note",
-    lblOctLow: "Low octave",
-    lblOctHigh: "High octave",
+    lblOctRange: "Octave range",
     lblSteps: "Rhythmic resolution (steps)",
     lblBars: "Length (bars)",
     lblTempo: "Tempo",
@@ -694,6 +743,8 @@ const I18N = {
     synthPlaying: "Playing ({x})",
     muteTitle: "Mute — silence this layer (preview + Web MIDI, not the .mid export)",
     soloTitle: "Solo — hear only this / these layer(s)",
+    lblLayerThresh: "Threshold",
+    layerThreshResetTitle: "Reset to the global threshold",
     notesWord: "notes",
     unitPx: "px",
     srcVideoLabel: "video",
@@ -811,13 +862,17 @@ let pendingCropRect = null;      // rect being drawn/edited, committed to cropRe
 let cropDragStart = null;        // [nx,ny] where the current drag started, null = not dragging
 
 const $ = id => document.getElementById(id);
-const dropEl = $('drop'), fileInput = $('fileInput'), preview = $('preview'), pctx = preview.getContext('2d');
+const fileInput = $('fileInput'), preview = $('preview'), pctx = preview.getContext('2d');
 
-['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault(); dropEl.classList.add('drag');}));
-['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e=>{e.preventDefault(); dropEl.classList.remove('drag');}));
-dropEl.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
-dropEl.addEventListener('click', ()=>fileInput.click());
+// whole Source panel is a drop target (no separate dropzone box) — the Image/
+// Video buttons below are the click-to-browse path, drag-and-drop is the bonus.
+const sourcePanel = document.querySelector('.panel-source');
+['dragenter','dragover'].forEach(ev => sourcePanel.addEventListener(ev, e=>{e.preventDefault(); sourcePanel.classList.add('drag');}));
+['dragleave','drop'].forEach(ev => sourcePanel.addEventListener(ev, e=>{e.preventDefault(); sourcePanel.classList.remove('drag');}));
+sourcePanel.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
 fileInput.addEventListener('change', e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+$('imageBtn').addEventListener('click', ()=>{ fileInput.accept = 'image/*'; fileInput.click(); });
+$('videoBtn').addEventListener('click', ()=>{ fileInput.accept = 'video/*'; fileInput.click(); });
 
 function showSrcError(msg){
   const el = $('srcHint');
@@ -994,8 +1049,11 @@ $('freezeBtn').addEventListener('click', ()=>{
 
 function updateSrcBtns(){
   const wb = $('webcamBtn');
-  wb.textContent = srcKind === 'webcam' ? t('btnWebcamStop') : t('btnWebcam');
+  wb.querySelector('span').textContent = srcKind === 'webcam' ? t('btnWebcamStop') : t('btnWebcam');
   wb.classList.toggle('active', srcKind === 'webcam');
+  // Image/Video buttons highlight to show which source type is currently loaded
+  $('imageBtn').classList.toggle('active', srcKind === 'image');
+  $('videoBtn').classList.toggle('active', srcKind === 'video');
   const fb = $('freezeBtn');
   fb.hidden = !(srcKind === 'video' || srcKind === 'webcam');
   fb.textContent = frozen ? t('btnResume') : t('btnFreeze');
@@ -1054,7 +1112,11 @@ function rebuildLayers(){
       auto: isAuto,
       program: keep ? keep.program : GM_INSTR[i % GM_INSTR.length].prog,
       mute: keep ? !!keep.mute : false,
-      solo: keep ? !!keep.solo : false
+      solo: keep ? !!keep.solo : false,
+      // per-layer sensitivity: tracks the global slider until the user drags
+      // this layer's own control, then stays fixed (same "auto vs custom" idea as names)
+      thresh: (keep && keep.threshCustom) ? keep.thresh : parseInt($('thresh').value),
+      threshCustom: keep ? !!keep.threshCustom : false
     });
   }
   renderLayerList();
@@ -1073,6 +1135,8 @@ function renderLayerList(){
   layers.forEach((L,i)=>{
     const row = document.createElement('div');
     row.className='layer';
+    const main = document.createElement('div');
+    main.className='layerMain';
     const sw = document.createElement('button');
     sw.type = 'button'; sw.className='swatch'; sw.style.background = L.color;
     if($('sepMode').value === 'pick'){
@@ -1109,7 +1173,40 @@ function renderLayerList(){
       layers[i].program = parseInt(e.target.value);
       if(playing && midiOut) midiOut.send([0xC0|(i%16), layers[i].program & 0x7F]);
     });
-    row.appendChild(sw); row.appendChild(ms); row.appendChild(nameInput); row.appendChild(sel);
+    main.appendChild(sw); main.appendChild(ms); main.appendChild(nameInput); main.appendChild(sel);
+
+    // per-layer sensitivity: independent from the global slider once touched
+    const threshRow = document.createElement('div');
+    threshRow.className = 'layerThresh';
+    const threshLbl = document.createElement('span');
+    threshLbl.className = 'layerThreshLbl'; threshLbl.textContent = t('lblLayerThresh');
+    const threshInput = document.createElement('input');
+    threshInput.type = 'range'; threshInput.min = '1'; threshInput.max = '100'; threshInput.value = L.thresh;
+    const threshVal = document.createElement('span');
+    threshVal.className = 'val'; threshVal.textContent = L.thresh;
+    const threshReset = document.createElement('button');
+    threshReset.type = 'button'; threshReset.className = 'layerThreshReset'; threshReset.textContent = '↺';
+    threshReset.title = t('layerThreshResetTitle');
+    threshReset.disabled = !L.threshCustom;
+    threshInput.addEventListener('input', e=>{
+      layers[i].thresh = parseInt(e.target.value);
+      layers[i].threshCustom = true;
+      threshVal.textContent = layers[i].thresh;
+      threshReset.disabled = false;
+      process();
+    });
+    threshReset.addEventListener('click', ()=>{
+      layers[i].thresh = parseInt($('thresh').value);
+      layers[i].threshCustom = false;
+      threshInput.value = layers[i].thresh;
+      threshVal.textContent = layers[i].thresh;
+      threshReset.disabled = true;
+      process();
+    });
+    threshRow.appendChild(threshLbl); threshRow.appendChild(threshInput);
+    threshRow.appendChild(threshVal); threshRow.appendChild(threshReset);
+
+    row.appendChild(main); row.appendChild(threshRow);
     list.appendChild(row);
   });
   refreshMixUI();
@@ -1545,7 +1642,11 @@ function process(){
     }
   }
 
-  const cutoff = (1-threshPct) * maxEdge;
+  // per-layer sensitivity: each layer keeps its own threshold (layers[i].thresh,
+  // 1-100, same units as the global slider) so isolating one color can be tuned
+  // independently of the rest — layers that haven't been individually touched
+  // (threshCustom === false) track the global slider live, see syncLayerThreshFromGlobal().
+  const layerCutoffs = layers.map(L => (1 - (L.thresh != null ? L.thresh : threshPct*100)/100) * maxEdge);
   const rows = pitches.length;              // number of pitch lanes
   const dir = readDir();
   lastNotes = layers.map(()=>[]);
@@ -1572,7 +1673,7 @@ function process(){
     for(let pi=0; pi<rows; pi++){
       for(let L=0; L<nLayers; L++){
         const v = bestEdge[(ti*rows+pi)*nLayers+L];
-        if(v >= cutoff && v > 2){
+        if(v >= layerCutoffs[L] && v > 2){
           const vel = Math.round(clamp(40 + 87*(v/maxEdge), 40, 127));
           lastNotes[L].push({step: ti, midi: pitches[pi], vel});
         }
@@ -1908,7 +2009,7 @@ function drawPlayhead(){
   // is affine; canvas clips it automatically if it runs past a corner.
   const [x0n,y0n] = dir.inv(tau, 0), [x1n,y1n] = dir.inv(tau, 1);
   pctx.save();
-  pctx.strokeStyle = 'rgba(79,209,197,.9)';
+  pctx.strokeStyle = 'rgba(77,217,201,.9)';
   pctx.lineWidth = 2;
   pctx.beginPath();
   pctx.moveTo(x0n*preview.width, y0n*preview.height);
@@ -1939,10 +2040,10 @@ function drawCropEditor(){
   pctx.fillRect(0,ry+rh,preview.width,preview.height-ry-rh);
   pctx.fillRect(0,ry,rx,rh);
   pctx.fillRect(rx+rw,ry,preview.width-rx-rw,rh);
-  pctx.strokeStyle = '#f5a623';
+  pctx.strokeStyle = '#00ffff';
   pctx.lineWidth = 2;
   pctx.strokeRect(rx,ry,rw,rh);
-  pctx.fillStyle = '#f5a623';
+  pctx.fillStyle = '#00ffff';
   const hs = 5;
   [[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([hx,hy])=>{ pctx.fillRect(hx-hs,hy-hs,hs*2,hs*2); });
 }
@@ -2313,8 +2414,8 @@ function syncLabels(){
   $('vPosterize').textContent = $('posterize').value;
   $('vPickTol').textContent = $('pickTol').value;
   $('vLayers').textContent = $('layers').value;
-  $('vOctLow').textContent = $('octLow').value;
-  $('vOctHigh').textContent = $('octHigh').value;
+  const octLo = parseInt($('octLow').value), octHi = parseInt($('octHigh').value);
+  $('vOctRange').textContent = octLo === octHi ? String(octLo) : (octLo+'–'+octHi);
   $('vSteps').textContent = $('steps').value;
   $('vBars').textContent = $('bars').value;
   $('vTempo').textContent = $('tempo').value+' bpm';
@@ -2324,10 +2425,86 @@ const structureIds = ['layers','sepMode'];
 liveIds.forEach(id=>{
   $(id).addEventListener('input', ()=>{
     syncLabels();
+    if(id === 'thresh') syncLayerThreshFromGlobal();
+    if(id === 'octLow' || id === 'octHigh') redrawOctaveHighlight();
     if(structureIds.includes(id)) rebuildLayers();
     process();
   });
 });
+
+/* ---- octave range: a top-down piano strip, dragged like a marquee-select
+   instead of two separate sliders. octLow/octHigh stay the source of truth
+   (now hidden inputs) so scaleNotesForRange(), resetControls() etc. don't
+   need to know this control exists — it just moves them and dispatches
+   'input' like a user would. ---- */
+function buildOctaveStrip(){
+  const svg = $('octaveStrip');
+  const W = 320, H = 60, octaves = 8, octW = W/octaves, whiteW = octW/7;
+  const blackAfter = [0,1,3,4,5]; // white-key indices (0=C) followed by a black key
+  let html = '';
+  for(let oct=0; oct<octaves; oct++){
+    const ox = oct*octW;
+    for(let w=0; w<7; w++) html += `<rect class="pw" x="${ox+w*whiteW}" y="0" width="${whiteW}" height="${H}"></rect>`;
+    blackAfter.forEach(wi=>{
+      const bx = ox + (wi+1)*whiteW - whiteW*0.3;
+      html += `<rect class="pb" x="${bx}" y="0" width="${whiteW*0.6}" height="${H*0.62}"></rect>`;
+    });
+  }
+  html += `<rect id="octHi" class="octHi" x="0" y="0" width="${octW}" height="${H}"></rect>`;
+  svg.innerHTML = html;
+
+  const labels = $('octaveLabels');
+  labels.innerHTML = '';
+  for(let oct=0; oct<octaves; oct++){ const s=document.createElement('span'); s.textContent=oct; labels.appendChild(s); }
+
+  let dragStart = null;
+  const octaveFromEvent = e=>{
+    const rect = svg.getBoundingClientRect();
+    return clamp(Math.floor((e.clientX-rect.left)/rect.width*octaves), 0, octaves-1);
+  };
+  const setRange = (lo,hi)=>{
+    $('octLow').value = lo; $('octHigh').value = hi;
+    $('octLow').dispatchEvent(new Event('input',{bubbles:true}));
+    $('octHigh').dispatchEvent(new Event('input',{bubbles:true}));
+  };
+  svg.addEventListener('pointerdown', e=>{
+    dragStart = octaveFromEvent(e);
+    setRange(dragStart, dragStart);
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener('pointermove', e=>{
+    if(dragStart==null) return;
+    const cur = octaveFromEvent(e);
+    setRange(Math.min(dragStart,cur), Math.max(dragStart,cur));
+  });
+  svg.addEventListener('pointerup', e=>{ dragStart=null; try{svg.releasePointerCapture(e.pointerId);}catch(err){} });
+
+  redrawOctaveHighlight();
+}
+function redrawOctaveHighlight(){
+  const hi = $('octHi'); if(!hi) return;
+  const octaves = 8, W = 320, octW = W/octaves;
+  const lo = parseInt($('octLow').value), high = parseInt($('octHigh').value);
+  hi.setAttribute('x', lo*octW);
+  hi.setAttribute('width', (high-lo+1)*octW);
+}
+
+// layers that haven't had their own sensitivity dragged yet track the global
+// slider live; updates their row's slider/value in place (no full re-render,
+// so focus/scroll position in the layer list isn't disturbed).
+function syncLayerThreshFromGlobal(){
+  const v = parseInt($('thresh').value);
+  const rows = $('layerList').children;
+  layers.forEach((L,i)=>{
+    if(L.threshCustom) return;
+    L.thresh = v;
+    const row = rows[i]; if(!row) return;
+    const input = row.querySelector('.layerThresh input[type=range]');
+    const val = row.querySelector('.layerThresh .val');
+    if(input) input.value = v;
+    if(val) val.textContent = v;
+  });
+}
 
 /* ---- Otsu's method: auto-pick the Sensitivity value from the current edge histogram ---- */
 $('autoThresh').addEventListener('click', ()=>{
@@ -2400,7 +2577,49 @@ document.querySelectorAll('.val.editable[data-for]').forEach(span=>{
 syncLabels();
 updatePlayBtnState();
 initCurveEditor();
+buildOctaveStrip();
 setLang(initialLang());
+</script>
+
+<!-- Grain overlay, matched to neoyume.com's #ny-noise: a small offscreen
+     canvas of pure random per-pixel gray, redrawn every frame and stretched
+     over the viewport (image-rendering:pixelated for the chunky look),
+     blended with mix-blend-mode:overlay so it reads as film grain rather
+     than a flat tint. pointer-events:none keeps every control underneath
+     fully clickable/draggable. -->
+<canvas id="ny-noise" aria-hidden="true"></canvas>
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.getElementById('ny-noise');
+  var ctx = canvas.getContext('2d');
+  var NOISE_RES = 480;
+
+  function resize(){
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    canvas.width = NOISE_RES;
+    canvas.height = Math.round(NOISE_RES * (window.innerHeight / window.innerWidth));
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function drawNoise(){
+    var imageData = ctx.createImageData(canvas.width, canvas.height);
+    var buf = imageData.data;
+    for(var i=0; i<buf.length; i+=4){
+      var shade = (Math.random()*255) | 0;
+      buf[i]=shade; buf[i+1]=shade; buf[i+2]=shade; buf[i+3]=255;
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  if(reduceMotion){
+    drawNoise();
+  } else {
+    (function animate(){ drawNoise(); requestAnimationFrame(animate); })();
+  }
+})();
 </script>
 </body>
 </html>
