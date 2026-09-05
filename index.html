@@ -119,7 +119,12 @@
   /* whole Source panel doubles as a drop target — no separate dropzone box */
   .panel-source.drag{outline:1.5px dashed var(--accent); outline-offset:-1.5px; background:rgba(0,255,255,.04);}
 
-  .previewWrap{margin-top:14px;}
+  .previewWrap{margin-top:14px; position:relative;}
+  #sensMask{
+    position:absolute; inset:0; width:100%; height:100%;
+    border-radius:7px; pointer-events:none; image-rendering:pixelated; opacity:.55;
+  }
+  #sensMask[hidden]{display:none;}
   canvas#preview{
     width:100%; display:block; border-radius:7px;
     background:#0a0a0c; border:1px solid var(--line);
@@ -466,6 +471,7 @@
       <div class="hint err" id="srcHint" hidden></div>
       <div class="previewWrap" id="previewWrap">
         <canvas id="preview" width="600" height="600" hidden></canvas>
+        <canvas id="sensMask" hidden></canvas>
         <div class="previewPlaceholder" id="previewPlaceholder">
           <svg viewBox="0 0 48 36" width="44" height="33" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="1" y="1" width="46" height="34" rx="4"></rect><circle cx="14" cy="12" r="4"></circle><path d="M1 29l12-11 9 8 7-6 18 15"></path></svg>
           <p data-i18n="previewPlaceholder">Ton image ou ta vidéo apparaîtra ici</p>
@@ -554,6 +560,7 @@
         <div class="sliderRow">
           <input type="range" id="thresh" min="1" max="100" value="55">
           <button type="button" class="miniBtn" id="autoThresh" data-i18n="btnAuto" title="Otsu">Auto</button>
+          <button type="button" class="miniBtn" id="maskToggleBtn" data-i18n="btnMaskToggle">◐ Masque</button>
         </div>
       </div>
       <div class="ctrl">
@@ -637,6 +644,7 @@ const I18N = {
     lblSat: "Saturation",
     lblSensitivity: "Sensibilité (garder les zones les + contrastées)",
     btnAuto: "Auto",
+    btnMaskToggle: "◐ Masque",
     lblBlur: "Lissage",
     lblInvert: "Inverser",
     lblImgOpacity: "Opacité image",
@@ -762,6 +770,7 @@ const I18N = {
     lblSat: "Saturation",
     lblSensitivity: "Sensitivity (keep the most contrasted areas)",
     btnAuto: "Auto",
+    btnMaskToggle: "◐ Mask",
     lblBlur: "Smoothing",
     lblInvert: "Invert",
     lblImgOpacity: "Image opacity",
@@ -952,7 +961,7 @@ let adjCanvas = document.createElement('canvas'), adjCtx = adjCanvas.getContext(
 let layers = [];                 // {color, pickColor, name, auto, program, mute, solo}
 let lastNotes = [];              // per layer: array of {step, midi, vel}
 let pickLayer = -1;              // index of the layer waiting for a click on the image ('pick' mode), -1 = none
-let lastEdgeArr = null, lastMaxEdge = 1;   // cached from the last process(), reused by the Otsu "Auto" button
+let lastEdgeArr = null, lastMaxEdge = 1;   // cached from the last process(), reused by the Otsu "Auto" button and the sensitivity mask
 const MAXDIM = 260;
 
 /* ---- source state: image, video file, or live webcam ---- */
@@ -1789,6 +1798,7 @@ function process(){
 
   redrawPreview();   // skips the analysis view in favor of the crop overlay while editing a crop
   drawPianoRoll();
+  drawSensitivityMask();
   const total = lastNotes.reduce((a,arr)=>a+arr.length,0);
   const srcLabel = srcKind === 'webcam' ? ' · ' + t('srcWebcamLabel')
                  : srcKind === 'video'  ? ' · ' + t('srcVideoLabel')
@@ -2134,6 +2144,34 @@ function drawPlayhead(){
   pctx.restore();
   rafId = requestAnimationFrame(drawPlayhead);
 }
+
+// Sensitivity mask: cyan-over-transparent overlay on the preview showing
+// exactly which pixels currently clear the global Sensitivity threshold —
+// re-thresholds the already-computed lastEdgeArr (no gradient/Sobel/LUT work
+// redone here), so it stays cheap to redraw on every slider tick.
+let maskVisible = false;
+function drawSensitivityMask(){
+  const canvas = $('sensMask');
+  if(!maskVisible || !lastEdgeArr || !img) return;
+  const w = imgCanvas.width, h = imgCanvas.height;
+  if(!w || !h || lastEdgeArr.length !== w*h) return;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const cutoff = (1 - parseInt($('thresh').value)/100) * lastMaxEdge;
+  const imgData = ctx.createImageData(w,h);
+  for(let i=0;i<lastEdgeArr.length;i++){
+    const on = lastEdgeArr[i] >= cutoff && lastEdgeArr[i] > 2;
+    imgData.data[i*4] = 77; imgData.data[i*4+1] = 217; imgData.data[i*4+2] = 201;
+    imgData.data[i*4+3] = on ? 220 : 0;
+  }
+  ctx.putImageData(imgData,0,0);
+}
+$('maskToggleBtn').addEventListener('click', ()=>{
+  maskVisible = !maskVisible;
+  $('sensMask').hidden = !maskVisible;
+  $('maskToggleBtn').classList.toggle('active', maskVisible);
+  drawSensitivityMask();
+});
 
 // Piano roll: renders lastNotes (the exact array driving buildMidi() and the
 // realtime scheduler — nothing recomputed here) as a grid of step × pitch-row
