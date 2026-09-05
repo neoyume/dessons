@@ -53,6 +53,14 @@
   .flowSteps b{color:var(--accent); font-weight:700;}
   .flowSteps .stepArrow{color:var(--line); font-weight:700;}
 
+  .presetBar{
+    display:flex; align-items:center; gap:8px; margin:0 0 18px;
+    padding:10px 14px; background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  }
+  .presetBar label{font-size:11px; color:var(--text-dim); flex:none;}
+  .presetBar select{flex:1; max-width:320px; padding:6px 8px; font-size:12px;}
+  .presetBar .miniBtn{flex:none;}
+
   /* language switch */
   .langToggle{
     display:flex; flex:none;
@@ -329,6 +337,13 @@
     </div>
   </header>
 
+  <div class="presetBar" id="presetBar">
+    <label for="presetSelect" data-i18n="lblPreset">Preset</label>
+    <select id="presetSelect"></select>
+    <button type="button" class="miniBtn" id="presetSaveBtn" data-i18n="btnPresetSave">💾 Enregistrer</button>
+    <button type="button" class="miniBtn" id="presetDeleteBtn" hidden data-i18n="btnPresetDelete">🗑 Supprimer</button>
+  </div>
+
   <div class="rack">
     <!-- LEFT (25%): Music -->
     <div class="panel panel-music">
@@ -546,6 +561,14 @@ const I18N = {
     flowSteps: '<b>1.</b> Dépose une image <span class="stepArrow">→</span> <b>2.</b> Ajuste les réglages <span class="stepArrow">→</span> <b>3.</b> Exporte ou joue en direct',
     previewPlaceholder: "Ton image ou ta vidéo apparaîtra ici",
     btnReset: "Réinitialiser",
+    lblPreset: "Preset",
+    presetNone: "— Aucun —",
+    presetBuiltinGroup: "Presets fournis",
+    presetUserGroup: "Mes presets",
+    btnPresetSave: "💾 Enregistrer",
+    btnPresetDelete: "🗑 Supprimer",
+    presetPromptName: "Nom du preset :",
+    presetConfirmDelete: "Supprimer le preset « {x} » ?",
     exportDisabledHint: "Importe une image pour activer l'export",
     safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
     midiHintToggle: "Comment connecter à Logic",
@@ -658,6 +681,14 @@ const I18N = {
     flowSteps: '<b>1.</b> Drop an image <span class="stepArrow">→</span> <b>2.</b> Tweak the settings <span class="stepArrow">→</span> <b>3.</b> Export or play it live',
     previewPlaceholder: "Your image or video will appear here",
     btnReset: "Reset",
+    lblPreset: "Preset",
+    presetNone: "— None —",
+    presetBuiltinGroup: "Built-in presets",
+    presetUserGroup: "My presets",
+    btnPresetSave: "💾 Save",
+    btnPresetDelete: "🗑 Delete",
+    presetPromptName: "Preset name:",
+    presetConfirmDelete: "Delete preset \"{x}\"?",
     exportDisabledHint: "Import an image to enable export",
     safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
     midiHintToggle: "How to connect to Logic",
@@ -800,6 +831,7 @@ function setLang(lang){
   updateCropUI();
   renderTransportIcons();                      // refresh icon tooltips
   renderMidiState();
+  renderPresetOptions();                        // re-translate built-in preset names + group labels
   if(img) process();
 }
 
@@ -835,6 +867,27 @@ const SCALES = {
   major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10],
   dorian:[0,2,3,5,7,9,10], wholetone:[0,2,4,6,8,10], chromatic:[0,1,2,3,4,5,6,7,8,9,10,11]
 };
+
+// Ready-made presets, shipped in the source — edit/add entries here and they
+// show up in the dropdown next to the user's own saved ones. Same shape as
+// what "Save" writes (see currentPresetValues()): a flat `values` object
+// (PRESET_KEYS) plus an optional `layerOverrides` array applied by index.
+const BUILTIN_PRESETS = [
+  {
+    name: {fr:"Contours nets", en:"Sharp edges"},
+    values: {blackPt:10, whitePt:245, gamma:1, sat:100, thresh:70, blur:1, invert:false,
+      layers:3, sepMode:'sobel', posterize:32, pickTol:60,
+      scale:'minPenta', root:'0', octLow:2, octHigh:5, steps:16, bars:2, tempo:110, gate:70,
+      playDir:'lr', curve:'linear'}
+  },
+  {
+    name: {fr:"Ambiance douce", en:"Soft ambient"},
+    values: {blackPt:40, whitePt:210, gamma:1.3, sat:70, thresh:40, blur:4, invert:false,
+      layers:2, sepMode:'lum', posterize:32, pickTol:60,
+      scale:'majPenta', root:'0', octLow:3, octHigh:6, steps:12, bars:4, tempo:80, gate:90,
+      playDir:'lr', curve:'decel'}
+  }
+];
 
 let img = null;                 // truthy once a source (image / video / webcam) is ready
 let imgCanvas = document.createElement('canvas'), imgCtx = imgCanvas.getContext('2d');
@@ -2488,6 +2541,113 @@ function redrawOctaveHighlight(){
   hi.setAttribute('x', lo*octW);
   hi.setAttribute('width', (high-lo+1)*octW);
 }
+
+/* ---- presets: save/load the full Image Analysis + Music + per-layer setup ---- */
+const PRESET_KEYS = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode',
+  'posterize','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate','playDir','curve'];
+
+function getUserPresets(){
+  try{ return JSON.parse(localStorage.getItem('dessons.presets') || '{}'); }catch(e){ return {}; }
+}
+function saveUserPresets(obj){
+  try{ localStorage.setItem('dessons.presets', JSON.stringify(obj)); }catch(e){}
+}
+
+function currentPresetValues(){
+  const values = {};
+  PRESET_KEYS.forEach(id=>{
+    const el = $(id);
+    values[id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  // per layer: instrument + individual sensitivity, applied back by index on load
+  const layerOverrides = layers.map(L => ({ program:L.program, thresh:L.thresh, threshCustom:L.threshCustom }));
+  return { values, layerOverrides };
+}
+
+function applyPreset(data){
+  if(!data) return;
+  // structure-affecting fields first (layers/sepMode rebuild the layer list via structureIds),
+  // then everything else driven by the normal slider/select wiring (liveIds) — each dispatched
+  // as a real 'input' so every existing side effect (syncLabels, syncLayerThreshFromGlobal,
+  // redrawOctaveHighlight, process...) just runs like the user had touched it.
+  ['layers','sepMode'].forEach(id=>{
+    if(data.values[id] == null) return;
+    $(id).value = data.values[id];
+    $(id).dispatchEvent(new Event('input', {bubbles:true}));
+  });
+  const skip = ['layers','sepMode','playDir','curve'];
+  PRESET_KEYS.filter(id => !skip.includes(id)).forEach(id=>{
+    if(data.values[id] == null) return;
+    const el = $(id);
+    if(el.type === 'checkbox') el.checked = data.values[id]; else el.value = data.values[id];
+    el.dispatchEvent(new Event('input', {bubbles:true}));
+  });
+  // playDir/curve are hidden inputs driven by the icon buttons, not liveIds — dispatching
+  // 'input' on them has no listener to catch it, so set + re-render explicitly instead.
+  if(data.values.playDir != null) $('playDir').value = data.values.playDir;
+  if(data.values.curve != null) $('curve').value = data.values.curve;
+  renderTransportIcons();
+  toggleCurveEditor();
+  if(data.layerOverrides){
+    data.layerOverrides.forEach((ov,i)=>{
+      if(!layers[i]) return;
+      if(ov.program != null) layers[i].program = ov.program;
+      if(ov.thresh != null){ layers[i].thresh = ov.thresh; layers[i].threshCustom = !!ov.threshCustom; }
+    });
+    renderLayerList();
+  }
+  process();
+}
+
+function presetDisplayName(p){ return (p.name && (p.name[LANG] || p.name.fr)) || p.name; }
+
+function renderPresetOptions(){
+  const sel = $('presetSelect');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  sel.appendChild(new Option(t('presetNone'), ''));
+  if(BUILTIN_PRESETS.length){
+    const og = document.createElement('optgroup'); og.label = t('presetBuiltinGroup');
+    BUILTIN_PRESETS.forEach((p,i)=> og.appendChild(new Option(presetDisplayName(p), 'builtin:'+i)));
+    sel.appendChild(og);
+  }
+  const userNames = Object.keys(getUserPresets());
+  if(userNames.length){
+    const og = document.createElement('optgroup'); og.label = t('presetUserGroup');
+    userNames.forEach(name=> og.appendChild(new Option(name, 'user:'+name)));
+    sel.appendChild(og);
+  }
+  sel.value = [...sel.options].some(o=>o.value===prev) ? prev : '';
+  $('presetDeleteBtn').hidden = !sel.value.startsWith('user:');
+}
+
+$('presetSelect').addEventListener('change', ()=>{
+  const v = $('presetSelect').value;
+  $('presetDeleteBtn').hidden = !v.startsWith('user:');
+  if(!v) return;
+  if(v.startsWith('builtin:')) applyPreset(BUILTIN_PRESETS[parseInt(v.slice(8))]);
+  else applyPreset(getUserPresets()[v.slice(5)]);
+});
+$('presetSaveBtn').addEventListener('click', ()=>{
+  const name = (prompt(t('presetPromptName')) || '').trim();
+  if(!name) return;
+  const presets = getUserPresets();
+  presets[name] = currentPresetValues();
+  saveUserPresets(presets);
+  renderPresetOptions();
+  $('presetSelect').value = 'user:'+name;
+  $('presetDeleteBtn').hidden = false;
+});
+$('presetDeleteBtn').addEventListener('click', ()=>{
+  const v = $('presetSelect').value;
+  if(!v.startsWith('user:')) return;
+  const name = v.slice(5);
+  if(!confirm(t('presetConfirmDelete').replace('{x}', name))) return;
+  const presets = getUserPresets();
+  delete presets[name];
+  saveUserPresets(presets);
+  renderPresetOptions();
+});
 
 // layers that haven't had their own sensitivity dragged yet track the global
 // slider live; updates their row's slider/value in place (no full re-render,
