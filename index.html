@@ -228,7 +228,7 @@
   }
   .layer:last-child{border-bottom:none;}
   .layerMain{
-    display:grid; grid-template-columns:13px 46px 1fr 1fr; gap:6px; align-items:center;
+    display:grid; grid-template-columns:13px 13px 46px 1fr 1fr; gap:6px; align-items:center;
   }
   .swatch{-webkit-appearance:none; appearance:none; width:13px; height:13px; border-radius:3px; border:1px solid rgba(255,255,255,.15); padding:0; cursor:default;}
   .swatch.pickable{cursor:pointer;}
@@ -236,6 +236,12 @@
   .swatch.pickable:not(.picked){border-style:dashed; border-color:var(--text-dim);}
   .swatch.arming{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); animation:swatchPulse .9s ease-in-out infinite;}
   @keyframes swatchPulse{50%{opacity:.4;}}
+  /* detected-color swatch: read-only, shows the actual average pixel color
+     found for the layer (vs. the adjacent identity swatch, which is the
+     synthetic hue/lum/pick color used for note-dot coloring) */
+  .swatchDetected{width:13px; height:13px; border-radius:50%; border:1px solid rgba(255,255,255,.15); background:transparent;}
+  .layerSwatchStrip{display:flex; gap:4px; margin-top:6px;}
+  .layerSwatchStrip .chip{flex:1; height:14px; border-radius:3px; border:1px solid rgba(255,255,255,.12); background:transparent;}
   canvas#preview.picking{cursor:crosshair;}
   .layer input[type=text]{padding:5px 7px; font-size:12px;}
   .layer select{padding:5px 7px; font-size:12px;}
@@ -594,6 +600,7 @@
       <div class="ctrl">
         <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val editable" id="vLayers" data-for="layers">3</span></label>
         <input type="range" id="layers" min="1" max="6" value="3">
+        <div id="layerSwatchStrip" class="layerSwatchStrip"></div>
       </div>
       <div class="ctrl" id="posterizeRow" hidden>
         <label><span data-i18n="lblPosterize">Niveaux de couleur</span> <span class="val editable" id="vPosterize" data-for="posterize">32</span></label>
@@ -676,6 +683,7 @@ const I18N = {
     lblPosterize: "Niveaux de couleur",
     pickArm: "Clique dans l'image pour isoler cette couleur — le reste restera silencieux.",
     swatchTitle: "Choisir la couleur dans l'image",
+    swatchDetectedTitle: "Couleur moyenne réellement détectée pour ce calque",
     lblPickTol: "Tolérance couleur",
     btnCrop: "✂ Recadrer",
     btnCropCancel: "✕ Annuler",
@@ -800,6 +808,7 @@ const I18N = {
     lblPosterize: "Color levels",
     pickArm: "Click in the image to isolate that color — everything else stays silent.",
     swatchTitle: "Pick color from the image",
+    swatchDetectedTitle: "Average color actually detected for this layer",
     lblPickTol: "Color tolerance",
     btnCrop: "✂ Crop",
     btnCropCancel: "✕ Cancel",
@@ -1288,6 +1297,10 @@ function renderLayerList(){
     } else {
       sw.disabled = true;
     }
+    const swDetected = document.createElement('div');
+    swDetected.className = 'swatchDetected';
+    swDetected.title = t('swatchDetectedTitle');
+    if(L.detectedColor) swDetected.style.background = L.detectedColor;
 
     const ms = document.createElement('div');
     ms.className = 'layerMS';
@@ -1313,7 +1326,7 @@ function renderLayerList(){
       layers[i].program = parseInt(e.target.value);
       if(playing && midiOut) midiOut.send([0xC0|(i%16), layers[i].program & 0x7F]);
     });
-    main.appendChild(sw); main.appendChild(ms); main.appendChild(nameInput); main.appendChild(sel);
+    main.appendChild(sw); main.appendChild(swDetected); main.appendChild(ms); main.appendChild(nameInput); main.appendChild(sel);
 
     // per-layer sensitivity: independent from the global slider once touched
     const threshRow = document.createElement('div');
@@ -1351,6 +1364,33 @@ function renderLayerList(){
   });
   refreshMixUI();
   updatePickUI();
+
+  // one chip per layer, mirrors the row order — rebuilt here (structural:
+  // layer count/order changed) then just re-tinted by updateLayerSwatches()
+  // on every process() tick, same split as syncLayerThreshFromGlobal().
+  const strip = $('layerSwatchStrip');
+  strip.innerHTML = '';
+  layers.forEach(L=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    if(L.detectedColor) chip.style.background = L.detectedColor;
+    strip.appendChild(chip);
+  });
+}
+
+// Detected-color swatches (the actual average pixel color found for each
+// layer, computed alongside note detection in process()) are re-tinted on
+// every analysis pass without rebuilding the layer rows — cheap DOM writes
+// only, same pattern as syncLayerThreshFromGlobal().
+function updateLayerSwatches(){
+  const rows = $('layerList').children;
+  const chips = $('layerSwatchStrip').children;
+  layers.forEach((L,i)=>{
+    const color = L.detectedColor || 'transparent';
+    const row = rows[i];
+    if(row){ const el = row.querySelector('.swatchDetected'); if(el) el.style.background = color; }
+    if(chips[i]) chips[i].style.background = color;
+  });
 }
 
 // Solo overrides Mute (DAW convention): if anything is soloed, only soloed
@@ -1796,12 +1836,18 @@ function process(){
   // per (step, row, layer). Works uniformly for cardinal *and* diagonal
   // directions — a "cell" is just whichever pixels land on the same (ti,pi).
   const bestEdge = new Float32Array(steps*rows*nLayers);
+  // accumulated alongside the same pass, for the detected-color swatches
+  // (average of every pixel actually assigned to the layer's bucket, not
+  // just the ones that clear the sensitivity threshold and become notes —
+  // "what's really in this layer" rather than "what's audible right now").
+  const sumR = new Float64Array(nLayers), sumG = new Float64Array(nLayers), sumB = new Float64Array(nLayers), swCount = new Float64Array(nLayers);
   for(let y=0;y<h;y++){
     const ny = y/h;
     for(let x=0;x<w;x++){
       const px = y*w+x;
       const L = layerOf(px);
       if(L<0) continue;   // 'pick' mode: pixel doesn't match any picked color
+      sumR[L]+=pr[px]; sumG[L]+=pg[px]; sumB[L]+=pb[px]; swCount[L]++;
       const [tau, rho] = dir.fwd(x/w, ny);
       const ti = clamp(Math.floor(tau*steps), 0, steps-1);
       const pi = clamp(Math.floor(rho*rows), 0, rows-1);
@@ -1820,6 +1866,11 @@ function process(){
       }
     }
   }
+
+  layers.forEach((L,i)=>{
+    L.detectedColor = swCount[i] > 0 ? rgbToHex(sumR[i]/swCount[i], sumG[i]/swCount[i], sumB[i]/swCount[i]) : null;
+  });
+  updateLayerSwatches();
 
   redrawPreview();   // skips the analysis view in favor of the crop overlay while editing a crop
   drawPianoRoll();
