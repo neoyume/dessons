@@ -238,24 +238,24 @@
   .layer.muted .layerThresh{opacity:.4;}
 
   button#exportBtn{
-    width:100%; display:flex; align-items:center; justify-content:center; gap:7px;
+    width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
     background:var(--accent); color:var(--bg);
-    border:1.5px solid transparent; padding:11.5px; font-size:13.5px; font-weight:800; letter-spacing:.4px;
-    border-radius:8px; cursor:pointer; transition:filter .15s, transform .15s, box-shadow .15s;
+    border:1.5px solid transparent; padding:7px; font-size:12.5px; font-weight:800; letter-spacing:.4px;
+    border-radius:7px; cursor:pointer; transition:filter .15s, transform .15s, box-shadow .15s;
     box-shadow:0 4px 16px rgba(0,255,255,.32);
   }
-  button#exportBtn svg{width:16px; height:16px; flex:none; display:block;}
+  button#exportBtn svg{width:14px; height:14px; flex:none; display:block;}
   button#exportBtn:hover:not(:disabled){filter:brightness(1.08); transform:translateY(-1px);}
   button#exportBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed; box-shadow:none;}
   .hint.exportDisabledHint{text-align:center; margin-top:8px;}
 
   button#playBtn{
-    width:100%; display:flex; align-items:center; justify-content:center; gap:7px;
+    width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
     background:transparent; color:var(--cyan);
-    border:1.5px solid var(--cyan); padding:11.5px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
+    border:1.5px solid var(--cyan); padding:7px; font-size:12.5px; font-weight:700; letter-spacing:.3px;
     border-radius:7px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
-  button#playBtn svg{width:16px; height:16px; flex:none; display:block;}
+  button#playBtn svg{width:14px; height:14px; flex:none; display:block;}
   button#playBtn:hover:not(:disabled){background:rgba(77,217,201,.12);}
   button#playBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
   button#playBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
@@ -300,7 +300,6 @@
 
   .hint{font-size:11.5px; color:var(--text-dim); margin-top:8px; line-height:1.5;}
   .hint.err{color:#e5484d;}
-  .stat{font-family:var(--mono); font-size:11px; color:var(--cyan); margin-top:10px;}
 
   .badge.warn{
     display:flex; align-items:center; gap:7px; font-size:11.5px; color:#ff8a8e;
@@ -500,14 +499,12 @@
       <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
 
       <div class="divider"></div>
-      <div class="stat" id="statLine"></div>
-      <div class="hint" data-i18n="exportHint">Chaque calque = une piste MIDI (canal séparé, patch General MIDI). Importe le fichier dans Logic Pro : une piste par instrument sera créée automatiquement à la lecture du fichier multi-pistes.</div>
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
       <div class="badge warn" data-i18n="safariWarnBadge">⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.</div>
-      <div class="ctrl">
-        <label style="margin-bottom:6px;" data-i18n="lblPort">Port MIDI de sortie</label>
-        <select id="midiPort"><option value="" data-i18n="portDetect">— clique pour détecter les ports —</option></select>
-      </div>
+      <!-- no manual picker: ensureMidi()/refreshPorts() auto-select a port (IAC/bus
+           preferred) the moment "Play in DAW" is clicked. Kept in the DOM (hidden)
+           since refreshPorts() still reads/writes it as the source of truth. -->
+      <select id="midiPort" hidden></select>
       <button type="button" class="accordionBtn" id="midiHintToggle" aria-expanded="false" data-i18n="midiHintToggle">Comment connecter à Logic</button>
       <div class="hint" id="midiHint" hidden data-i18n-html="midiHint">Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.</div>
     </div>
@@ -683,15 +680,12 @@ const I18N = {
     lblGate: "Gate (durée note)",
     layersTitle: "Calques / Instruments",
     btnExport: "Exporter le .mid",
-    exportHint: "Chaque calque = une piste MIDI (canal séparé, patch General MIDI). Importe le fichier dans Logic Pro : une piste par instrument sera créée automatiquement à la lecture du fichier multi-pistes.",
     rtTitle: "Temps réel (Web MIDI)",
-    lblPort: "Port MIDI de sortie",
-    portDetect: "— clique pour détecter les ports —",
     btnPlay: "Jouer dans le DAW",
     btnPlayStop: "Stop",
     btnStop: "■ Stop",
     midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.",
-    footerFree: "Dessons, par Neoyume, est gratuit et open source, créé par Cedric Rolando.",
+    footerFree: "Dessons est en source ouverte (source-available) et gratuit pour un usage non commercial (licence PolyForm). Mais le fichier MIDI que tu exportes ou joues t'appartient à 100 % ; utilise-le comme bon te semble, commercialement ou non.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
     btnPreview: "▶ Écouter l'aperçu",
     previewHint: "Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.",
@@ -811,15 +805,12 @@ const I18N = {
     lblGate: "Gate (note length)",
     layersTitle: "Layers / Instruments",
     btnExport: "Export .mid",
-    exportHint: "Each layer = one MIDI track (separate channel, General MIDI patch). Import the file into Logic Pro: one track per instrument is created automatically when the multi-track file is played.",
     rtTitle: "Real-time (Web MIDI)",
-    lblPort: "MIDI output port",
-    portDetect: "— click to detect ports —",
     btnPlay: "Play in DAW",
     btnPlayStop: "Stop",
     btnStop: "■ Stop",
     midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>.",
-    footerFree: "Neoyume's Dessons is free and open source, created by Cedric Rolando.",
+    footerFree: "Neoyume's Dessons is source-available and free for non-commercial usage (PolyForm license). However, the MIDI file you export or play is 100% yours; use it however you want, commercially or not.",
     footerKofi: "☕ Support me on Ko-fi",
     btnPreview: "▶ Preview sound",
     previewHint: "Preview with the browser's built-in synth — rough sounds, just to judge the loop without a DAW.",
@@ -1045,7 +1036,6 @@ function clearPreview(){
   pctx.clearRect(0,0,preview.width,preview.height);
   $('dims').textContent = '—';
   $('noteCount').textContent = '0 ' + t('notesWord');
-  $('statLine').textContent = '';
 }
 
 // swap the canvas for a placeholder graphic until a source is actually loaded
@@ -1796,7 +1786,6 @@ function process(){
                  : ' ' + t('unitPx');
   $('dims').textContent = w + '×' + h + srcLabel;
   $('noteCount').textContent = total + ' ' + t('notesWord');
-  $('statLine').textContent = layers.map((L,i)=>L.name+': '+lastNotes[i].length).join('   ·   ');
 }
 
 function rgbToHue(r,g,b){
