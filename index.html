@@ -143,6 +143,11 @@
   .metaCol .cropRow{margin-top:0;}
   .metaCol .previewMeta{margin-top:8px;}
 
+  /* piano roll: visualizes lastNotes (the same array driving MIDI export and
+     preview playback) instead of just the "N notes" count. */
+  .pianoRollWrap{margin-top:10px; border:1px solid var(--line); border-radius:7px; background:#0a0a0c; overflow:hidden;}
+  #pianoRoll{width:100%; height:120px; display:block;}
+
   /* controls */
   .ctrl{margin-bottom:16px;}
   .ctrl label{
@@ -495,6 +500,9 @@
           <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
           <div class="midiRow"><span class="dot" id="synthDot"></span><span id="synthState">—</span></div>
         </div>
+      </div>
+      <div class="pianoRollWrap">
+        <canvas id="pianoRoll" width="900" height="120"></canvas>
       </div>
       <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
 
@@ -1780,6 +1788,7 @@ function process(){
   }
 
   redrawPreview();   // skips the analysis view in favor of the crop overlay while editing a crop
+  drawPianoRoll();
   const total = lastNotes.reduce((a,arr)=>a+arr.length,0);
   const srcLabel = srcKind === 'webcam' ? ' · ' + t('srcWebcamLabel')
                  : srcKind === 'video'  ? ' · ' + t('srcVideoLabel')
@@ -2093,18 +2102,24 @@ function scheduler(){
   stepWin = stepWin.filter(w => w.at + w.span > now - 150);
 }
 
-function drawPlayhead(){
-  if(!playing) return;
-  redrawPreview();
-  const steps = parseInt($('steps').value);
-  const dir = readDir();
+// where the loop currently is, in fractional steps (e.g. 3.4 = 40% through
+// step 3) — shared by the image playhead and the piano-roll playhead so both
+// stay in lockstep with the actual scheduler instead of duplicating the math.
+function currentLoopPos(steps){
   const now = performance.now();
-  // find the scheduled step whose time-span contains `now`, interpolate within it
   const w = stepWin.find(v => now >= v.at && now < v.at + v.span) || stepWin[0];
   let pos = 0;
   if(w) pos = w.step + Math.max(0, Math.min(1, (now - w.at) / w.span));
-  pos = ((pos % steps) + steps) % steps;
-  const tau = pos / steps;
+  return ((pos % steps) + steps) % steps;
+}
+
+function drawPlayhead(){
+  if(!playing) return;
+  redrawPreview();
+  drawPianoRoll();
+  const steps = parseInt($('steps').value);
+  const dir = readDir();
+  const tau = currentLoopPos(steps) / steps;
   // a line of constant τ, spanning the full pitch axis (ρ 0→1) — a straight
   // line in image space for every direction, cardinal or diagonal, since inv()
   // is affine; canvas clips it automatically if it runs past a corner.
@@ -2118,6 +2133,58 @@ function drawPlayhead(){
   pctx.stroke();
   pctx.restore();
   rafId = requestAnimationFrame(drawPlayhead);
+}
+
+// Piano roll: renders lastNotes (the exact array driving buildMidi() and the
+// realtime scheduler — nothing recomputed here) as a grid of step × pitch-row
+// rectangles, colored per layer. X is linear in step index (not curve-warped
+// time — that's what makes it read as a normal piano roll); only the moving
+// playhead follows the real, possibly-curved playback position, so dragging
+// a "Pulsing" curve visibly shows the line bunching up at the grid's edges.
+const pianoRoll = document.getElementById('pianoRoll'), prCtx = pianoRoll.getContext('2d');
+function drawPianoRoll(){
+  const wrap = pianoRoll.parentElement;
+  const cssW = wrap.clientWidth || 900;
+  // 2x internal resolution for crisp thin rows on retina; CSS still holds it at 120px tall.
+  if(pianoRoll.width !== cssW*2 || pianoRoll.height !== 240){ pianoRoll.width = cssW*2; pianoRoll.height = 240; }
+  const W = pianoRoll.width, H = pianoRoll.height;
+  prCtx.clearRect(0,0,W,H);
+  if(!img || !layers.length) return;
+
+  const steps = parseInt($('steps').value);
+  const pitches = scaleNotesForRange();
+  const rows = pitches.length;
+  if(!rows) return;
+  const colW = W/steps, rowH = H/rows;
+  const gatePct = parseInt($('gate').value)/100;
+
+  prCtx.strokeStyle = 'rgba(255,255,255,.05)';
+  prCtx.lineWidth = 1;
+  for(let r=1; r<rows; r++){
+    const y = Math.round(r*rowH)+0.5;
+    prCtx.beginPath(); prCtx.moveTo(0,y); prCtx.lineTo(W,y); prCtx.stroke();
+  }
+
+  lastNotes.forEach((arr,Li)=>{
+    const L = layers[Li]; if(!L) return;
+    prCtx.fillStyle = L.color;
+    prCtx.globalAlpha = layerAudible(Li) ? 1 : 0.25;   // same dimming convention as drawPreview()
+    arr.forEach(n=>{
+      const pIdx = pitches.indexOf(n.midi);
+      if(pIdx < 0) return;
+      const x = n.step*colW;
+      const y = (rows-1-pIdx)*rowH;   // top/high row = highest pitch, same convention as note dots
+      prCtx.fillRect(x+0.5, y+0.5, Math.max(1, colW*gatePct-1), Math.max(1, rowH-1));
+    });
+  });
+  prCtx.globalAlpha = 1;
+
+  if(playing){
+    const x = currentLoopPos(steps)/steps*W;
+    prCtx.strokeStyle = 'rgba(77,217,201,.9)';
+    prCtx.lineWidth = 2;
+    prCtx.beginPath(); prCtx.moveTo(x,0); prCtx.lineTo(x,H); prCtx.stroke();
+  }
 }
 
 function redrawPreview(){
@@ -2502,6 +2569,7 @@ document.addEventListener('visibilitychange', ()=>{
 });
 // page going away: stop playback and release the camera
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
+window.addEventListener('resize', ()=> drawPianoRoll());
 
 /* ---- wire up controls ---- */
 const liveIds = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode','posterize','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
