@@ -464,10 +464,6 @@
           <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
         </div>
       </div>
-      <div class="ctrl" id="imgOpacityCtrl">
-        <label><span data-i18n="lblImgOpacity">Opacité image</span> <span class="val editable" id="vImgOpacity" data-for="imgOpacity">100%</span></label>
-        <input type="range" id="imgOpacity" min="0" max="100" value="100">
-      </div>
       <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
 
       <div class="divider"></div>
@@ -511,6 +507,15 @@
       </div>
 
       <div class="ctrl">
+        <label style="margin-bottom:6px;" data-i18n="lblMethod">Méthode</label>
+        <select id="sepMode">
+          <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
+          <option value="lum" data-i18n="optLum">Par luminosité</option>
+          <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
+          <option value="sobel" data-i18n="optSobel">Par contours (Sobel)</option>
+        </select>
+      </div>
+      <div class="ctrl">
         <label><span data-i18n="lblBlackPt">Point noir</span> <span class="val editable" id="vBlackPt" data-for="blackPt">21</span></label>
         <input type="range" id="blackPt" min="0" max="255" value="21">
       </div>
@@ -544,15 +549,6 @@
         <label><span data-i18n="lblLayers">Séparation en calques</span> <span class="val editable" id="vLayers" data-for="layers">3</span></label>
         <input type="range" id="layers" min="1" max="6" value="3">
       </div>
-      <div class="ctrl">
-        <label style="margin-bottom:6px;" data-i18n="lblMethod">Méthode</label>
-        <select id="sepMode">
-          <option value="hue" data-i18n="optHue">Par couleur (teinte)</option>
-          <option value="lum" data-i18n="optLum">Par luminosité</option>
-          <option value="pick" data-i18n="optPick">Par couleurs (pipette)</option>
-          <option value="sobel" data-i18n="optSobel">Par contours (Sobel)</option>
-        </select>
-      </div>
       <div class="ctrl" id="posterizeRow" hidden>
         <label><span data-i18n="lblPosterize">Niveaux de couleur</span> <span class="val editable" id="vPosterize" data-for="posterize">32</span></label>
         <input type="range" id="posterize" min="2" max="32" value="32">
@@ -560,6 +556,10 @@
       <div class="ctrl" id="pickTolRow" hidden>
         <label><span data-i18n="lblPickTol">Tolérance couleur</span> <span class="val editable" id="vPickTol" data-for="pickTol">60</span></label>
         <input type="range" id="pickTol" min="10" max="150" value="60">
+      </div>
+      <div class="ctrl" id="imgOpacityCtrl">
+        <label><span data-i18n="lblImgOpacity">Opacité image</span> <span class="val editable" id="vImgOpacity" data-for="imgOpacity">100%</span></label>
+        <input type="range" id="imgOpacity" min="0" max="100" value="100">
       </div>
 
       <div class="divider"></div>
