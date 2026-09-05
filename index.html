@@ -121,11 +121,27 @@
      bottom of the (much narrower) Analysis column — this row lives inside
      .panel-source, so it's still within its 3/5 share of .rack, just split
      internally. Below 1080px .rack itself goes single-column, so this also
-     collapses to stacked (media above, layer list below) for the same reason. */
-  .sourceMediaRow{display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start; margin-top:14px;}
-  .layersPanel{min-width:0;}
+     collapses to stacked (media above, layer list below) for the same reason.
+     grid-template-areas (not just 2 columns) so the "Source" and "Calques /
+     Instruments" <h2>s share a header row instead of the 2nd one trailing
+     lower, inside .layersPanel, below the media's own title. */
+  .sourceMediaRow{
+    display:grid; grid-template-columns:2fr 1fr; column-gap:16px; row-gap:14px; align-items:start;
+    grid-template-areas:"srcHead layersHead" "media layers";
+  }
+  .sourceMediaRow .srcHead{grid-area:srcHead;}
+  .sourceMediaRow .layersHead{grid-area:layersHead;}
+  .sourceMediaRow .srcHead, .sourceMediaRow .layersHead{margin:0;}
+  .mediaCol{grid-area:media; min-width:0;}
+  /* previewWrap no longer carries its own margin-top (the grid's row-gap
+     handles spacing from the header row) — a grid item doesn't collapse
+     margins with its children, so when freezeBtn/srcHint are actually
+     visible (video/webcam active, load error) they need their own gap
+     before previewWrap instead of relying on collapse. */
+  #freezeBtn, #srcHint{margin-bottom:10px;}
+  .layersPanel{grid-area:layers; min-width:0;}
   @media (max-width: 1080px){
-    .sourceMediaRow{grid-template-columns:1fr;}
+    .sourceMediaRow{grid-template-columns:1fr; grid-template-areas:"srcHead" "media" "layersHead" "layers";}
   }
 
   .previewWrap{position:relative; text-align:center;}
@@ -506,11 +522,13 @@
 
     <!-- CENTER (50%): source + preview, then layers/export/real-time -->
     <div class="panel panel-source">
-      <h2 data-i18n="srcTitle">Source</h2>
-      <input type="file" id="fileInput" accept="image/*,video/*" hidden>
-      <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
-      <div class="hint err" id="srcHint" hidden></div>
       <div class="sourceMediaRow">
+        <h2 class="srcHead" data-i18n="srcTitle">Source</h2>
+        <h2 class="layersHead" data-i18n="layersTitle">Calques / Instruments</h2>
+        <div class="mediaCol">
+        <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+        <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
+        <div class="hint err" id="srcHint" hidden></div>
         <div class="previewWrap" id="previewWrap">
           <div class="mediaBox" id="mediaBox">
             <canvas id="preview" width="600" height="600" hidden></canvas>
@@ -538,8 +556,8 @@
             <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
           </div>
         </div>
+        </div>
         <div class="layersPanel">
-          <h2 data-i18n="layersTitle">Calques / Instruments</h2>
           <div id="layerList"></div>
         </div>
       </div>
