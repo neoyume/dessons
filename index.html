@@ -117,10 +117,16 @@
   .srcBtn.active{background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700;}
   .srcBtn:disabled{opacity:.4; cursor:not-allowed;}
 
-  .previewWrap{margin-top:14px; position:relative;}
+  .previewWrap{margin-top:14px; position:relative; text-align:center;}
   /* the whole frame is the drop target, empty or already loaded */
   #previewWrap.drag{outline:1.5px dashed var(--accent); outline-offset:-1.5px; border-radius:7px;}
   #previewWrap.drag .previewPlaceholder{border-color:var(--accent); background:rgba(0,255,255,.04);}
+  /* mediaBox shrink-wraps to the canvas's own rendered size (inline-block,
+     centered via previewWrap's text-align) instead of always spanning the
+     full panel width — needed so a 9:16 portrait capped at max-height:490px
+     doesn't leave sensMask/scanOverlay/removeMediaBtn stretched across a
+     wider, mostly-empty box than the visible image. */
+  .mediaBox{display:inline-block; position:relative; max-width:100%; max-height:490px;}
   #sensMask{
     position:absolute; inset:0; width:100%; height:100%;
     border-radius:7px; pointer-events:none; image-rendering:pixelated; opacity:.55;
@@ -129,8 +135,8 @@
   #scanOverlay{position:absolute; inset:0; width:100%; height:100%; border-radius:7px; pointer-events:none;}
   #scanOverlay[hidden]{display:none;}
   canvas#preview{
-    width:100%; display:block; border-radius:7px;
-    background:#0a0a0c; border:1px solid var(--line);
+    display:block; max-width:100%; max-height:490px; width:auto; height:auto;
+    border-radius:7px; background:#0a0a0c; border:1px solid var(--line);
     image-rendering:pixelated;
   }
   canvas#preview[hidden]{display:none;}
@@ -146,7 +152,7 @@
   .previewPlaceholder .srcBtns3{width:100%; max-width:300px;}
   .previewPlaceholder .hint{margin:0; max-width:260px;}
   /* overlay "×" shown once media is loaded — sits above the canvas/mask/scan
-     layers regardless of z-index thanks to DOM order (see #previewWrap kids) */
+     layers regardless of z-index thanks to DOM order (see #mediaBox kids) */
   .removeMediaBtn{
     position:absolute; top:8px; right:8px; z-index:5;
     width:26px; height:26px; display:flex; align-items:center; justify-content:center;
@@ -494,9 +500,14 @@
       <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
       <div class="hint err" id="srcHint" hidden></div>
       <div class="previewWrap" id="previewWrap">
-        <canvas id="preview" width="600" height="600" hidden></canvas>
-        <canvas id="sensMask" hidden></canvas>
-        <canvas id="scanOverlay" hidden></canvas>
+        <div class="mediaBox" id="mediaBox">
+          <canvas id="preview" width="600" height="600" hidden></canvas>
+          <canvas id="sensMask" hidden></canvas>
+          <canvas id="scanOverlay" hidden></canvas>
+          <button type="button" class="removeMediaBtn" id="removeMediaBtn" hidden aria-label="Remove media">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"></path></svg>
+          </button>
+        </div>
         <div class="previewPlaceholder" id="previewPlaceholder">
           <div class="srcBtns3" id="srcBtns3">
             <button type="button" class="srcBtn" id="imageBtn">
@@ -514,9 +525,6 @@
           </div>
           <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
         </div>
-        <button type="button" class="removeMediaBtn" id="removeMediaBtn" hidden aria-label="Remove media">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"></path></svg>
-        </button>
       </div>
       <div class="metaTransportRow">
         <div class="transportIcons">
@@ -618,10 +626,6 @@
         <input type="range" id="layers" min="1" max="6" value="3">
         <div id="layerSwatchStrip" class="layerSwatchStrip"></div>
       </div>
-      <div class="ctrl" id="posterizeRow" hidden>
-        <label><span data-i18n="lblPosterize">Niveaux de couleur</span> <span class="val editable" id="vPosterize" data-for="posterize">32</span></label>
-        <input type="range" id="posterize" min="2" max="32" value="32">
-      </div>
       <div class="ctrl" id="pickTolRow" hidden>
         <label><span data-i18n="lblPickTol">Tolérance couleur</span> <span class="val editable" id="vPickTol" data-for="pickTol">60</span></label>
         <input type="range" id="pickTol" min="10" max="150" value="60">
@@ -696,7 +700,6 @@ const I18N = {
     optLum: "Par luminosité",
     optPick: "Par couleurs (pipette)",
     optSobel: "Par contours (Sobel)",
-    lblPosterize: "Niveaux de couleur",
     pickArm: "Clique dans l'image pour isoler cette couleur — le reste restera silencieux.",
     swatchTitle: "Choisir la couleur dans l'image",
     swatchDetectedTitle: "Couleur moyenne réellement détectée pour ce calque",
@@ -821,7 +824,6 @@ const I18N = {
     optLum: "By brightness",
     optPick: "By picked colors (eyedropper)",
     optSobel: "By edges (Sobel)",
-    lblPosterize: "Color levels",
     pickArm: "Click in the image to isolate that color — everything else stays silent.",
     swatchTitle: "Pick color from the image",
     swatchDetectedTitle: "Average color actually detected for this layer",
@@ -981,14 +983,14 @@ const BUILTIN_PRESETS = [
   {
     name: {fr:"Contours nets", en:"Sharp edges"},
     values: {blackPt:10, whitePt:245, gamma:1, sat:100, thresh:70, blur:1, invert:false,
-      layers:3, sepMode:'sobel', posterize:32, pickTol:60,
+      layers:3, sepMode:'sobel', pickTol:60,
       scale:'minPenta', root:'0', octLow:2, octHigh:5, steps:16, bars:2, tempo:110, gate:70,
       playDir:'lr', curve:'linear'}
   },
   {
     name: {fr:"Ambiance douce", en:"Soft ambient"},
     values: {blackPt:40, whitePt:210, gamma:1.3, sat:70, thresh:40, blur:4, invert:false,
-      layers:2, sepMode:'lum', posterize:32, pickTol:60,
+      layers:2, sepMode:'lum', pickTol:60,
       scale:'majPenta', root:'0', octLow:3, octHigh:6, steps:12, bars:4, tempo:80, gate:90,
       playDir:'lr', curve:'decel'}
   }
@@ -1280,9 +1282,13 @@ function rebuildLayers(){
   for(let i=0;i<n;i++){
     const keep = oldLayers[i];
     let color;
-    if(mode==='hue' || mode==='sobel') color = hslToHex(Math.round(360*i/n), 70, 55);
+    // +180° rotation: layers 0/1/2 land on cyan/magenta/yellow instead of the
+    // red/green/blue an unshifted 360*i/n wheel would give at n=3 — same even
+    // spacing, just a different starting point on the wheel (user request).
+    const wheelHue = (Math.round(360*i/n) + 180) % 360;
+    if(mode==='hue' || mode==='sobel') color = hslToHex(wheelHue, 70, 55);
     else if(mode==='lum') color = hslToHex(0, 0, Math.round(20 + 60*i/(Math.max(n-1,1))));
-    else color = (keep && keep.pickColor) || hslToHex(Math.round(360*i/n), 70, 55); // 'pick': keep the last picked color
+    else color = (keep && keep.pickColor) || hslToHex(wheelHue, 70, 55); // 'pick': keep the last picked color
     const isAuto = keep ? keep.auto !== false : true;   // auto name unless the user renamed it
     layers.push({
       color,
@@ -1301,7 +1307,6 @@ function rebuildLayers(){
   }
   renderLayerList();
   $('pickTolRow').hidden = mode !== 'pick';
-  $('posterizeRow').hidden = mode !== 'hue';
   // already playing: re-send the channel patches for the current layers
   if(playing && midiOut){
     layers.forEach((L,i)=> midiOut.send([0xC0|(i%16), L.program & 0x7F]));
@@ -1821,10 +1826,6 @@ function process(){
   // *only* the green leaves, not "everything, sorted by nearest hue".
   const pickTargets = sepMode==='pick' ? layers.map(L => hexToRgb(L.color)) : null;
   const pickTolSq = (parseInt($('pickTol').value) || 60) ** 2;
-  // hue-separation only: quantize hue into N steps first, so the layer split
-  // is predictable/controllable instead of riding the source image's noise.
-  const posterizeLevels = parseInt($('posterize').value);
-  const hueStep = 360/posterizeLevels;
 
   // pick a layer for a pixel (by hue bin, brightness bin, edge orientation, or nearest picked color)
   function layerOf(px){
@@ -1846,8 +1847,7 @@ function process(){
     }
     if(nLayers===1) return 0;
     if(sepMode==='hue'){
-      const hh = posterizeLevels<32 ? Math.floor(hue[px]/hueStep)*hueStep : hue[px];
-      return Math.floor((hh/360)*nLayers) % nLayers;
+      return Math.floor((hue[px]/360)*nLayers) % nLayers;
     } else {
       return Math.min(nLayers-1, Math.floor((lum[px]/256)*nLayers));
     }
@@ -2758,7 +2758,7 @@ window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource
 window.addEventListener('resize', ()=> drawPianoRoll());
 
 /* ---- wire up controls ---- */
-const liveIds = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode','posterize','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
+const liveIds = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate'];
 function syncLabels(){
   $('vBlackPt').textContent = $('blackPt').value;
   $('vWhitePt').textContent = $('whitePt').value;
@@ -2766,7 +2766,6 @@ function syncLabels(){
   $('vSat').textContent = $('sat').value+'%';
   $('vThresh').textContent = $('thresh').value;
   $('vBlur').textContent = $('blur').value+'px';
-  $('vPosterize').textContent = $('posterize').value;
   $('vPickTol').textContent = $('pickTol').value;
   $('vLayers').textContent = $('layers').value;
   const octLo = parseInt($('octLow').value), octHi = parseInt($('octHigh').value);
@@ -2980,7 +2979,7 @@ toneCurveGraph.addEventListener('pointerup', e=>{ tcDrag=null; try{ toneCurveGra
 
 /* ---- presets: save/load the full Image Analysis + Music + per-layer setup ---- */
 const PRESET_KEYS = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode',
-  'posterize','pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate','playDir','curve','imgOpacity'];
+  'pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate','playDir','curve','imgOpacity'];
 
 function getUserPresets(){
   try{ return JSON.parse(localStorage.getItem('dessons.presets') || '{}'); }catch(e){ return {}; }
@@ -3157,7 +3156,7 @@ $('midiHintToggle').addEventListener('click', ()=>{
 /* ---- reset a section's controls to their factory defaults ---- */
 const CONTROL_DEFAULTS = {
   blackPt:21, whitePt:234, gamma:1, sat:100, thresh:55, blur:0, invert:false,
-  layers:3, sepMode:'hue', posterize:32, pickTol:60,
+  layers:3, sepMode:'hue', pickTol:60,
   scale:'minPenta', root:'0', octLow:3, octHigh:5, steps:16, bars:2, tempo:100, gate:80
 };
 function resetControls(ids){
@@ -3168,7 +3167,7 @@ function resetControls(ids){
   // dispatch after all values are set, so process() only ever sees a consistent state
   ids.forEach(id=>{ $(id).dispatchEvent(new Event('input', {bubbles:true})); });
 }
-$('resetAnalysis').addEventListener('click', ()=> resetControls(['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode','posterize','pickTol']));
+$('resetAnalysis').addEventListener('click', ()=> resetControls(['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode','pickTol']));
 $('resetMusic').addEventListener('click', ()=> resetControls(['scale','root','octLow','octHigh','steps','bars','tempo','gate']));
 
 /* ---- click a slider's value to type an exact number, clamped to its range ---- */
