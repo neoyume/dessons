@@ -227,27 +227,31 @@
   .layer.muted .layerThresh{opacity:.4;}
 
   button#exportBtn{
-    width:100%; background:var(--accent); color:var(--bg);
-    border:none; padding:15px; font-size:14.5px; font-weight:800; letter-spacing:.4px;
+    width:100%; display:flex; align-items:center; justify-content:center; gap:7px;
+    background:var(--accent); color:var(--bg);
+    border:1.5px solid transparent; padding:11.5px; font-size:13.5px; font-weight:800; letter-spacing:.4px;
     border-radius:8px; cursor:pointer; transition:filter .15s, transform .15s, box-shadow .15s;
     box-shadow:0 4px 16px rgba(0,255,255,.32);
   }
+  button#exportBtn svg{width:16px; height:16px; flex:none; display:block;}
   button#exportBtn:hover:not(:disabled){filter:brightness(1.08); transform:translateY(-1px);}
   button#exportBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed; box-shadow:none;}
   .hint.exportDisabledHint{text-align:center; margin-top:8px;}
 
   button#playBtn{
-    width:100%; background:transparent; color:var(--cyan);
+    width:100%; display:flex; align-items:center; justify-content:center; gap:7px;
+    background:transparent; color:var(--cyan);
     border:1.5px solid var(--cyan); padding:11.5px; font-size:13.5px; font-weight:700; letter-spacing:.3px;
     border-radius:7px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
+  button#playBtn svg{width:16px; height:16px; flex:none; display:block;}
   button#playBtn:hover:not(:disabled){background:rgba(77,217,201,.12);}
   button#playBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
   button#playBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
 
   button#previewBtn{
     width:100%; background:var(--panel-2); color:var(--text);
-    border:1px solid var(--line); padding:11px; font-size:13px; font-weight:600;
+    border:1.5px solid var(--line); padding:11.5px; font-size:13.5px; font-weight:600;
     border-radius:7px; cursor:pointer; transition:border-color .15s, background .15s;
   }
   button#previewBtn:hover:not(:disabled){border-color:var(--accent);}
@@ -453,7 +457,10 @@
       <div class="divider"></div>
       <div class="actionRow">
         <div class="actionCol">
-          <button id="exportBtn" disabled data-i18n="btnExport">Exporter le .mid</button>
+          <button id="exportBtn" disabled>
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v8"></path><path d="M6 7l3 3 3-3"></path><path d="M3 12v2.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V12"></path></svg>
+            <span data-i18n="btnExport">Exporter le .mid</span>
+          </button>
           <div class="hint exportDisabledHint" id="exportDisabledHint" data-i18n="exportDisabledHint">Importe une image pour activer l'export</div>
         </div>
         <div class="actionCol">
@@ -461,7 +468,10 @@
           <div class="midiRow"><span class="dot" id="synthDot"></span><span id="synthState">—</span></div>
         </div>
         <div class="actionCol">
-          <button id="playBtn" disabled data-i18n="btnPlay">▶ Jouer dans Logic</button>
+          <button id="playBtn" disabled>
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none"></circle><path d="M6.5 6.5a3.6 3.6 0 0 0 0 5"></path><path d="M11.5 6.5a3.6 3.6 0 0 1 0 5"></path><path d="M4 4a7 7 0 0 0 0 10"></path><path d="M14 4a7 7 0 0 1 0 10"></path></svg>
+            <span data-i18n="btnPlay">Jouer dans le DAW</span>
+          </button>
           <div class="midiRow"><span class="dot" id="midiDot"></span><span id="midiState">Web MIDI non initialisé</span></div>
         </div>
       </div>
@@ -641,10 +651,11 @@ const I18N = {
     rtTitle: "Temps réel (Web MIDI)",
     lblPort: "Port MIDI de sortie",
     portDetect: "— clique pour détecter les ports —",
-    btnPlay: "▶ Jouer dans Logic",
+    btnPlay: "Jouer dans le DAW",
+    btnPlayStop: "Stop",
     btnStop: "■ Stop",
     midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.",
-    footerFree: "Dessons est gratuit et open source.",
+    footerFree: "Dessons, par Neoyume, est gratuit et open source, créé par Cedric Rolando.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
     btnPreview: "▶ Écouter l'aperçu",
     previewHint: "Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.",
@@ -761,10 +772,11 @@ const I18N = {
     rtTitle: "Real-time (Web MIDI)",
     lblPort: "MIDI output port",
     portDetect: "— click to detect ports —",
-    btnPlay: "▶ Play into Logic",
+    btnPlay: "Play in DAW",
+    btnPlayStop: "Stop",
     btnStop: "■ Stop",
     midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>.",
-    footerFree: "Dessons is free and open source.",
+    footerFree: "Neoyume's Dessons is free and open source, created by Cedric Rolando.",
     footerKofi: "☕ Support me on Ko-fi",
     btnPreview: "▶ Preview sound",
     previewHint: "Preview with the browser's built-in synth — rough sounds, just to judge the loop without a DAW.",
@@ -2173,7 +2185,7 @@ $('cropResetBtn').addEventListener('click', ()=>{
 function updateTransportButtons(){
   const midiOn  = playing && sink === 'midi';
   const synthOn = playing && sink === 'synth';
-  playBtn.textContent = midiOn ? t('btnStop') : t('btnPlay');
+  playBtn.querySelector('span').textContent = midiOn ? t('btnPlayStop') : t('btnPlay');
   playBtn.classList.toggle('playing', midiOn);
   previewBtn.textContent = synthOn ? t('btnStop') : t('btnPreview');
   previewBtn.classList.toggle('playing', synthOn);
