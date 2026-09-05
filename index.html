@@ -999,29 +999,27 @@ document.querySelectorAll('#langToggle button').forEach(b=>{
 });
 
 /* ---- General MIDI instrument shortlist (bilingual label + program number
-   + a small line-icon shown at rest instead of the name, see .instrPicker
-   in renderLayerList() — icon markup only, wrapped in a shared <svg> at
-   render time so every icon inherits the same stroke/viewBox/style). ---- */
+   + a small emoji shown at rest instead of the name, see .instrPicker in
+   renderLayerList()). Limited to exactly 6 — one per layer at the max —
+   deliberately picked one per timbreFor() bucket (see the Web Audio synth
+   further down) rather than a broad GM sampling: the original 19-entry
+   list had several instruments landing in the *same* timbreFor() branch
+   (e.g. Celesta/Vibraphone/Marimba/Music Box/Tubular Bells/Xylophone all
+   hit the 8-15 "mallets" bucket and sounded byte-for-byte identical in the
+   preview synth) — user feedback after actually listening to all of them.
+   Each of these 6 hits a different branch: default/triangle (Piano),
+   sawtooth-sustained (Organ), triangle-no-sustain-bright (Vibraphone),
+   sine+sub-lowpass (Synth Bass), sine-sustained-bright (Flute), and the
+   only square-wave branch (Steel Drums) — maximally distinct in the
+   browser preview *and* still sensible, common General MIDI picks for
+   the real .mid export. ---- */
 const GM_INSTR = [
   {fr:"Piano acoustique",  en:"Acoustic Piano",    prog:0,   emoji:'🎹'},
-  {fr:"Piano électrique",  en:"Electric Piano",    prog:4,   emoji:'🎹'},
-  {fr:"Clavecin",          en:"Harpsichord",       prog:6,   emoji:'🎹'},
-  {fr:"Célesta",           en:"Celesta",           prog:8,   emoji:'🔔'},
-  {fr:"Vibraphone",        en:"Vibraphone",        prog:11,  emoji:'🥁'},
-  {fr:"Marimba",           en:"Marimba",           prog:12,  emoji:'🪘'},
-  {fr:"Boîte à musique",   en:"Music Box",         prog:10,  emoji:'🎵'},
-  {fr:"Kalimba",           en:"Kalimba",           prog:108, emoji:'🪕'},
-  {fr:"Cordes pizzicato",  en:"Pizzicato Strings", prog:45,  emoji:'🎻'},
-  {fr:"Cordes (ensemble)", en:"String Ensemble",   prog:48,  emoji:'🎼'},
-  {fr:"Nappe synthé",      en:"Synth Pad",         prog:89,  emoji:'🎹'},
-  {fr:"Lead synthé",       en:"Synth Lead",        prog:81,  emoji:'🎹'},
-  {fr:"Basse synthé",      en:"Synth Bass",        prog:38,  emoji:'🎹'},
-  {fr:"Steel drums",       en:"Steel Drums",       prog:114, emoji:'🪘'},
-  {fr:"Flûte",             en:"Flute",             prog:73,  emoji:'🪈'},
-  {fr:"Cloches tubulaires",en:"Tubular Bells",     prog:14,  emoji:'🔔'},
   {fr:"Orgue",             en:"Organ",             prog:19,  emoji:'🎹'},
-  {fr:"Guitare nylon",     en:"Nylon Guitar",      prog:24,  emoji:'🎸'},
-  {fr:"Xylophone",         en:"Xylophone",         prog:13,  emoji:'🥁'}
+  {fr:"Vibraphone",        en:"Vibraphone",        prog:11,  emoji:'🥁'},
+  {fr:"Basse synthé",      en:"Synth Bass",        prog:38,  emoji:'🎚️'},
+  {fr:"Flûte",             en:"Flute",             prog:73,  emoji:'🪈'},
+  {fr:"Steel drums",       en:"Steel Drums",       prog:114, emoji:'🪘'}
 ];
 
 const SCALES = {
@@ -1653,6 +1651,8 @@ function renderTransportIcons(){
     b.setAttribute('aria-label', t('dir' + d.toUpperCase()));
     b.classList.toggle('on', $('playDir').value === d);
     b.addEventListener('click', ()=>{ $('playDir').value = d; renderTransportIcons(); process(); });
+    b.addEventListener('mouseenter', ()=>{ hoverDir = d; });
+    b.addEventListener('mouseleave', ()=>{ hoverDir = null; });
     dg.appendChild(b);
   });
   const cg = $('curveIcons'); cg.innerHTML = '';
@@ -1675,6 +1675,8 @@ function renderTransportIcons(){
       toggleCurveEditor();
       redrawPreview();
     });
+    b.addEventListener('mouseenter', ()=>{ hoverCurve = c; });
+    b.addEventListener('mouseleave', ()=>{ hoverCurve = null; });
     cg.appendChild(b);
   });
 }
@@ -2300,7 +2302,12 @@ function scheduler(){
 // than a parallel implementation, so the preview is never inconsistent with
 // the real thing. Only runs on hover (never a permanent background loop),
 // and steps aside the moment real playback starts.
-let scanRafId = null, scanStart = 0;
+// hoverDir/hoverCurve: while the mouse sits over one specific direction or
+// curve icon (not yet clicked), the scan previews THAT one instead of the
+// currently active setting — set/cleared by renderTransportIcons()'s own
+// per-button mouseenter/mouseleave, read here in preference to the real
+// $('playDir')/$('curve') values.
+let scanRafId = null, scanStart = 0, hoverDir = null, hoverCurve = null;
 const SCAN_DURATION_MS = 2200;
 function scanFrame(){
   if(!img || playing){ stopScanAnim(); return; }
@@ -2309,8 +2316,8 @@ function scanFrame(){
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const p = ((performance.now()-scanStart) % SCAN_DURATION_MS) / SCAN_DURATION_MS;
-  const tau = curveFrac($('curve').value, p*1000, 1000);
-  const dir = readDir();
+  const tau = curveFrac(hoverCurve || $('curve').value, p*1000, 1000);
+  const dir = DIR_DEFS[hoverDir] || readDir();
   const [x0n,y0n] = dir.inv(tau,0), [x1n,y1n] = dir.inv(tau,1);
   ctx.strokeStyle = 'rgba(0,255,255,.85)';
   ctx.lineWidth = 2;
@@ -2329,6 +2336,7 @@ function startScanAnim(){
 function stopScanAnim(){
   if(scanRafId){ cancelAnimationFrame(scanRafId); scanRafId = null; }
   $('scanOverlay').hidden = true;
+  hoverDir = null; hoverCurve = null;
 }
 document.querySelector('.transportIcons').addEventListener('mouseenter', startScanAnim);
 document.querySelector('.transportIcons').addEventListener('mouseleave', stopScanAnim);
