@@ -1101,6 +1101,27 @@ const BUILTIN_PRESETS = [
       layers:2, sepMode:'lum', pickTol:60,
       scale:'majPenta', root:'0', octLow:3, octHigh:6, steps:12, bars:4, tempo:80, gate:90,
       playDir:'lr', curve:'decel'}
+  },
+  {
+    name: {fr:"Balayage diagonal", en:"Diagonal Sweep"},
+    values: {blackPt:15, whitePt:240, gamma:0.9, sat:130, thresh:55, blur:0, invert:false,
+      layers:5, sepMode:'hue', pickTol:60,
+      scale:'dorian', root:'2', octLow:2, octHigh:6, steps:24, bars:2, tempo:128, gate:60,
+      playDir:'tlbr', curve:'swing'}
+  },
+  {
+    name: {fr:"Basse profonde", en:"Deep Bass Pulse"},
+    values: {blackPt:25, whitePt:220, gamma:1.1, sat:60, thresh:50, blur:2, invert:false,
+      layers:2, sepMode:'lum', pickTol:60,
+      scale:'minor', root:'9', octLow:0, octHigh:3, steps:16, bars:2, tempo:90, gate:95,
+      playDir:'bt', curve:'pulse'}
+  },
+  {
+    name: {fr:"Éclats rapides", en:"Rapid Sparks"},
+    values: {blackPt:5, whitePt:250, gamma:0.8, sat:100, thresh:85, blur:0, invert:false,
+      layers:4, sepMode:'sobel', pickTol:60,
+      scale:'wholetone', root:'7', octLow:4, octHigh:6, steps:32, bars:1, tempo:150, gate:35,
+      playDir:'brtl', curve:'accel'}
   }
 ];
 
