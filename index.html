@@ -57,6 +57,7 @@
   .presetBar select{width:100%; padding:6px 8px; font-size:12px; margin-bottom:8px;}
   .presetBarBtns{display:flex; gap:8px;}
   .presetBarBtns .miniBtn{flex:1;}
+  .presetBarBtns2{margin-top:8px;}
 
   /* language switch */
   .langToggle{
@@ -407,6 +408,11 @@
           <button type="button" class="miniBtn" id="presetSaveBtn" data-i18n="btnPresetSave">💾 Enregistrer</button>
           <button type="button" class="miniBtn" id="presetDeleteBtn" hidden data-i18n="btnPresetDelete">🗑 Supprimer</button>
         </div>
+        <div class="presetBarBtns presetBarBtns2">
+          <button type="button" class="miniBtn" id="presetExportBtn" data-i18n="btnPresetExport">⬆ Exporter</button>
+          <button type="button" class="miniBtn" id="presetImportBtn" data-i18n="btnPresetImport">⬇ Importer</button>
+          <input type="file" id="presetImportInput" accept="application/json,.json" hidden>
+        </div>
       </div>
     </div>
 
@@ -595,6 +601,11 @@ const I18N = {
     btnPresetDelete: "🗑 Supprimer",
     presetPromptName: "Nom du preset :",
     presetConfirmDelete: "Supprimer le preset « {x} » ?",
+    btnPresetExport: "⬆ Exporter",
+    btnPresetImport: "⬇ Importer",
+    presetImportSuccess: "{x} preset(s) importé(s).",
+    presetImportError: "Fichier de presets illisible ou invalide.",
+    presetImportOverwriteConfirm: "{x} preset(s) portent déjà ce nom et seront remplacés. Continuer ?",
     exportDisabledHint: "Importe une image pour activer l'export",
     safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
     midiHintToggle: "Comment connecter à Logic",
@@ -717,6 +728,11 @@ const I18N = {
     btnPresetDelete: "🗑 Delete",
     presetPromptName: "Preset name:",
     presetConfirmDelete: "Delete preset \"{x}\"?",
+    btnPresetExport: "⬆ Export",
+    btnPresetImport: "⬇ Import",
+    presetImportSuccess: "{x} preset(s) imported.",
+    presetImportError: "Couldn't read that presets file — it looks invalid.",
+    presetImportOverwriteConfirm: "{x} preset(s) already use that name and will be overwritten. Continue?",
     exportDisabledHint: "Import an image to enable export",
     safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
     midiHintToggle: "How to connect to Logic",
@@ -2685,6 +2701,39 @@ $('presetDeleteBtn').addEventListener('click', ()=>{
   delete presets[name];
   saveUserPresets(presets);
   renderPresetOptions();
+});
+
+// export/import: localStorage never leaves this one browser+origin, so this
+// is the only way to back up presets or move them to another machine/browser.
+$('presetExportBtn').addEventListener('click', ()=>{
+  const data = JSON.stringify(getUserPresets(), null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dessons-presets.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+$('presetImportBtn').addEventListener('click', ()=> $('presetImportInput').click());
+$('presetImportInput').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  e.target.value = ''; // clear so importing the same filename again still fires 'change'
+  if(!file) return;
+  let imported;
+  try{
+    imported = JSON.parse(await file.text());
+    if(!imported || typeof imported !== 'object' || Array.isArray(imported)) throw new Error('bad shape');
+  }catch(err){
+    alert(t('presetImportError'));
+    return;
+  }
+  const existing = getUserPresets();
+  const collisions = Object.keys(imported).filter(name => existing[name]);
+  if(collisions.length && !confirm(t('presetImportOverwriteConfirm').replace('{x}', collisions.length))) return;
+  Object.assign(existing, imported);
+  saveUserPresets(existing);
+  renderPresetOptions();
+  alert(t('presetImportSuccess').replace('{x}', Object.keys(imported).length));
 });
 
 // layers that haven't had their own sensitivity dragged yet track the global
