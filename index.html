@@ -116,10 +116,11 @@
   .srcBtn:hover{border-color:var(--accent); color:var(--text);}
   .srcBtn.active{background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700;}
   .srcBtn:disabled{opacity:.4; cursor:not-allowed;}
-  /* whole Source panel doubles as a drop target — no separate dropzone box */
-  .panel-source.drag{outline:1.5px dashed var(--accent); outline-offset:-1.5px; background:rgba(0,255,255,.04);}
 
   .previewWrap{margin-top:14px; position:relative;}
+  /* the whole frame is the drop target, empty or already loaded */
+  #previewWrap.drag{outline:1.5px dashed var(--accent); outline-offset:-1.5px; border-radius:7px;}
+  #previewWrap.drag .previewPlaceholder{border-color:var(--accent); background:rgba(0,255,255,.04);}
   #sensMask{
     position:absolute; inset:0; width:100%; height:100%;
     border-radius:7px; pointer-events:none; image-rendering:pixelated; opacity:.55;
@@ -133,14 +134,28 @@
     image-rendering:pixelated;
   }
   canvas#preview[hidden]{display:none;}
+  /* empty state: the 3 source buttons + drop hint, centered in the same
+     frame the loaded media will occupy — merges what used to be 3 separate
+     blocks (button row, hint text, placeholder box) into one drop target */
   .previewPlaceholder{
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
-    height:130px; color:var(--text-dim); background:#0a0a0c; border:1px solid var(--line);
-    border-radius:7px; font-size:12px; text-align:center; padding:10px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    min-height:150px; color:var(--text-dim); background:#0a0a0c; border:1px dashed var(--line);
+    border-radius:7px; font-size:12px; text-align:center; padding:20px; transition:border-color .15s;
   }
   .previewPlaceholder[hidden]{display:none;}
-  .previewPlaceholder svg{opacity:.5;}
-  .previewPlaceholder p{margin:0; max-width:220px; line-height:1.4;}
+  .previewPlaceholder .srcBtns3{width:100%; max-width:300px;}
+  .previewPlaceholder .hint{margin:0; max-width:260px;}
+  /* overlay "×" shown once media is loaded — sits above the canvas/mask/scan
+     layers regardless of z-index thanks to DOM order (see #previewWrap kids) */
+  .removeMediaBtn{
+    position:absolute; top:8px; right:8px; z-index:5;
+    width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,10,12,.65); color:var(--text); border:1px solid var(--line);
+    border-radius:50%; cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .removeMediaBtn:hover{border-color:var(--accent); background:rgba(10,10,12,.88);}
+  .removeMediaBtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .removeMediaBtn[hidden]{display:none;}
   .previewMeta{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-top:6px; font-family:var(--mono);}
 
   /* crop + size/notes info sit to the left of Direction/Curve instead of
@@ -475,32 +490,33 @@
     <!-- CENTER (50%): source + preview, then layers/export/real-time -->
     <div class="panel panel-source">
       <h2 data-i18n="srcTitle">Source</h2>
-      <div class="srcBtns3" id="srcBtns3">
-        <button type="button" class="srcBtn" id="imageBtn">
-          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="2.5" width="15" height="13" rx="1.5"></rect><circle cx="6" cy="7" r="1.5"></circle><path d="M1.5 12.5l4-4 3 3 2.5-2.5 6 6"></path></svg>
-          <span data-i18n="btnImage">Image</span>
-        </button>
-        <button type="button" class="srcBtn" id="videoBtn">
-          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="4" width="10" height="10" rx="1.5"></rect><path d="M11.5 7.5l5-2.5v8l-5-2.5z"></path></svg>
-          <span data-i18n="btnVideoSrc">Vidéo</span>
-        </button>
-        <button type="button" class="srcBtn" id="webcamBtn">
-          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><circle cx="9" cy="7" r="5"></circle><circle cx="9" cy="7" r="1.8" fill="currentColor" stroke="none"></circle><path d="M5 15h8M9 12v3"></path></svg>
-          <span data-i18n="btnWebcam">Webcam</span>
-        </button>
-      </div>
       <input type="file" id="fileInput" accept="image/*,video/*" hidden>
       <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
-      <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
       <div class="hint err" id="srcHint" hidden></div>
       <div class="previewWrap" id="previewWrap">
         <canvas id="preview" width="600" height="600" hidden></canvas>
         <canvas id="sensMask" hidden></canvas>
         <canvas id="scanOverlay" hidden></canvas>
         <div class="previewPlaceholder" id="previewPlaceholder">
-          <svg viewBox="0 0 48 36" width="44" height="33" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="1" y="1" width="46" height="34" rx="4"></rect><circle cx="14" cy="12" r="4"></circle><path d="M1 29l12-11 9 8 7-6 18 15"></path></svg>
-          <p data-i18n="previewPlaceholder">Ton image ou ta vidéo apparaîtra ici</p>
+          <div class="srcBtns3" id="srcBtns3">
+            <button type="button" class="srcBtn" id="imageBtn">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="2.5" width="15" height="13" rx="1.5"></rect><circle cx="6" cy="7" r="1.5"></circle><path d="M1.5 12.5l4-4 3 3 2.5-2.5 6 6"></path></svg>
+              <span data-i18n="btnImage">Image</span>
+            </button>
+            <button type="button" class="srcBtn" id="videoBtn">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="4" width="10" height="10" rx="1.5"></rect><path d="M11.5 7.5l5-2.5v8l-5-2.5z"></path></svg>
+              <span data-i18n="btnVideoSrc">Vidéo</span>
+            </button>
+            <button type="button" class="srcBtn" id="webcamBtn">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><circle cx="9" cy="7" r="5"></circle><circle cx="9" cy="7" r="1.8" fill="currentColor" stroke="none"></circle><path d="M5 15h8M9 12v3"></path></svg>
+              <span data-i18n="btnWebcam">Webcam</span>
+            </button>
+          </div>
+          <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
         </div>
+        <button type="button" class="removeMediaBtn" id="removeMediaBtn" hidden aria-label="Remove media">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"></path></svg>
+        </button>
       </div>
       <div class="metaTransportRow">
         <div class="transportIcons">
@@ -639,7 +655,7 @@ const I18N = {
     docTitle: "Dessons · Générateur de loops image → MIDI",
     flowStep1: "Dépose un média",
     flowStep2: "Joue avec les réglages",
-    previewPlaceholder: "Ton image ou ta vidéo apparaîtra ici",
+    removeMediaLabel: "Retirer le média",
     btnReset: "Réinitialiser",
     lblPreset: "Preset",
     presetNone: "— Aucun —",
@@ -764,7 +780,7 @@ const I18N = {
     docTitle: "Dessons · Image → MIDI loop generator",
     flowStep1: "Drop a media",
     flowStep2: "Play with the settings",
-    previewPlaceholder: "Your image or video will appear here",
+    removeMediaLabel: "Remove media",
     btnReset: "Reset",
     lblPreset: "Preset",
     presetNone: "— None —",
@@ -1006,12 +1022,15 @@ let cropDragStart = null;        // [nx,ny] where the current drag started, null
 const $ = id => document.getElementById(id);
 const fileInput = $('fileInput'), preview = $('preview'), pctx = preview.getContext('2d');
 
-// whole Source panel is a drop target (no separate dropzone box) — the Image/
-// Video buttons below are the click-to-browse path, drag-and-drop is the bonus.
-const sourcePanel = document.querySelector('.panel-source');
-['dragenter','dragover'].forEach(ev => sourcePanel.addEventListener(ev, e=>{e.preventDefault(); sourcePanel.classList.add('drag');}));
-['dragleave','drop'].forEach(ev => sourcePanel.addEventListener(ev, e=>{e.preventDefault(); sourcePanel.classList.remove('drag');}));
-sourcePanel.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+// the merged preview frame is the drop target, empty or already showing a
+// media — dropping a file always replaces whatever's currently loaded
+// (loadFile() calls stopSource() first, so an active webcam gets torn down
+// the same way the × button does). The Image/Video buttons (visible only in
+// the empty state, see previewPlaceholder) are the click-to-browse path.
+const previewWrap = $('previewWrap');
+['dragenter','dragover'].forEach(ev => previewWrap.addEventListener(ev, e=>{e.preventDefault(); previewWrap.classList.add('drag');}));
+['dragleave','drop'].forEach(ev => previewWrap.addEventListener(ev, e=>{e.preventDefault(); previewWrap.classList.remove('drag');}));
+previewWrap.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
 fileInput.addEventListener('change', e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
 $('imageBtn').addEventListener('click', ()=>{ fileInput.accept = 'image/*'; fileInput.click(); });
 $('videoBtn').addEventListener('click', ()=>{ fileInput.accept = 'video/*'; fileInput.click(); });
@@ -1077,15 +1096,36 @@ function liveLoop(){
 
 function clearPreview(){
   pctx.clearRect(0,0,preview.width,preview.height);
+  drawPianoRoll();          // img is already null by the time this runs — clears and early-returns
+  drawSensitivityMask();    // same: clears first regardless, so a stale mask never lingers
   $('dims').textContent = '—';
   $('noteCount').textContent = '0 ' + t('notesWord');
 }
 
-// swap the canvas for a placeholder graphic until a source is actually loaded
+// swap the canvas for the empty-state placeholder (source buttons + drop
+// hint) until a source is actually loaded; the overlay "×" is the mirror
+// image of that same state, only ever shown once something is loaded.
 function setPreviewEmpty(empty){
   preview.hidden = empty;
   $('previewPlaceholder').hidden = !empty;
+  $('removeMediaBtn').hidden = empty;
 }
+
+// shared teardown for "clear the loaded media, go back to the empty state" —
+// used by the × button and by re-clicking Webcam to turn it off. Routes
+// through stopSource(), which stops any camStream track and pauses/detaches
+// a <video> element, so a webcam never keeps running in the background.
+function removeMedia(){
+  stopSource();
+  img = null;
+  if(playing) stopPlayback();
+  $('exportBtn').disabled = true;
+  $('exportDisabledHint').hidden = false;
+  updatePlayBtnState();
+  clearPreview();
+  setPreviewEmpty(true);
+}
+$('removeMediaBtn').addEventListener('click', removeMedia);
 
 function loadFile(file){
   if(!file) return;
@@ -1139,17 +1179,7 @@ function loadFile(file){
 }
 
 async function toggleWebcam(){
-  if(srcKind === 'webcam'){                 // turn it off → back to empty state
-    stopSource();
-    img = null;
-    if(playing) stopPlayback();
-    $('exportBtn').disabled = true;
-    $('exportDisabledHint').hidden = false;
-    updatePlayBtnState();
-    clearPreview();
-    setPreviewEmpty(true);
-    return;
-  }
+  if(srcKind === 'webcam'){ removeMedia(); return; }   // turn it off → back to empty state
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     showSrcError(t('webcamUnavail'));
     return;
@@ -1207,6 +1237,7 @@ function updateSrcBtns(){
   fb.hidden = !(srcKind === 'video' || srcKind === 'webcam');
   fb.textContent = frozen ? t('btnResume') : t('btnFreeze');
   fb.classList.toggle('active', frozen);
+  $('removeMediaBtn').setAttribute('aria-label', t('removeMediaLabel'));
 }
 
 /* ---- eyedropper: click a layer's swatch, then click the image ('pick' mode) ---- */
@@ -2268,11 +2299,12 @@ function drawPlayhead(){
 let maskVisible = false;
 function drawSensitivityMask(){
   const canvas = $('sensMask');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);   // always clear first — a stale mask must never outlive its source image
   if(!maskVisible || !lastEdgeArr || !img) return;
   const w = imgCanvas.width, h = imgCanvas.height;
   if(!w || !h || lastEdgeArr.length !== w*h) return;
   canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
   const cutoff = (1 - parseInt($('thresh').value)/100) * lastMaxEdge;
   const imgData = ctx.createImageData(w,h);
   for(let i=0;i<lastEdgeArr.length;i++){
