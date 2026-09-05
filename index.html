@@ -117,7 +117,18 @@
   .srcBtn.active{background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700;}
   .srcBtn:disabled{opacity:.4; cursor:not-allowed;}
 
-  .previewWrap{margin-top:14px; position:relative; text-align:center;}
+  /* experiment: Layers/Instruments sits beside the media instead of at the
+     bottom of the (much narrower) Analysis column — this row lives inside
+     .panel-source, so it's still within its 3/5 share of .rack, just split
+     internally. Below 1080px .rack itself goes single-column, so this also
+     collapses to stacked (media above, layer list below) for the same reason. */
+  .sourceMediaRow{display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start; margin-top:14px;}
+  .layersPanel{min-width:0;}
+  @media (max-width: 1080px){
+    .sourceMediaRow{grid-template-columns:1fr;}
+  }
+
+  .previewWrap{position:relative; text-align:center;}
   /* the whole frame is the drop target, empty or already loaded */
   #previewWrap.drag{outline:1.5px dashed var(--accent); outline-offset:-1.5px; border-radius:7px;}
   #previewWrap.drag .previewPlaceholder{border-color:var(--accent); background:rgba(0,255,255,.04);}
@@ -499,31 +510,37 @@
       <input type="file" id="fileInput" accept="image/*,video/*" hidden>
       <button type="button" id="freezeBtn" hidden data-i18n="btnFreeze">Figer l'image</button>
       <div class="hint err" id="srcHint" hidden></div>
-      <div class="previewWrap" id="previewWrap">
-        <div class="mediaBox" id="mediaBox">
-          <canvas id="preview" width="600" height="600" hidden></canvas>
-          <canvas id="sensMask" hidden></canvas>
-          <canvas id="scanOverlay" hidden></canvas>
-          <button type="button" class="removeMediaBtn" id="removeMediaBtn" hidden aria-label="Remove media">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"></path></svg>
-          </button>
-        </div>
-        <div class="previewPlaceholder" id="previewPlaceholder">
-          <div class="srcBtns3" id="srcBtns3">
-            <button type="button" class="srcBtn" id="imageBtn">
-              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="2.5" width="15" height="13" rx="1.5"></rect><circle cx="6" cy="7" r="1.5"></circle><path d="M1.5 12.5l4-4 3 3 2.5-2.5 6 6"></path></svg>
-              <span data-i18n="btnImage">Image</span>
-            </button>
-            <button type="button" class="srcBtn" id="videoBtn">
-              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="4" width="10" height="10" rx="1.5"></rect><path d="M11.5 7.5l5-2.5v8l-5-2.5z"></path></svg>
-              <span data-i18n="btnVideoSrc">Vidéo</span>
-            </button>
-            <button type="button" class="srcBtn" id="webcamBtn">
-              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><circle cx="9" cy="7" r="5"></circle><circle cx="9" cy="7" r="1.8" fill="currentColor" stroke="none"></circle><path d="M5 15h8M9 12v3"></path></svg>
-              <span data-i18n="btnWebcam">Webcam</span>
+      <div class="sourceMediaRow">
+        <div class="previewWrap" id="previewWrap">
+          <div class="mediaBox" id="mediaBox">
+            <canvas id="preview" width="600" height="600" hidden></canvas>
+            <canvas id="sensMask" hidden></canvas>
+            <canvas id="scanOverlay" hidden></canvas>
+            <button type="button" class="removeMediaBtn" id="removeMediaBtn" hidden aria-label="Remove media">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"></path></svg>
             </button>
           </div>
-          <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
+          <div class="previewPlaceholder" id="previewPlaceholder">
+            <div class="srcBtns3" id="srcBtns3">
+              <button type="button" class="srcBtn" id="imageBtn">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="2.5" width="15" height="13" rx="1.5"></rect><circle cx="6" cy="7" r="1.5"></circle><path d="M1.5 12.5l4-4 3 3 2.5-2.5 6 6"></path></svg>
+                <span data-i18n="btnImage">Image</span>
+              </button>
+              <button type="button" class="srcBtn" id="videoBtn">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="1.5" y="4" width="10" height="10" rx="1.5"></rect><path d="M11.5 7.5l5-2.5v8l-5-2.5z"></path></svg>
+                <span data-i18n="btnVideoSrc">Vidéo</span>
+              </button>
+              <button type="button" class="srcBtn" id="webcamBtn">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><circle cx="9" cy="7" r="5"></circle><circle cx="9" cy="7" r="1.8" fill="currentColor" stroke="none"></circle><path d="M5 15h8M9 12v3"></path></svg>
+                <span data-i18n="btnWebcam">Webcam</span>
+              </button>
+            </div>
+            <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
+          </div>
+        </div>
+        <div class="layersPanel">
+          <h2 data-i18n="layersTitle">Calques / Instruments</h2>
+          <div id="layerList"></div>
         </div>
       </div>
       <div class="metaTransportRow">
@@ -634,10 +651,6 @@
         <label><span data-i18n="lblImgOpacity">Opacité image</span> <span class="val editable" id="vImgOpacity" data-for="imgOpacity">100%</span></label>
         <input type="range" id="imgOpacity" min="0" max="100" value="100">
       </div>
-
-      <div class="divider"></div>
-      <h2 data-i18n="layersTitle">Calques / Instruments</h2>
-      <div id="layerList"></div>
     </div>
   </div>
 
