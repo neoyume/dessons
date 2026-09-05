@@ -2917,7 +2917,16 @@ function startPreviewPlayback(){
   if(!img || !ensureAudio()) return;
   ac.resume().then(updateSynthState).catch(updateSynthState);  // fire-and-forget, doesn't block the gesture chain
   if(iosAudioEl && iosAudioEl.paused) iosAudioEl.play().catch(()=>{}); // re-arm if iOS paused it in the background
-  if(!lastNotes.length || lastNotes.every(a=>!a.length)) return;
+  // a live source's very first analyzed frame can legitimately be blank
+  // (a video's first decoded frame, or a camera's auto-exposure warm-up)
+  // even though liveLoop() keeps re-analyzing and real notes show up a
+  // frame or two later — the scheduler already re-reads lastNotes fresh
+  // on every tick, so starting anyway just means a brief silent beat
+  // instead of never starting at all (this was the actual bug behind
+  // "autoplay works for images but not video/webcam"). A static image
+  // with genuinely zero notes has no such excuse, so it still declines.
+  const isLive = srcKind === 'video' || srcKind === 'webcam';
+  if(!isLive && (!lastNotes.length || lastNotes.every(a=>!a.length))) return;
   if(playing) stopPlayback();    // was playing into a MIDI port → switch outputs
   startPlayback('synth');
 }
