@@ -403,6 +403,24 @@
   button#playBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
   button#playBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
 
+  /* 9:16 video export — same outline treatment as #playBtn (secondary --cyan;
+     Export .mid keeps the vivid --accent as the primary action). While
+     recording it carries its own progress fill as an *inline* background-image
+     (see renderVideoProgress()), which beats the `background:transparent` in
+     the :disabled rule below since inline styles always win — that's why the
+     hover rule targets background-color only, never the shorthand. */
+  button#videoExportBtn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
+    background:transparent; color:var(--cyan);
+    border:1.5px solid var(--cyan); padding:7px; font-size:12.5px; font-weight:700; letter-spacing:.3px;
+    border-radius:7px; cursor:pointer; white-space:nowrap;
+    transition:background-color .15s, color .15s, border-color .15s;
+  }
+  button#videoExportBtn svg{width:14px; height:14px; flex:none; display:block;}
+  button#videoExportBtn:hover:not(:disabled){background-color:rgba(77,217,201,.12);}
+  button#videoExportBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
+  button#videoExportBtn.recording{border-color:var(--accent); color:var(--accent); cursor:progress;}
+
   button#previewBtn{
     width:100%; background:transparent; color:var(--cyan);
     border:1.5px solid var(--cyan); padding:11.5px; font-size:13.5px; font-weight:600;
@@ -508,6 +526,12 @@
           <button id="exportBtn" disabled>
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v8"></path><path d="M6 7l3 3 3-3"></path><path d="M3 12v2.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V12"></path></svg>
             <span data-i18n="btnExport">Exporter le .mid</span>
+          </button>
+        </div>
+        <div class="actionCol flowAction">
+          <button id="videoExportBtn" disabled>
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="1.5" width="8" height="15" rx="1.5"></rect><path d="M7.8 6.4l3.5 2.6-3.5 2.6z" fill="currentColor" stroke="none"></path></svg>
+            <span data-i18n="btnVideoExport">Export vidéo</span>
           </button>
         </div>
         <div class="actionCol flowAction flowActionPlay">
@@ -864,6 +888,10 @@ const I18N = {
     lblGate: "Gate (durée note)",
     layersTitle: "Calques / Instruments",
     btnExport: "Exporter le .mid",
+    btnVideoExport: "Export vidéo",
+    videoExportRecording: "Enreg. {x}",
+    videoExportTitle: "Exporte la boucle en vidéo verticale 1080×1920 (9:16) avec le son du synthé d'aperçu — prête pour TikTok / Reels / Shorts. Fichier WebM : accepté à l'upload depuis un ordinateur ; pour publier depuis une app mobile, convertis-le d'abord en MP4 (HandBrake, ou un simple import/export dans CapCut ou iMovie).",
+    videoExportUnavail: "Export vidéo indisponible dans ce navigateur",
     rtTitle: "Temps réel (Web MIDI)",
     btnPlay: "Jouer dans le DAW",
     btnPlayStop: "Stop",
@@ -993,6 +1021,10 @@ const I18N = {
     lblGate: "Gate (note length)",
     layersTitle: "Layers / Instruments",
     btnExport: "Export .mid",
+    btnVideoExport: "Export video",
+    videoExportRecording: "Rec. {x}",
+    videoExportTitle: "Export the loop as a vertical 1080×1920 (9:16) video with the preview synth's sound — ready for TikTok / Reels / Shorts. WebM file: accepted when uploading from a computer; to post from a mobile app, convert it to MP4 first (HandBrake, or a plain import/export through CapCut or iMovie).",
+    videoExportUnavail: "Video export unavailable in this browser",
     rtTitle: "Real-time (Web MIDI)",
     btnPlay: "Play in DAW",
     btnPlayStop: "Stop",
@@ -2244,73 +2276,92 @@ function hexToRgb(hex){
   return [(n>>16)&255, (n>>8)&255, n&255];
 }
 
-function drawPreview(){
-  pctx.clearRect(0,0,preview.width,preview.height);
-  pctx.save();
+// Paints the analysis view — adjusted image, the black scrim, the note dots
+// and the playback-curve ticks — into an arbitrary rect of an arbitrary 2D
+// context. drawPreview() renders it at 1:1 into the on-page canvas; the 9:16
+// video exporter renders the very same thing into its letterboxed rect, so
+// the two can never drift apart.
+//   markScale : multiplies dot radii / line widths / tick lengths, which are
+//               otherwise sized for the on-screen preview canvas.
+//   alphaFor  : per-layer opacity (defaults to the hover/pin-aware UI rule).
+//   showHover : hover ring, meaningless outside the interactive preview.
+// Caller is responsible for clearing (and, off-screen, for clipping — the
+// on-page canvas clips overflowing diagonals for free, an export rect can't).
+function paintAnalysisFrame(ctx, ox, oy, w, h, opt){
+  const markScale = (opt && opt.markScale != null) ? opt.markScale : 1;
+  const alphaFor  = (opt && opt.alphaFor) || layerVisualAlpha;
+  const showHover = !opt || opt.showHover !== false;
+  ctx.save();
   // 100% = today's default look (image dimmed under the black overlay below,
   // notes already popping over it); dragging toward 0 fades the image out
   // entirely so only the note dots remain, independent of that fixed overlay.
-  pctx.globalAlpha = parseInt($('imgOpacity').value)/100;
-  pctx.drawImage(adjCanvas,0,0,preview.width,preview.height);
-  pctx.globalAlpha=0.55;
-  pctx.fillStyle='#000';
-  pctx.fillRect(0,0,preview.width,preview.height);
-  pctx.globalAlpha=1;
+  ctx.globalAlpha = parseInt($('imgOpacity').value)/100;
+  ctx.drawImage(adjCanvas,ox,oy,w,h);
+  ctx.globalAlpha=0.55;
+  ctx.fillStyle='#000';
+  ctx.fillRect(ox,oy,w,h);
+  ctx.globalAlpha=1;
 
   const steps = parseInt($('steps').value);
   const pitches = scaleNotesForRange();
   const rows = pitches.length;
   const dir = readDir();
   lastNotes.forEach((arr,Li)=>{
-    pctx.fillStyle = layers[Li].color;
-    pctx.globalAlpha = layerVisualAlpha(Li);   // dims muted/non-soloed layers, or all-but-isolated on hover/pin
+    if(!layers[Li]) return;
+    ctx.fillStyle = layers[Li].color;
+    ctx.globalAlpha = alphaFor(Li);   // dims muted/non-soloed layers, or all-but-isolated on hover/pin
     arr.forEach(n=>{
       const pIdx = pitches.indexOf(n.midi);
       if(pIdx < 0) return;
       // n.step is already play-order; inv() maps (time,pitch) fractions straight
       // back to image space, reversal and diagonals included — no extra bookkeeping.
       const [nx, ny] = dir.inv((n.step+0.5)/steps, (pIdx+0.5)/rows);
-      const cx = nx*preview.width, cy = ny*preview.height;
-      const isHover = hoverNote && hoverNote.layerIdx===Li && hoverNote.step===n.step && hoverNote.midi===n.midi;
-      const rad = (2 + (n.vel/127)*4) * (isHover ? 1.7 : 1);
-      pctx.beginPath();
-      pctx.arc(cx,cy,rad,0,Math.PI*2);
-      pctx.fill();
+      const cx = ox + nx*w, cy = oy + ny*h;
+      const isHover = showHover && hoverNote && hoverNote.layerIdx===Li && hoverNote.step===n.step && hoverNote.midi===n.midi;
+      const rad = (2 + (n.vel/127)*4) * (isHover ? 1.7 : 1) * markScale;
+      ctx.beginPath();
+      ctx.arc(cx,cy,rad,0,Math.PI*2);
+      ctx.fill();
       // cross-link with the piano roll: the note under the mouse (there or
       // here) gets a bright ring, at full opacity regardless of isolation
       // dimming, so it's findable even if its layer is currently dimmed.
       if(isHover){
-        pctx.save();
-        pctx.globalAlpha = 1;
-        pctx.strokeStyle = '#fff';
-        pctx.lineWidth = 2;
-        pctx.beginPath();
-        pctx.arc(cx,cy,rad+3,0,Math.PI*2);
-        pctx.stroke();
-        pctx.restore();
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2*markScale;
+        ctx.beginPath();
+        ctx.arc(cx,cy,rad+3*markScale,0,Math.PI*2);
+        ctx.stroke();
+        ctx.restore();
       }
     });
   });
-  pctx.globalAlpha = 1;
+  ctx.globalAlpha = 1;
 
   // playback-curve ticks: short mark at each step's warped time position, from
   // the ρ=0 edge/corner of the sweep line toward ρ=1 — even spacing = linear,
   // uneven = warped. Same construction for cardinal and diagonal directions.
-  pctx.strokeStyle = 'rgba(255,255,255,.28)';
-  pctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,.28)';
+  ctx.lineWidth = 1*markScale;
   for(let k=0; k<=steps; k++){
     const ft = stepTimeFrac(k, steps);
     const [x0n,y0n] = dir.inv(ft, 0), [x1n,y1n] = dir.inv(ft, 1);
-    let dx = (x1n-x0n)*preview.width, dy = (y1n-y0n)*preview.height;
+    let dx = (x1n-x0n)*w, dy = (y1n-y0n)*h;
     const len = Math.hypot(dx,dy) || 1;
-    dx = dx/len*7; dy = dy/len*7;
-    const x0 = x0n*preview.width, y0 = y0n*preview.height;
-    pctx.beginPath();
-    pctx.moveTo(x0, y0);
-    pctx.lineTo(x0+dx, y0+dy);
-    pctx.stroke();
+    dx = dx/len*7*markScale; dy = dy/len*7*markScale;
+    const x0 = ox + x0n*w, y0 = oy + y0n*h;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x0+dx, y0+dy);
+    ctx.stroke();
   }
-  pctx.restore();
+  ctx.restore();
+}
+
+function drawPreview(){
+  pctx.clearRect(0,0,preview.width,preview.height);
+  paintAnalysisFrame(pctx, 0, 0, preview.width, preview.height);
 }
 
 /* ---- MIDI file export (SMF type 1, hand-written) ---- */
@@ -2411,12 +2462,15 @@ let sink = 'midi';       // 'midi' (Web MIDI out) | 'synth' (built-in preview sy
 let schedTimer = null, rafId = null;
 let playStep = 0;            // next grid step to schedule
 let nextStepTime = 0;        // when that step should sound (performance.now clock)
+let playOriginAt = 0;        // when step 0 of the current playback sounded — the video exporter
+                             // aligns its recording window to it so the file starts exactly on the downbeat
 let stepWin = [];            // recent scheduled steps {step, at, span} — drives the playhead
 let hangingNotes = new Set(); // chan*128+note keys, to force-off on stop
 let usedChannels = new Set();
 
 // built-in preview synth (Web Audio, no dependency)
 let ac = null, masterGain = null;
+let synthOut = null;         // last node before the speakers — the 9:16 video exporter taps it in parallel
 let voices = new Set();      // live { osc, g, sub } entries
 
 // just-in-time scheduling: only the next ~150 ms is programmed, never the whole
@@ -2438,14 +2492,17 @@ function renderMidiState(){
 }
 
 function updatePlayBtnState(){
-  previewBtn.disabled = !img || !audioSupported();
+  // a video export owns the synth scheduler for its whole run — every other
+  // transport button stays out of the way until it's done (see setVideoExportBusy)
+  previewBtn.disabled = videoExporting || !img || !audioSupported();
   updateSynthState();
+  updateVideoExportBtn();
   if(!midiSupported()){
     playBtn.disabled = true;
     setMidiState('midiUnavail', false);
     return;
   }
-  playBtn.disabled = !img;
+  playBtn.disabled = videoExporting || !img;
 }
 
 function ensureMidi(){
@@ -2608,25 +2665,30 @@ function currentLoopPos(steps){
   return ((pos % steps) + steps) % steps;
 }
 
+// The playhead itself: a line of constant τ, spanning the full pitch axis
+// (ρ 0→1) — a straight line in image space for every direction, cardinal or
+// diagonal, since inv() is affine. Shared with the 9:16 video exporter, which
+// draws it into its own rect (and has to clip explicitly; the on-page canvas
+// clips a diagonal running past a corner for free).
+function strokePlayhead(ctx, ox, oy, w, h, tau, lineWidth){
+  const dir = readDir();
+  const [x0n,y0n] = dir.inv(tau, 0), [x1n,y1n] = dir.inv(tau, 1);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(77,217,201,.9)';
+  ctx.lineWidth = lineWidth || 2;
+  ctx.beginPath();
+  ctx.moveTo(ox + x0n*w, oy + y0n*h);
+  ctx.lineTo(ox + x1n*w, oy + y1n*h);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawPlayhead(){
   if(!playing) return;
   redrawPreview();
   drawPianoRoll();
   const steps = parseInt($('steps').value);
-  const dir = readDir();
-  const tau = currentLoopPos(steps) / steps;
-  // a line of constant τ, spanning the full pitch axis (ρ 0→1) — a straight
-  // line in image space for every direction, cardinal or diagonal, since inv()
-  // is affine; canvas clips it automatically if it runs past a corner.
-  const [x0n,y0n] = dir.inv(tau, 0), [x1n,y1n] = dir.inv(tau, 1);
-  pctx.save();
-  pctx.strokeStyle = 'rgba(77,217,201,.9)';
-  pctx.lineWidth = 2;
-  pctx.beginPath();
-  pctx.moveTo(x0n*preview.width, y0n*preview.height);
-  pctx.lineTo(x1n*preview.width, y1n*preview.height);
-  pctx.stroke();
-  pctx.restore();
+  strokePlayhead(pctx, 0, 0, preview.width, preview.height, currentLoopPos(steps) / steps, 2);
   rafId = requestAnimationFrame(drawPlayhead);
 }
 
@@ -2877,6 +2939,7 @@ function updateTransportButtons(){
   previewBtn.textContent = synthOn ? t('btnStop') : t('btnPreview');
   previewBtn.classList.toggle('playing', synthOn);
   updateSynthState();
+  updateVideoExportBtn();   // also the re-translation hook for its tooltip (setLang -> here)
 }
 
 // visible, on-page diagnostic — no devtools needed to tell what the synth is
@@ -2913,6 +2976,7 @@ function startPlayback(which){
   playStep = 0;
   stepWin = [];
   nextStepTime = performance.now() + 90; // small delay for a clean start
+  playOriginAt = nextStepTime;           // step 0's own sounding time, before scheduler() advances nextStepTime
   scheduler();
   schedTimer = setInterval(scheduler, SCHED_INTERVAL_MS);
   rafId = requestAnimationFrame(drawPlayhead);
@@ -3054,6 +3118,7 @@ function ensureAudio(){
   conv.buffer = makeImpulse(1.8, 2.5);
   masterGain.connect(dry); dry.connect(comp);
   masterGain.connect(conv); conv.connect(wet); wet.connect(comp);
+  synthOut = comp;   // ensureVideoAudioTap() branches off here without touching the speaker path below
 
   if(isIOS() && typeof ac.createMediaStreamDestination === 'function'){
     // iOS Safari mutes plain Web Audio output (ac.destination) whenever the
@@ -3197,9 +3262,280 @@ function stopAllVoices(){
   voices.clear();
 }
 
+/* ============================================================
+   9:16 video export — a share-ready vertical clip of the loop
+   ============================================================
+   Everything happens on an off-screen 1080×1920 canvas that is never
+   inserted in the document: the desktop UI keeps rendering exactly as it
+   did, this just composes a second, differently-shaped view of the same
+   state. Full HD rather than 720p on purpose — the social platforms
+   re-encode aggressively, and this artwork is thin dots and 1-2px scan
+   lines on a dark ground, i.e. the first thing their compression eats.
+
+   Nothing here re-derives timing or geometry: the frames come from
+   paintAnalysisFrame()/strokePlayhead()/currentLoopPos() (the on-screen
+   preview's own functions) and the audio is a parallel tap on the preview
+   synth's output bus, so the file can't disagree with what the app plays.
+   ------------------------------------------------------------ */
+const VIDEO_W = 1080, VIDEO_H = 1920, VIDEO_FPS = 30, VIDEO_TARGET_MS = 15000;
+// Note dots and line widths are sized for the on-page preview canvas
+// (imgCanvas * 3, so ≤780px); the export frame is up to 1080px wide, hence the
+// ratio — plus a modest boost so they still read on a phone after the
+// platforms' re-encode. Purely a rendering constant, nothing else uses it.
+const VIDEO_MARK_BOOST = 1.4;
+const VIDEO_WATERMARK_URL = 'neoyume.github.io/dessons';
+
+let videoExporting = false;
+let videoCanvas = null, videoCtx = null, videoAudioTap = null;
+let videoRec = null, videoChunks = [], videoStream = null, videoRaf = null;
+let videoStartAt = 0, videoTotalMs = 0, videoRecStarted = false;
+
+function videoExportSupported(){
+  return typeof MediaRecorder !== 'undefined'
+      && typeof HTMLCanvasElement.prototype.captureStream === 'function'
+      && audioSupported();
+}
+
+function updateVideoExportBtn(){
+  const btn = $('videoExportBtn');
+  if(!btn) return;
+  const tip = videoExportSupported() ? t('videoExportTitle') : t('videoExportUnavail');
+  btn.title = tip;
+  btn.setAttribute('aria-label', tip);
+  btn.disabled = videoExporting || !img || !videoExportSupported();
+  if(videoExporting) return;   // label + progress fill belong to renderVideoProgress() while it runs
+  btn.querySelector('span').textContent = t('btnVideoExport');
+  btn.classList.remove('recording');
+  btn.style.backgroundImage = '';
+}
+
+function setVideoExportBusy(on){
+  videoExporting = on;
+  $('exportBtn').disabled = on || !img;
+  $('videoExportBtn').classList.toggle('recording', on);
+  updatePlayBtnState();   // playBtn / previewBtn / videoExportBtn all read videoExporting
+}
+
+// A second, permanent branch off the synth's output bus. The speaker path
+// (comp -> ac.destination, or the iOS <audio> element) is left untouched —
+// this only adds a capture destination alongside it.
+function ensureVideoAudioTap(){
+  if(videoAudioTap) return videoAudioTap;
+  if(!ac || !synthOut || typeof ac.createMediaStreamDestination !== 'function') return null;
+  videoAudioTap = ac.createMediaStreamDestination();
+  synthOut.connect(videoAudioTap);
+  return videoAudioTap;
+}
+
+// Letterbox: the whole media always visible, fitted to whichever of 1080/1920
+// binds first, centered — never a crop that clips the edges.
+function videoLayout(){
+  const iw = imgCanvas.width || 1, ih = imgCanvas.height || 1;
+  const s = Math.min(VIDEO_W/iw, VIDEO_H/ih);
+  const w = Math.round(iw*s), h = Math.round(ih*s);
+  return { x: Math.round((VIDEO_W-w)/2), y: Math.round((VIDEO_H-h)/2), w, h };
+}
+
+// The page's own backdrop (--bg plus the --glow radial), re-plotted for a 9:16
+// frame, so the letterbox bands read as the app rather than as generic black.
+function drawVideoBackground(ctx){
+  ctx.fillStyle = '#0c0a10';                                     // --bg
+  ctx.fillRect(0,0,VIDEO_W,VIDEO_H);
+  const cx = VIDEO_W*0.15, cy = -VIDEO_H*0.10;                   // same origin as body's gradient
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, VIDEO_H*0.55);
+  g.addColorStop(0, 'rgba(28,20,36,1)');                         // --glow
+  g.addColorStop(1, 'rgba(28,20,36,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VIDEO_W,VIDEO_H);
+}
+
+// Watermark: these clips travel without context, so it has to be possible to
+// get back to the tool from one. Sits in the bottom letterbox band by default
+// (never over the artwork); when the media fills the frame and there is no
+// band, it falls back to an overlay on its own plate so it stays legible over
+// whatever the image happens to be there.
+function drawVideoWatermark(ctx, box){
+  const cx = VIDEO_W/2;
+  const nameSize = 52, urlSize = 27, gap = 12;
+  const nameFont = nameSize + 'px "DotGothic16", "SF Mono", monospace';
+  const urlFont  = urlSize  + 'px "DotGothic16", "SF Mono", monospace';
+  const blockH = nameSize + gap + urlSize;
+  const bandTop = box.y + box.h, bandH = VIDEO_H - bandTop;
+  const inBand = bandH >= blockH + 70;
+  const top = inBand ? bandTop + (bandH - blockH)/2 : VIDEO_H - 64 - blockH;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  if(!inBand){
+    ctx.font = nameFont; const w1 = ctx.measureText('dessons').width;
+    ctx.font = urlFont;  const w2 = ctx.measureText(VIDEO_WATERMARK_URL).width;
+    const pad = 26, bw = Math.max(w1,w2) + pad*2, bh = blockH + pad*1.6;
+    const bx = cx - bw/2, by = top - pad*0.8;
+    ctx.fillStyle = 'rgba(12,10,16,.58)';
+    if(typeof ctx.roundRect === 'function'){ ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,18); ctx.fill(); }
+    else ctx.fillRect(bx,by,bw,bh);
+  }
+  ctx.globalAlpha = 0.58;      // discreet, but not invisible after re-encoding
+  ctx.fillStyle = '#00ffff';   // --accent
+  ctx.font = nameFont;
+  ctx.fillText('dessons', cx, top);
+  ctx.font = urlFont;
+  ctx.fillText(VIDEO_WATERMARK_URL, cx, top + nameSize + gap);
+  ctx.restore();
+}
+
+function drawVideoFrame(){
+  if(!videoCtx) return;
+  const box = videoLayout();
+  drawVideoBackground(videoCtx);
+
+  videoCtx.save();
+  videoCtx.beginPath();
+  videoCtx.rect(box.x, box.y, box.w, box.h);
+  videoCtx.clip();   // diagonal playheads/ticks run past the corners; the on-page canvas clips those for free, this rect doesn't
+  const markScale = (box.w / (preview.width || box.w)) * VIDEO_MARK_BOOST;
+  paintAnalysisFrame(videoCtx, box.x, box.y, box.w, box.h, {
+    markScale,
+    // mirrors what's actually being recorded on the audio side; the hover/pin
+    // isolation dimming is a mouse-driven UI affordance and has no business
+    // leaking into a file.
+    alphaFor: i => layerAudible(i) ? 1 : 0.22,
+    showHover: false
+  });
+  if(playing){
+    const steps = parseInt($('steps').value);
+    strokePlayhead(videoCtx, box.x, box.y, box.w, box.h, currentLoopPos(steps)/steps, 2*markScale);
+  }
+  videoCtx.restore();
+
+  videoCtx.strokeStyle = 'rgba(42,36,50,1)';   // --line, same hairline the on-page canvas has
+  videoCtx.lineWidth = 2;
+  videoCtx.strokeRect(box.x+1, box.y+1, box.w-2, box.h-2);
+
+  drawVideoWatermark(videoCtx, box);
+}
+
+function renderVideoProgress(elapsedMs){
+  const btn = $('videoExportBtn');
+  const total = Math.round(videoTotalMs/1000);
+  const done = Math.min(total, Math.floor(elapsedMs/1000));
+  btn.querySelector('span').textContent = t('videoExportRecording').replace('{x}', done + 's / ' + total + 's');
+  const pct = (clamp(elapsedMs/videoTotalMs, 0, 1)*100).toFixed(1);
+  btn.style.backgroundImage = 'linear-gradient(to right, rgba(0,255,255,.22) ' + pct + '%, rgba(0,255,255,0) ' + pct + '%)';
+}
+
+// Deliberately synchronous up to startPlayback(), same rule as
+// startPreviewPlayback(): iOS Safari only unlocks audio when the first node
+// starts inside the gesture itself. Never introduce an `await` before that.
+function startVideoExport(){
+  if(videoExporting || !img) return;
+  if(!videoExportSupported() || !ensureAudio()) return;
+  ac.resume().then(updateSynthState).catch(updateSynthState);   // fire-and-forget, doesn't block the gesture
+  if(iosAudioEl && iosAudioEl.paused) iosAudioEl.play().catch(()=>{});
+
+  const tap = ensureVideoAudioTap();
+  if(!tap) return;
+
+  // Whole loops only, count chosen so the total lands closest to ~15s — never
+  // a loop cut mid-flight, and always at least one even if a single loop is
+  // already longer than the target (slow tempo / many bars).
+  const loopMs = loopDurationMs();
+  videoTotalMs = Math.max(1, Math.round(VIDEO_TARGET_MS / loopMs)) * loopMs;
+
+  if(!videoCanvas){
+    videoCanvas = document.createElement('canvas');   // never inserted in the document
+    videoCanvas.width = VIDEO_W; videoCanvas.height = VIDEO_H;
+    videoCtx = videoCanvas.getContext('2d');
+  }
+  drawVideoFrame();   // paint once before capturing, so the stream never opens on a blank canvas
+
+  let canvasStream;
+  try{ canvasStream = videoCanvas.captureStream(VIDEO_FPS); }catch(e){ return; }
+  videoStream = new MediaStream([...canvasStream.getVideoTracks(), ...tap.stream.getAudioTracks()]);
+
+  const mime = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
+    .find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
+  const opts = { videoBitsPerSecond: 8000000, audioBitsPerSecond: 128000 };
+  if(mime) opts.mimeType = mime;
+  try{
+    videoRec = new MediaRecorder(videoStream, opts);
+  }catch(e){
+    try{ videoRec = new MediaRecorder(videoStream); }   // let the browser pick whatever it does support
+    catch(e2){ cleanupVideoExport(); return; }
+  }
+  videoChunks = [];
+  videoRec.ondataavailable = e=>{ if(e.data && e.data.size) videoChunks.push(e.data); };
+  videoRec.onstop = downloadVideoExport;
+
+  setVideoExportBusy(true);
+  if(playing) stopPlayback();      // was previewing / playing into a MIDI port -> this export takes over
+  startPlayback('synth');
+  videoStartAt = playOriginAt;
+  videoRecStarted = false;
+  videoRaf = requestAnimationFrame(videoExportFrame);
+}
+
+function videoExportFrame(){
+  if(!videoExporting){ videoRaf = null; return; }
+  const now = performance.now();
+  drawVideoFrame();
+  // Start recording on the downbeat, not on the click: startPlayback() leaves a
+  // ~90ms lead-in before step 0, which would land as a silent head on a clip
+  // the platforms play on repeat. Same reason the window ends at exactly
+  // N whole loops — last frame flows straight back into the first.
+  if(!videoRecStarted && now >= videoStartAt){
+    videoRecStarted = true;
+    try{ videoRec.start(); }catch(e){ finishVideoExport(); return; }
+  }
+  const elapsed = Math.max(0, now - videoStartAt);
+  renderVideoProgress(elapsed);
+  // `!playing` covers playback being torn down from under us (a media dropped
+  // on the preview, pagehide...): stop and keep whatever was captured.
+  if(!playing || (videoRecStarted && elapsed >= videoTotalMs)){ finishVideoExport(); return; }
+  videoRaf = requestAnimationFrame(videoExportFrame);
+}
+
+function finishVideoExport(){
+  if(videoRaf){ cancelAnimationFrame(videoRaf); videoRaf = null; }
+  if(playing) stopPlayback();
+  if(videoRec && videoRec.state !== 'inactive'){
+    try{ videoRec.stop(); return; }catch(e){}   // -> onstop -> downloadVideoExport() -> cleanup
+  }
+  cleanupVideoExport();
+}
+
+function downloadVideoExport(){
+  const type = (videoRec && videoRec.mimeType) || 'video/webm';
+  const ext = /mp4/i.test(type) ? 'mp4' : 'webm';
+  const blob = new Blob(videoChunks, {type: type.split(';')[0]});
+  cleanupVideoExport();
+  if(!blob.size) return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dessons-loop-9x16.' + ext;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function cleanupVideoExport(){
+  if(videoRaf){ cancelAnimationFrame(videoRaf); videoRaf = null; }
+  // only the canvas track — the audio one belongs to videoAudioTap, which is a
+  // permanent branch of the synth graph reused by the next export.
+  if(videoStream) videoStream.getVideoTracks().forEach(tr => tr.stop());
+  videoStream = null; videoRec = null; videoChunks = [];
+  videoRecStarted = false;
+  setVideoExportBusy(false);
+}
+
+$('videoExportBtn').addEventListener('click', startVideoExport);
+
 // tab hidden: stop MIDI playback (timers throttle) and pause the live grab loop
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
+    // rAF stops firing while hidden, so the export loop can't wrap itself up —
+    // close it out here instead of leaving a recorder running unattended.
+    if(videoExporting) finishVideoExport();
     if(playing) stopPlayback();
     if(grabTimer){ clearTimeout(grabTimer); grabTimer = null; }
   } else if(!frozen && !grabTimer && (srcKind === 'video' || srcKind === 'webcam')){
