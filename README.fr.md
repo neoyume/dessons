@@ -13,6 +13,10 @@ Tourne entièrement dans le navigateur — aucun serveur, aucune dépendance, au
 
 L'interface est bilingue **français / anglais** : bouton `FR / EN` en haut à droite, langue détectée automatiquement au premier lancement puis mémorisée.
 
+![L'interface de Dessons : le panneau Musique à gauche, la zone de dépôt du média au centre, le panneau Analyse de l'image à droite](docs/screenshot-interface.webp)
+
+Un article plus détaillé sur le pourquoi et le comment, avec d'autres captures : **[Dessons — étude de cas](https://www.neoyume.com/work/dessons)** (en anglais).
+
 ## Utiliser en local
 
 Aucune installation nécessaire. Deux options :
@@ -35,11 +39,15 @@ Aucune installation nécessaire. Deux options :
 - **Source** : dépose une **image** (JPG / PNG / WebP) ou une **vidéo** (MP4 / WebM / MOV), ou active la **webcam**. Vidéo et webcam sont ré-analysées ~15 fois par seconde : les notes se recalculent en direct et, combinées à « Jouer dans le DAW », la boucle MIDI évolue avec l'image qui bouge. Le bouton **Figer** capture un instant précis.
 - **Contraste / Saturation / Sensibilité** : contrôle quelles zones de l'image deviennent des notes. Saturation à 0% = noir et blanc (pratique avant de passer en séparation par luminosité) ; plus la sensibilité est basse, moins il y a de notes (seules les zones les plus contrastées sont gardées).
 - **Séparation en calques** : sépare l'image par couleur (teinte), par luminosité (ombres / tons moyens / hautes lumières), ou **par couleurs choisies à la pipette** — clique sur la pastille d'un calque (elle s'entoure et pulse), puis clique n'importe où dans l'aperçu pour isoler cette couleur : seuls les pixels assez proches (réglable via **Tolérance couleur**) alimentent ce calque, le reste reste silencieux pour lui. Choisir le vert des feuilles d'une fraise fait jouer *uniquement le vert*, pas « tout, trié par couleur la plus proche » — un calque jamais pipetté ne produit rien. Chaque calque devient une piste MIDI indépendante, avec son propre instrument General MIDI et son propre nom. Chaque ligne a aussi un bouton **M** (muet) et **S** (solo) pour comparer les calques à l'oreille — ça n'agit que sur l'aperçu et le Web MIDI, jamais sur quels pixels sont devenus des notes au départ (ça, c'est décidé une fois pour toutes à l'analyse, donc identique dans l'aperçu, la lecture live et l'export `.mid`).
+
+  ![La liste des calques : une peinture sous-marine séparée en un calque orange rouille pour les poissons et un calque pâle pour l'eau, chacun avec son instrument, son nombre de notes et ses boutons M / S](docs/screenshot-layers.webp)
 - **Gamme / octave / tempo / mesures** : un axe de l'image est quantisé sur la gamme choisie (pas de fausses notes), l'autre devient le temps.
 - **Sens de lecture & courbe** (boutons-icônes à côté du bouton ▶ d'aperçu) :
   - *Sens* — 8 options : les 4 côtés (gauche→droite par défaut, droite→gauche, haut→bas, bas→haut) plus les 4 diagonales (d'un coin à l'autre, dans les deux sens sur chaque diagonale). Détermine quel axe porte le temps et dans quel sens la tête de lecture le parcourt ; en diagonale, la hauteur suit l'AUTRE diagonale.
   - *Courbe* — déforme le temps de la tête de lecture sur la boucle : *linéaire* (régulier), *accéléré*, *ralenti*, *pulsé* (dense sur le temps, aéré au milieu), *swing*, ou **personnalisée** — fais glisser les 3 poignées du petit graphe pour dessiner ta propre courbe (toujours gardée monotone, donc toujours une boucle valide). Même motif de notes, grooves différents. Chaque icône de courbe montre déjà son propre placement ; les petits traits sur le bord d'attaque de l'aperçu le montrent en pleine résolution.
   - Les deux s'appliquent à l'aperçu, à la lecture temps réel **et** à l'export `.mid`.
+
+  ![Les contrôles de sens et de courbe : une tête de lecture en diagonale sélectionnée et l'éditeur de courbe personnalisée ouvert dessous, avec une image de vidéo figée comme source](docs/screenshot-direction.webp)
 - **Écouter l'aperçu** : le bouton **▶ Écouter l'aperçu** joue la boucle directement dans le navigateur via un petit synthé intégré (approximations grossières des familles General MIDI) — sans DAW, sans config, dans tous les navigateurs y compris Safari et iOS/iPadOS (sur iOS, le son passe par une balise `<audio>` cachée pour que l'interrupteur sonnerie/silence ne le coupe pas — contournement standard d'une particularité de Safari). Une ligne d'état sous le bouton affiche l'état du contexte audio (`running`/`suspended`/…) — utile si jamais ça ne sonne toujours pas.
 - **Export** : génère un fichier `.mid` (format 1, multi-pistes) prêt à être importé dans Logic Pro — une piste par calque est créée automatiquement à l'import.
 - **Export vidéo (9:16)** : rend la boucle en clip vertical **1080×1920** avec le son du synthé d'aperçu, prêt pour TikTok / Reels / Shorts. Le média entier reste visible — letterboxé sur le fond de l'app, jamais recadré — avec les points de notes colorés et la tête de lecture qui balaie par-dessus, et un petit watermark `dessons` dans la bande du bas. Le clip dure un nombre entier de boucles, celui dont le total tombe le plus près de ~15 s, pour qu'il reboucle proprement comme le font ces plateformes. L'enregistrement se fait en temps réel : le bouton affiche donc sa progression pendant ces ~15 secondes, et les autres boutons de sortie sont désactivés le temps de l'opération puisqu'ils partagent le même moteur audio. Le fichier sort en **WebM** (VP9/Opus) : les plateformes l'acceptent à l'upload depuis un ordinateur, mais pour publier depuis une app mobile mieux vaut le convertir en MP4 — HandBrake, ou un simple import/export dans CapCut ou iMovie. Un navigateur qui enregistre nativement en MP4 produira un `.mp4` ; un navigateur sans `MediaRecorder` laisse simplement le bouton désactivé, tout le reste continue de fonctionner.
@@ -72,6 +80,7 @@ dessons/
 ├── README.fr.md            # doc en français (ce fichier)
 ├── LICENSE                 # PolyForm Noncommercial 1.0.0
 ├── CLAUDE.md               # contexte projet pour itérer avec Claude Code
+├── docs/                   # captures utilisées dans les README + la carte de partage
 └── .github/FUNDING.yml     # lien Ko-fi pour le bouton Sponsor du repo
 ```
 

@@ -13,6 +13,10 @@ Runs entirely in the browser — no server, no dependencies, nothing sent anywhe
 
 The interface is bilingual **French / English**: `FR / EN` switch in the top-right corner, language auto-detected on first launch, then remembered.
 
+![The Dessons interface: the Music panel on the left, the source drop zone in the middle, the Image Analysis panel on the right](docs/screenshot-interface.webp)
+
+A longer write-up of how and why I built it, with more screenshots: **[Dessons — build case study](https://www.neoyume.com/work/dessons)**.
+
 ## Run it locally
 
 No installation needed. Two options:
@@ -35,11 +39,15 @@ No installation needed. Two options:
 - **Source**: drop an **image** (JPG / PNG / WebP) or a **video** (MP4 / WebM / MOV), or turn on the **webcam**. Video and webcam are re-analysed ~15 times per second: the notes are recomputed live and, together with "Play in DAW", the MIDI loop evolves with the moving image. The **Freeze** button captures a single frame.
 - **Contrast / Saturation / Sensitivity**: control which parts of the image become notes. Saturation 0% = grayscale (handy before switching to brightness-based separation); lower sensitivity means fewer notes (only the most contrasted areas are kept).
 - **Split into layers**: separate the image by color (hue), by brightness (shadows / midtones / highlights), or **by picked colors** — click a layer's swatch (it outlines and pulses), then click anywhere on the preview to isolate that color: only pixels close enough to it (the **Color tolerance** slider) feed that layer, everything else stays silent for it. Picking the green of a strawberry's leaves makes *only the green* play, not "everything, sorted by nearest color" — an unpicked layer produces nothing. Each layer becomes its own MIDI track, with its own General MIDI instrument and name. Each row also has **M** (mute) and **S** (solo) toggles to A/B layers while listening — they affect the preview and Web MIDI only, never which pixels became notes in the first place (that's decided once, in the analysis, so it's identical in the preview, live playback and the `.mid` export).
+
+  ![The layer list: an underwater painting split into a rust-orange layer for the fish and a pale layer for the water, each with its own instrument, note count and M / S toggles](docs/screenshot-layers.webp)
 - **Scale / octave / tempo / bars**: one image axis is quantized to the chosen scale (no wrong notes possible), the other becomes time.
 - **Playback direction & curve** (icon buttons next to the ▶ preview button):
   - *Direction* — 8 options: the 4 sides (left→right default, right→left, top→bottom, bottom→top) plus the 4 diagonals (corner to corner, both ways on each diagonal). Sets which axis carries time and which way the playhead sweeps it; on a diagonal, pitch runs along the *other* diagonal.
   - *Curve* — time-warps the playhead across the loop: *linear* (steady), *accelerating*, *decelerating*, *pulsing* (dense on the beat, sparse mid-loop), *swing*, or **custom** — drag the 3 handles of the little curve graph to draw your own timing (always kept monotonic, so it stays a valid loop). Same note pattern, different grooves. Each curve icon shows its own timing; faint ticks along the leading edge of the preview show it at full resolution.
   - All apply to the preview, real-time playback **and** the `.mid` export.
+
+  ![The direction and curve controls: a diagonal playhead selected and the custom-curve editor open below, with a frozen video frame as the source](docs/screenshot-direction.webp)
 - **Preview sound**: the **▶ Preview sound** button plays the loop right in the browser through a small built-in synth (rough approximations of the General MIDI families) — no DAW, no setup, works in every browser including Safari and iOS/iPadOS (on iOS the output is routed through a hidden `<audio>` element so the physical ringer/silent switch doesn't mute it, a standard workaround for a Safari quirk). A status line under the button shows the audio context's state (`running`/`suspended`/…) — handy if something still doesn't sound right.
 - **Export**: generates a `.mid` file (format 1, multi-track) ready to import into Logic Pro — one track per layer is created automatically on import.
 - **Export video (9:16)**: renders the loop as a vertical **1080×1920** clip with the preview synth's sound, ready for TikTok / Reels / Shorts. The whole media stays visible — letterboxed on the app's own background, never cropped — with the colored note dots and the sweeping playhead drawn over it, and a small `dessons` watermark in the bottom band. The clip lasts a whole number of loops, whichever total lands closest to ~15 s, so it repeats seamlessly the way those platforms play it. Recording happens in real time, so the button shows its progress for those ~15 seconds; the other output buttons are disabled meanwhile, since they share the same audio engine. The file comes out as **WebM** (VP9/Opus): platforms accept it when you upload from a computer, but to post from a phone app you'll want to convert it to MP4 first — HandBrake, or a plain import/export through CapCut or iMovie. A browser that records MP4 natively gets an `.mp4` instead; one with no `MediaRecorder` at all just leaves the button disabled, everything else keeps working.
@@ -72,6 +80,7 @@ dessons/
 ├── README.fr.md            # French docs
 ├── LICENSE                 # PolyForm Noncommercial 1.0.0
 ├── CLAUDE.md               # project context for iterating with Claude Code
+├── docs/                   # screenshots used in the READMEs + the social preview card
 └── .github/FUNDING.yml     # Ko-fi link for the repo's Sponsor button
 ```
 
