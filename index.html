@@ -327,27 +327,32 @@
   }
   .layerNameLabel:hover{border-color:var(--line);}
   .layerNameEdit{width:100%; padding:5px 7px; font-size:12px; background:var(--panel-2); border:1px solid var(--accent); border-radius:6px; color:var(--text); font-family:inherit;}
-  /* instrument picker: only an emoji shows at rest — the real <select> (full
+  /* instrument picker: only an icon shows at rest — the real <select> (full
      GM instrument names, native dropdown) sits on top, fully transparent
      and stretched over the icon, so every click/keyboard interaction still
      goes through the real control. Icon + tooltip are kept in sync with its
-     value in JS (see syncInstrIcon() in renderLayerList()). Native color
-     emoji rather than hand-drawn line icons — closer to the real instrument
-     at a glance than a minimalist glyph could get for e.g. a kalimba or a
-     harpsichord; several GM entries share one emoji where no dedicated
-     glyph exists (Unicode has no vibraphone/celesta/kalimba/organ icon) —
-     the exact name is always one click or hover away regardless. */
+     value in JS (see syncInstrIcon() in renderLayerList()). The icons are
+     hand-drawn SVGs (GM_INSTR[].icon), one per instrument, inlined so the
+     zero-dependency / file:// promise holds — no glyph font, no external
+     file. Rendered in the theme's monochrome line style: shape fill =
+     currentColor (dims to --text-dim at rest, --text on hover), the drawn
+     outlines re-mapped to --panel-2 so they read as thin cut lines / gaps
+     rather than the original black; .ic-cut shapes (piano/bass keys) are
+     forced to --panel-2 fill so they punch through as dark cutouts. */
   .instrPicker{position:relative; width:32px; height:32px;}
   .instrIcon{
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     border:1px solid var(--line); border-radius:6px; background:var(--panel-2);
-    font-size:17px; line-height:1; pointer-events:none; transition:border-color .15s;
+    color:var(--text-dim); line-height:1; pointer-events:none; transition:border-color .15s, color .15s;
   }
+  .instrIcon svg{width:20px; height:20px; display:block;}
+  .instrIcon .st0, .instrIcon .st1{fill:currentColor; stroke:var(--panel-2); stroke-width:3px; stroke-miterlimit:10;}
+  .instrIcon .ic-cut{fill:var(--panel-2); stroke:none;}
   .instrPicker select{
     position:absolute; inset:0; width:100%; height:100%; padding:0; border:0;
     opacity:0; cursor:pointer;
   }
-  .instrPicker:hover .instrIcon{border-color:var(--accent);}
+  .instrPicker:hover .instrIcon{border-color:var(--accent); color:var(--text);}
   .layerMS{display:flex; gap:3px;}
   .layerMS button{
     width:21px; height:21px; padding:0; flex:none;
@@ -373,17 +378,19 @@
   .layer.muted .layerThresh{opacity:.4;}
   .layerNoteCount{flex:none; font-family:var(--mono); color:var(--text-dim); font-size:10.5px; margin-left:auto; padding-left:6px;}
 
+  /* same outline treatment as #playBtn — transparent fill, cyan stroke + text
+     at rest, faint tint on hover, muted (not full-cyan) when disabled. Kept on
+     --accent (the vivid cyan) rather than #playBtn's softer --cyan so Export
+     still reads as the primary action next to "Play in DAW". */
   button#exportBtn{
     width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
-    background:var(--accent); color:var(--bg);
-    border:1.5px solid transparent; padding:7px; font-size:12.5px; font-weight:800; letter-spacing:.4px;
-    border-radius:7px; cursor:pointer; transition:filter .15s, transform .15s, box-shadow .15s;
-    box-shadow:0 4px 16px rgba(0,255,255,.32);
+    background:transparent; color:var(--accent);
+    border:1.5px solid var(--accent); padding:7px; font-size:12.5px; font-weight:800; letter-spacing:.4px;
+    border-radius:7px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
   button#exportBtn svg{width:14px; height:14px; flex:none; display:block;}
-  button#exportBtn:hover:not(:disabled){filter:brightness(1.08); transform:translateY(-1px);}
-  button#exportBtn:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed; box-shadow:none;}
-  .hint.exportDisabledHint{text-align:center; margin-top:8px;}
+  button#exportBtn:hover:not(:disabled){background:rgba(0,255,255,.12);}
+  button#exportBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
 
   button#playBtn{
     width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
@@ -397,18 +404,23 @@
   button#playBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
 
   button#previewBtn{
-    width:100%; background:var(--panel-2); color:var(--text);
-    border:1.5px solid var(--line); padding:11.5px; font-size:13.5px; font-weight:600;
-    border-radius:7px; cursor:pointer; transition:border-color .15s, background .15s;
+    width:100%; background:transparent; color:var(--cyan);
+    border:1.5px solid var(--cyan); padding:11.5px; font-size:13.5px; font-weight:600;
+    border-radius:7px; cursor:pointer; transition:border-color .15s, background .15s, color .15s;
   }
-  button#previewBtn:hover:not(:disabled){border-color:var(--accent);}
-  button#previewBtn:disabled{color:var(--text-dim); cursor:not-allowed;}
+  button#previewBtn:hover:not(:disabled){background:rgba(77,217,201,.12);}
+  button#previewBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
   button#previewBtn.playing{background:#e5484d; border-color:#e5484d; color:#fff;}
 
   /* action buttons (export/play in flowSteps step 3, preview in metaTransportRow) */
   .actionCol{display:flex; flex-direction:column; flex:none;}
   .actionCol .midiRow{margin-top:8px;}
   .flowAction{width:190px;}
+  /* "Play in DAW" keeps its Web MIDI status line to the RIGHT of the button
+     (user request), not stacked under it; wraps back under on a narrow header. */
+  .flowActionPlay{flex-direction:row; align-items:center; width:auto; gap:10px; flex-wrap:wrap;}
+  .flowActionPlay #playBtn{width:190px;}
+  .flowActionPlay .midiRow{margin-top:0;}
 
   .transportIcons{display:flex; flex-direction:column; gap:6px; flex:none;}
   .iconRow{display:flex; align-items:center; gap:8px;}
@@ -497,9 +509,8 @@
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v8"></path><path d="M6 7l3 3 3-3"></path><path d="M3 12v2.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V12"></path></svg>
             <span data-i18n="btnExport">Exporter le .mid</span>
           </button>
-          <div class="hint exportDisabledHint" id="exportDisabledHint" data-i18n="exportDisabledHint">Importe une image pour activer l'export</div>
         </div>
-        <div class="actionCol flowAction">
+        <div class="actionCol flowAction flowActionPlay">
           <button id="playBtn" disabled>
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none"></circle><path d="M6.5 6.5a3.6 3.6 0 0 0 0 5"></path><path d="M11.5 6.5a3.6 3.6 0 0 1 0 5"></path><path d="M4 4a7 7 0 0 0 0 10"></path><path d="M14 4a7 7 0 0 1 0 10"></path></svg>
             <span data-i18n="btnPlay">Jouer dans le DAW</span>
@@ -783,7 +794,6 @@ const I18N = {
     presetImportSuccess: "{x} preset(s) importé(s).",
     presetImportError: "Fichier de presets illisible ou invalide.",
     presetImportOverwriteConfirm: "{x} preset(s) portent déjà ce nom et seront remplacés. Continuer ?",
-    exportDisabledHint: "Importe une image pour activer l'export",
     safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
     lblSustain: "Sustain (aperçu & MIDI)",
     midiHintToggle: "Comment connecter à Logic",
@@ -913,7 +923,6 @@ const I18N = {
     presetImportSuccess: "{x} preset(s) imported.",
     presetImportError: "Couldn't read that presets file — it looks invalid.",
     presetImportOverwriteConfirm: "{x} preset(s) already use that name and will be overwritten. Continue?",
-    exportDisabledHint: "Import an image to enable export",
     safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
     lblSustain: "Sustain (preview & MIDI)",
     midiHintToggle: "How to connect to Logic",
@@ -1067,9 +1076,25 @@ document.querySelectorAll('#langToggle button').forEach(b=>{
   b.addEventListener('click', ()=> setLang(b.dataset.lang));
 });
 
+/* ---- Hand-drawn instrument icons, one per GM_INSTR entry below. Inlined
+   as SVG markup (not external <img src> files) so the zero-dependency /
+   works-from-file:// promise holds — nothing to fetch. Kept verbatim from
+   the source drawings (viewBox 0 0 78.8 80, class="st0"/"st1" on every
+   shape); the theme re-colouring is done entirely in .instrIcon CSS, the
+   only local edit here is class="ic-cut" on the shapes that must punch
+   through as dark cutouts (piano + bass keys). ---- */
+const INSTR_ICONS = {
+  piano:'<svg viewBox="0 0 78.8 80"><rect class="st1" x="3.7" y="4" width="71.8" height="71.8"/><rect class="st1" x="26.2" y="4" width="24.5" height="71.8"/><rect class="ic-cut" x="19" y="5.5" width="13.4" height="46.2"/><rect class="ic-cut" x="45.1" y="5.5" width="13.4" height="46.2"/></svg>',
+  organ:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="2.8" y="31.8" width="13.2" height="45.6"/><rect class="st0" x="63.2" y="31.9" width="13.2" height="45.6"/><rect class="st0" x="17.9" y="18.4" width="13.2" height="59"/><rect class="st0" x="48.1" y="18.4" width="13.2" height="59"/><rect class="st0" x="33" y="7.3" width="13.2" height="70.1"/></svg>',
+  vibraphone:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="32.2" y="3.2" width="13.4" height="46.2" transform="translate(77.7 52.5) rotate(-180)"/><rect class="st0" x="47.1" y="3.2" width="13.4" height="59.8" transform="translate(107.6 66.1) rotate(-180)"/><rect class="st0" x="2.3" y="3.2" width="13.4" height="27.5" transform="translate(18 33.9) rotate(-180)"/><rect class="st0" x="17.2" y="3.2" width="13.4" height="35.6" transform="translate(47.8 42) rotate(-180)"/><rect class="st0" x="62.1" y="3.2" width="13.4" height="71" transform="translate(137.5 77.3) rotate(-180)"/></svg>',
+  bass:'<svg viewBox="0 0 78.8 80"><rect class="st1" x="3.7" y="4.9" width="71.8" height="71.8"/><rect class="st1" x="3.6" y="2.9" width="71.8" height="26.8"/><rect class="st1" x="26.2" y="29.7" width="24.5" height="46.7"/><rect class="ic-cut" x="18.9" y="28.3" width="13.4" height="30.5"/><rect class="ic-cut" x="45.1" y="28.3" width="13.4" height="30.5"/><circle class="st1" cx="24.9" cy="15.9" r="9"/><circle class="st1" cx="53.7" cy="15.9" r="9"/></svg>',
+  flute:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="32.7" y="8.1" width="12.5" height="66.2" transform="translate(34.8 97.8) rotate(-132.4)"/><rect class="st0" x="60.4" y="7.8" width="12.5" height="16.2" rx="4.5" ry="4.5" transform="translate(99.8 75.9) rotate(-132.4)"/><rect class="st0" x="7.2" y="56.8" width="8.6" height="19.7" rx="4.3" ry="4.3" transform="translate(-42.2 25.6) rotate(-42.8)"/><rect class="st0" x="20.3" y="46.4" width="4" height="19.7" rx="2" ry="2" transform="translate(-31.5 28.6) rotate(-41.2)"/><rect class="st0" x="65.3" y="14.5" width="2.2" height="3.7" rx=".8" ry=".8" transform="translate(5.7 47.8) rotate(-41.2)"/><circle class="st0" cx="30.8" cy="48.8" r="2.2"/><circle class="st0" cx="38.7" cy="41.7" r="2.2"/><circle class="st0" cx="46.3" cy="34.8" r="2.2"/><circle class="st0" cx="54.8" cy="27.2" r="2.2"/></svg>',
+  steel:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="3.5" y="4" width="71.8" height="71.8" rx="31" ry="31"/><rect class="st0" x="24.7" y="25.2" width="28.9" height="28.9" rx="14.4" ry="14.4"/><rect class="st0" x="46.7" y="9.8" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="10.3" y="10.6" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="9.4" y="47.4" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="47.4" y="47.9" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="5.6" y="31.5" width="15.7" height="15.7" rx="7.8" ry="7.8"/><rect class="st0" x="56.9" y="31.5" width="15.7" height="15.7" rx="7.8" ry="7.8"/><rect class="st0" x="30.4" y="5.5" width="15.7" height="15.7" rx="7.8" ry="7.8" transform="translate(51.6 -25) rotate(90)"/><rect class="st0" x="30.4" y="56.8" width="15.7" height="15.7" rx="7.8" ry="7.8" transform="translate(102.9 26.4) rotate(90)"/></svg>'
+};
+
 /* ---- General MIDI instrument shortlist (bilingual label + program number
-   + a small emoji shown at rest instead of the name, see .instrPicker in
-   renderLayerList()). Limited to exactly 6 — one per layer at the max —
+   + a small hand-drawn SVG icon shown at rest instead of the name, see
+   .instrPicker in renderLayerList()). Limited to exactly 6 — one per layer at the max —
    deliberately picked one per timbreFor() bucket (see the Web Audio synth
    further down) rather than a broad GM sampling: the original 19-entry
    list had several instruments landing in the *same* timbreFor() branch
@@ -1083,12 +1108,12 @@ document.querySelectorAll('#langToggle button').forEach(b=>{
    browser preview *and* still sensible, common General MIDI picks for
    the real .mid export. ---- */
 const GM_INSTR = [
-  {fr:"Piano acoustique",  en:"Acoustic Piano",    prog:0,   emoji:'🎹'},
-  {fr:"Orgue",             en:"Organ",             prog:19,  emoji:'🎹'},
-  {fr:"Vibraphone",        en:"Vibraphone",        prog:11,  emoji:'🥁'},
-  {fr:"Basse synthé",      en:"Synth Bass",        prog:38,  emoji:'🎚️'},
-  {fr:"Flûte",             en:"Flute",             prog:73,  emoji:'🪈'},
-  {fr:"Steel drums",       en:"Steel Drums",       prog:114, emoji:'🪘'}
+  {fr:"Piano acoustique",  en:"Acoustic Piano",    prog:0,   icon:INSTR_ICONS.piano},
+  {fr:"Orgue",             en:"Organ",             prog:19,  icon:INSTR_ICONS.organ},
+  {fr:"Vibraphone",        en:"Vibraphone",        prog:11,  icon:INSTR_ICONS.vibraphone},
+  {fr:"Basse synthé",      en:"Synth Bass",        prog:38,  icon:INSTR_ICONS.bass},
+  {fr:"Flûte",             en:"Flute",             prog:73,  icon:INSTR_ICONS.flute},
+  {fr:"Steel drums",       en:"Steel Drums",       prog:114, icon:INSTR_ICONS.steel}
 ];
 // used to suggest "Rhythm" instead of "Layer N" for a freshly-created layer
 // that already has a percussion instrument assigned — see rebuildLayers().
@@ -1268,7 +1293,6 @@ function removeMedia(){
   img = null;
   if(playing) stopPlayback();
   $('exportBtn').disabled = true;
-  $('exportDisabledHint').hidden = false;
   updatePlayBtnState();
   clearPreview();
   setPreviewEmpty(true);
@@ -1293,7 +1317,6 @@ function loadFile(file){
       if(!fitCanvas()){ showSrcError(t('videoErr')); return; }
       setPreviewEmpty(false);
       $('exportBtn').disabled = false;
-      $('exportDisabledHint').hidden = true;
       updateSrcBtns();
       updateCropUI();
       updatePlayBtnState();
@@ -1313,7 +1336,6 @@ function loadFile(file){
       if(!fitCanvas()) return;
       setPreviewEmpty(false);
       $('exportBtn').disabled = false;
-      $('exportDisabledHint').hidden = true;
       updateSrcBtns();
       updateCropUI();
       updatePlayBtnState();
@@ -1357,7 +1379,6 @@ async function toggleWebcam(){
     fitCanvas();
     setPreviewEmpty(false);
     $('exportBtn').disabled = false;
-    $('exportDisabledHint').hidden = true;
     updateSrcBtns();
     updateCropUI();
     updatePlayBtnState();
@@ -1565,7 +1586,7 @@ function renderLayerList(){
     });
     const syncInstrIcon = ()=>{
       const inst = GM_INSTR.find(g => g.prog === layers[i].program) || GM_INSTR[0];
-      instrIcon.textContent = inst.emoji;
+      instrIcon.innerHTML = inst.icon;
       instrPicker.title = inst[LANG] || inst.en;
     };
     sel.addEventListener('change', e=>{
