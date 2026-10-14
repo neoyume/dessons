@@ -26,16 +26,16 @@
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* palette matched to neoyume.com: void/ink/accent tokens, same hexes */
-    --bg:#0c0a10;
-    --glow:#1c1424;
-    --panel:#15111c;
-    --panel-2:#1c1620;
-    --line:#2a2432;
+    /* palette matched to dessons.neoyume.com (dessons_web): teal void, neon green accent */
+    --bg:#002b2a;
+    --glow:#004a48;
+    --panel:#00302f;
+    --panel-2:#003d3c;
+    --line:#0e5856;
     --text:#f3efe9;
-    --text-dim:#a9a3ac;
-    --accent:#00ffff;
-    --accent-dim:#0a6670;
+    --text-dim:#9fbcb9;
+    --accent:#00ff00;
+    --accent-dim:#0b6b1e;
     --cyan:#4dd9c9;
     --mono: 'SF Mono', 'Roboto Mono', Consolas, monospace;
     --sans: 'DotGothic16', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -164,7 +164,7 @@
   .previewWrap{position:relative; text-align:center;}
   /* the whole frame is the drop target, empty or already loaded */
   #previewWrap.drag{outline:1.5px dashed var(--accent); outline-offset:-1.5px; border-radius:7px;}
-  #previewWrap.drag .previewPlaceholder{border-color:var(--accent); background:rgba(0,255,255,.04);}
+  #previewWrap.drag .previewPlaceholder{border-color:var(--accent); background:rgba(0,255,0,.04);}
   /* mediaBox shrink-wraps to the canvas's own rendered size (inline-block,
      centered via previewWrap's text-align) instead of always spanning the
      full panel width — needed so a 9:16 portrait capped at max-height:490px
@@ -296,7 +296,7 @@
   /* hover/pin cross-link with the image dots + piano roll (see
      onLayerIsolationChange()) — a "look at this one" highlight, distinct
      from .muted below which is a real mix state. */
-  .layer.isolated{background:rgba(0,255,255,.07);}
+  .layer.isolated{background:rgba(0,255,0,.07);}
   .layerMain{
     display:grid; grid-template-columns:13px 13px 46px 1fr 32px; gap:6px; align-items:center;
   }
@@ -389,7 +389,7 @@
     border-radius:7px; cursor:pointer; transition:background .15s, color .15s, border-color .15s;
   }
   button#exportBtn svg{width:14px; height:14px; flex:none; display:block;}
-  button#exportBtn:hover:not(:disabled){background:rgba(0,255,255,.12);}
+  button#exportBtn:hover:not(:disabled){background:rgba(0,255,0,.12);}
   button#exportBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
 
   button#playBtn{
@@ -2632,7 +2632,7 @@ function scanFrame(){
   const tau = curveFrac(hoverCurve || $('curve').value, p*1000, 1000);
   const dir = DIR_DEFS[hoverDir] || readDir();
   const [x0n,y0n] = dir.inv(tau,0), [x1n,y1n] = dir.inv(tau,1);
-  ctx.strokeStyle = 'rgba(0,255,255,.85)';
+  ctx.strokeStyle = 'rgba(0,255,0,.85)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(x0n*canvas.width, y0n*canvas.height);
@@ -2854,10 +2854,10 @@ function drawCropEditor(){
   pctx.fillRect(0,ry+rh,preview.width,preview.height-ry-rh);
   pctx.fillRect(0,ry,rx,rh);
   pctx.fillRect(rx+rw,ry,preview.width-rx-rw,rh);
-  pctx.strokeStyle = '#00ffff';
+  pctx.strokeStyle = '#00ff00';
   pctx.lineWidth = 2;
   pctx.strokeRect(rx,ry,rw,rh);
-  pctx.fillStyle = '#00ffff';
+  pctx.fillStyle = '#00ff00';
   const hs = 5;
   [[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([hx,hy])=>{ pctx.fillRect(hx-hs,hy-hs,hs*2,hs*2); });
 }
@@ -3339,12 +3339,12 @@ function videoLayout(){
 // The page's own backdrop (--bg plus the --glow radial), re-plotted for a 9:16
 // frame, so the letterbox bands read as the app rather than as generic black.
 function drawVideoBackground(ctx){
-  ctx.fillStyle = '#0c0a10';                                     // --bg
+  ctx.fillStyle = '#002b2a';                                     // --bg
   ctx.fillRect(0,0,VIDEO_W,VIDEO_H);
   const cx = VIDEO_W*0.15, cy = -VIDEO_H*0.10;                   // same origin as body's gradient
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, VIDEO_H*0.55);
-  g.addColorStop(0, 'rgba(28,20,36,1)');                         // --glow
-  g.addColorStop(1, 'rgba(28,20,36,0)');
+  g.addColorStop(0, 'rgba(0,74,72,1)');                         // --glow
+  g.addColorStop(1, 'rgba(0,74,72,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0,0,VIDEO_W,VIDEO_H);
 }
@@ -3372,12 +3372,12 @@ function drawVideoWatermark(ctx, box){
     ctx.font = urlFont;  const w2 = ctx.measureText(VIDEO_WATERMARK_URL).width;
     const pad = 26, bw = Math.max(w1,w2) + pad*2, bh = blockH + pad*1.6;
     const bx = cx - bw/2, by = top - pad*0.8;
-    ctx.fillStyle = 'rgba(12,10,16,.58)';
+    ctx.fillStyle = 'rgba(0,43,42,.58)';
     if(typeof ctx.roundRect === 'function'){ ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,18); ctx.fill(); }
     else ctx.fillRect(bx,by,bw,bh);
   }
   ctx.globalAlpha = 0.58;      // discreet, but not invisible after re-encoding
-  ctx.fillStyle = '#00ffff';   // --accent
+  ctx.fillStyle = '#00ff00';   // --accent
   ctx.font = nameFont;
   ctx.fillText('dessons', cx, top);
   ctx.font = urlFont;
@@ -3422,7 +3422,7 @@ function renderVideoProgress(elapsedMs){
   const done = Math.min(total, Math.floor(elapsedMs/1000));
   btn.querySelector('span').textContent = t('videoExportRecording').replace('{x}', done + 's / ' + total + 's');
   const pct = (clamp(elapsedMs/videoTotalMs, 0, 1)*100).toFixed(1);
-  btn.style.backgroundImage = 'linear-gradient(to right, rgba(0,255,255,.22) ' + pct + '%, rgba(0,255,255,0) ' + pct + '%)';
+  btn.style.backgroundImage = 'linear-gradient(to right, rgba(0,255,0,.22) ' + pct + '%, rgba(0,255,0,0) ' + pct + '%)';
 }
 
 // Deliberately synchronous up to startPlayback(), same rule as
@@ -3704,7 +3704,7 @@ function drawToneCurveGraph(){
 
   const bp = parseInt($('blackPt').value), wp = Math.max(bp+1, parseInt($('whitePt').value)), gamma = parseFloat($('gamma').value);
   const lut = buildToneLUT(bp, wp, gamma);
-  tcCtx.strokeStyle = '#00ffff';   // matches --accent (canvas can't read CSS vars)
+  tcCtx.strokeStyle = '#00ff00';   // matches --accent (canvas can't read CSS vars)
   tcCtx.lineWidth = 1.5;
   tcCtx.beginPath();
   for(let x=0;x<256;x++){
@@ -3716,7 +3716,7 @@ function drawToneCurveGraph(){
   const midX = (bp+wp)/2;
   const midY = H - (lut[clamp(Math.round(midX),0,255)]/255)*H;
   const drawHandle = (x,y)=>{
-    tcCtx.fillStyle = '#0e0f12'; tcCtx.strokeStyle = '#00ffff'; tcCtx.lineWidth = 1.5;
+    tcCtx.fillStyle = '#002b2a'; tcCtx.strokeStyle = '#00ff00'; tcCtx.lineWidth = 1.5;
     tcCtx.beginPath(); tcCtx.arc(x,y,4,0,Math.PI*2); tcCtx.fill(); tcCtx.stroke();
   };
   drawHandle(bp, H);
