@@ -473,6 +473,9 @@
   .iconGroup button svg{width:15px; height:15px; display:block;}
 
   .curveEditor{margin-left:78px;}
+  .pathRow{margin-left:78px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  .pathRow .pathHint{font-size:11px; color:var(--text-dim);}
+  canvas#preview.pathing{cursor:crosshair;}
   .curveEditor svg{display:block; touch-action:none;}
   .curveEditor rect{fill:var(--panel-2); stroke:var(--line);}
   .curveEditor polyline{fill:none; stroke:var(--cyan); stroke-width:1.6;}
@@ -682,7 +685,12 @@
         <div class="transportIcons">
           <input type="hidden" id="playDir" value="lr">
           <input type="hidden" id="curve" value="linear">
+          <input type="hidden" id="noteStyle" value="dots">
           <div class="iconRow"><span class="iconLbl" data-i18n="lblDirShort">Sens</span><div class="iconGroup" id="dirIcons"></div></div>
+          <div class="pathRow" id="pathRow" hidden>
+            <button type="button" class="miniBtn" id="pathBtn" data-i18n="btnDrawPath">✎ Tracer le trajet</button>
+            <span class="pathHint" id="pathHint" hidden data-i18n="pathHint">Trace la courbe sur l'image, du début à la fin</span>
+          </div>
           <div class="iconRow"><span class="iconLbl" data-i18n="lblCurveShort">Courbe</span><div class="iconGroup" id="curveIcons"></div></div>
           <div class="curveEditor" id="curveEditor" hidden>
             <svg id="curveGraph" viewBox="0 0 140 70" width="140" height="70" preserveAspectRatio="none">
@@ -693,6 +701,7 @@
               <circle class="cp" data-i="3" r="5"></circle>
             </svg>
           </div>
+          <div class="iconRow"><span class="iconLbl" data-i18n="lblNotesShort">Notes</span><div class="iconGroup" id="noteIcons"></div></div>
         </div>
         <div class="metaCol">
           <div class="cropRow" id="cropRow">
@@ -883,6 +892,15 @@ const I18N = {
     dirBRTL: "Bas-droite → haut-gauche",
     dirTRBL: "Haut-droite → bas-gauche",
     dirBLTR: "Bas-gauche → haut-droite",
+    dirPATH: "Trajet dessiné : le temps suit ta courbe, la hauteur dépend de la distance à la courbe",
+    btnDrawPath: "✎ Tracer le trajet",
+    btnDrawPathCancel: "✕ Annuler le tracé",
+    pathHint: "Trace la courbe sur l'image, du début à la fin",
+    lblNotesShort: "Notes",
+    noteDots: "Points",
+    noteLinks: "Liens : chaque note se relie à la plus proche du pas précédent",
+    noteSpring: "Ressort : les notes rebondissent quand elles jouent",
+    noteWater: "Eau : notes qui flottent, liens qui ondulent, ronds dans l'eau",
     lblCurveShort: "Courbe",
     curveLinear: "Linéaire (régulier)",
     curveAccel: "Accéléré",
@@ -1016,6 +1034,15 @@ const I18N = {
     dirBRTL: "Bottom-right → top-left",
     dirTRBL: "Top-right → bottom-left",
     dirBLTR: "Bottom-left → top-right",
+    dirPATH: "Drawn path: time follows your curve, pitch is the distance from it",
+    btnDrawPath: "✎ Draw path",
+    btnDrawPathCancel: "✕ Cancel drawing",
+    pathHint: "Draw the curve on the image, from start to end",
+    lblNotesShort: "Notes",
+    noteDots: "Dots",
+    noteLinks: "Links: each note joins the nearest one of the previous step",
+    noteSpring: "Spring: notes bounce as they play",
+    noteWater: "Water: floating notes, rippling links, rings on the water",
     lblCurveShort: "Curve",
     curveLinear: "Linear (steady)",
     curveAccel: "Accelerating",
@@ -1854,6 +1881,101 @@ function readDir(){
   return DIR_DEFS[$('playDir').value] || DIR_DEFS.lr;
 }
 
+// Drawn path ('path'): the user traces a polyline on the image. τ = arc-length
+// position of the nearest point on the path, ρ = signed distance from it
+// (left of the travel direction = higher pitch, like 'lr' where above = higher),
+// scaled so the farthest pixel of the image still lands in [0,1). Worked out in
+// aspect-corrected space so a circle drawn on a wide image stays a circle.
+// Unlike the 8 affine directions, a line of constant τ is the path's normal at
+// that point, and inv() of a cell center can land off the pixels that produced
+// it where the path curls, hence cellCentroid (process()) for placing dots.
+let pathPoints = null;              // [[nx,ny],...] normalized on the analyzed image, null = not drawn yet
+let pathDrawing = false, pathDraft = null;
+let pathModelCache = null, pathLutCache = null;
+const PATH_N = 160;
+function pathModel(){
+  const ar = (imgCanvas && imgCanvas.width && imgCanvas.height) ? imgCanvas.width/imgCanvas.height : 1;
+  const raw = (pathPoints && pathPoints.length > 1) ? pathPoints : [[0.02,0.5],[0.98,0.5]];
+  const key = ar + '|' + JSON.stringify(raw);
+  if(pathModelCache && pathModelCache.key === key) return pathModelCache;
+  const P = raw.map(([x,y]) => [x*ar, y]);
+  const cum = [0];
+  for(let i=1;i<P.length;i++) cum.push(cum[i-1] + Math.hypot(P[i][0]-P[i-1][0], P[i][1]-P[i-1][1]));
+  const total = cum[cum.length-1] || 1;
+  // resample at equal arc length: even time per unit of path, whatever the drawing speed
+  const qx = new Float64Array(PATH_N), qy = new Float64Array(PATH_N);
+  for(let k=0, j=0; k<PATH_N; k++){
+    const target = total * k/(PATH_N-1);
+    while(j < P.length-2 && cum[j+1] < target) j++;
+    const seg = (cum[j+1]-cum[j]) || 1, u = clamp((target-cum[j])/seg, 0, 1);
+    qx[k] = P[j][0] + (P[j+1][0]-P[j][0])*u;
+    qy[k] = P[j][1] + (P[j+1][1]-P[j][1])*u;
+  }
+  const m = { key, ar, qx, qy, dmax: 1 };
+  let dmax = 1e-3;
+  for(let gy=0; gy<=40; gy++) for(let gx=0; gx<=40; gx++){
+    const d = Math.abs(pathProject(m, gx/40*ar, gy/40)[1]);
+    if(d > dmax) dmax = d;
+  }
+  m.dmax = dmax * 1.001;
+  pathModelCache = m;
+  return m;
+}
+// -> [τ, signed distance] for a point in aspect-corrected space
+function pathProject(m, x, y){
+  const {qx, qy} = m;
+  let best = Infinity, bt = 0, bs = 0;
+  for(let i=0;i<PATH_N-1;i++){
+    const ax = qx[i], ay = qy[i], dx = qx[i+1]-ax, dy = qy[i+1]-ay;
+    const l2 = dx*dx+dy*dy || 1e-12;
+    const u = clamp(((x-ax)*dx + (y-ay)*dy)/l2, 0, 1);
+    const ex = x-(ax+dx*u), ey = y-(ay+dy*u), d2 = ex*ex+ey*ey;
+    if(d2 < best){ best = d2; bt = (i+u)/(PATH_N-1); bs = (dx*(y-ay) - dy*(x-ax)) >= 0 ? 1 : -1; }
+  }
+  return [bt, bs*Math.sqrt(best)];
+}
+function pathPointAt(m, t){
+  const f = clamp(t, 0, 1)*(PATH_N-1), i = Math.min(PATH_N-2, Math.floor(f)), u = f-i;
+  const dx = m.qx[i+1]-m.qx[i], dy = m.qy[i+1]-m.qy[i], l = Math.hypot(dx,dy) || 1;
+  return [m.qx[i]+dx*u, m.qy[i]+dy*u, -dy/l, dx/l];   // point + unit normal (positive side)
+}
+// per-pixel (τ,ρ) for the analysis grid, cached until the path or grid size changes
+function pathLut(w, h){
+  const m = pathModel();
+  if(pathLutCache && pathLutCache.m === m && pathLutCache.w === w && pathLutCache.h === h) return pathLutCache;
+  const tau = new Float32Array(w*h), rho = new Float32Array(w*h);
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+    const [t, d] = pathProject(m, x/w*m.ar, y/h);
+    tau[y*w+x] = Math.min(t, 0.99999);
+    rho[y*w+x] = clamp(0.5 - d/(2*m.dmax), 0, 0.99999);
+  }
+  pathLutCache = { m, w, h, tau, rho };
+  return pathLutCache;
+}
+DIR_DEFS.path = {
+  isPath: true,
+  fwd: (nx, ny)=>{
+    const m = pathModel(), [t, d] = pathProject(m, nx*m.ar, ny);
+    return [Math.min(t, 0.99999), clamp(0.5 - d/(2*m.dmax), 0, 0.99999)];
+  },
+  inv: (t, r)=>{
+    const m = pathModel(), [x, y, nx, ny] = pathPointAt(m, t), off = (0.5 - r)*2*m.dmax;
+    return [(x + nx*off)/m.ar, y + ny*off];
+  }
+};
+
+// where to draw a note: the centroid of the pixels that produced it on a drawn
+// path (see above), the cell center mapped back through inv() otherwise
+let cellCentroid = null;
+function notePos(dir, Li, step, pIdx, steps, rows){
+  const c = cellCentroid;
+  if(dir.isPath && c && c.steps === steps && c.rows === rows && c.nLayers > Li){
+    const idx = (step*rows + pIdx)*c.nLayers + Li;
+    if(c.n[idx] > 0) return [c.sx[idx]/c.n[idx], c.sy[idx]/c.n[idx]];
+  }
+  return dir.inv((step+0.5)/steps, (pIdx+0.5)/rows);
+}
+
 // full loop duration in ms, read live from tempo / bars
 function loopDurationMs(){
   return parseInt($('bars').value) * 4 * (60000 / parseInt($('tempo').value)); // 4/4
@@ -1904,7 +2026,14 @@ const DIRS = [
   ['tlbr', 'M4 4L14 14M8 14H14V8'],   // top-left → bottom-right
   ['brtl', 'M14 14L4 4M10 4H4V10'],   // bottom-right → top-left
   ['trbl', 'M14 4L4 14M10 14H4V8'],   // top-right → bottom-left
-  ['bltr', 'M4 14L14 4M8 4H14V10']    // bottom-left → top-right
+  ['bltr', 'M4 14L14 4M8 4H14V10'],   // bottom-left → top-right
+  ['path', 'M3 14C3 8 8 4 12 6S13 12 9 11M13 3l2 2-6 6H7V9z']   // drawn path (curve + pencil)
+];
+const NOTE_STYLES = [
+  ['dots',   '<circle cx="5" cy="11" r="2"/><circle cx="9" cy="6" r="2"/><circle cx="13" cy="10" r="2"/>'],
+  ['links',  '<path d="M5 11L9 6L13 10" fill="none"/><circle cx="5" cy="11" r="2"/><circle cx="9" cy="6" r="2"/><circle cx="13" cy="10" r="2"/>'],
+  ['spring', '<path d="M3 13l2-3 2 3 2-3 2 3 2-3 2 3" fill="none"/><circle cx="9" cy="5" r="2.2"/>'],
+  ['water',  '<path d="M2 11c2-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0" fill="none"/><ellipse cx="9" cy="5" rx="5" ry="1.8" fill="none"/><circle cx="9" cy="5" r="1.4"/>']
 ];
 const CURVES = ['linear','accel','decel','pulse','swing','custom'];
 
@@ -1931,7 +2060,13 @@ function renderTransportIcons(){
     b.title = t('dir' + d.toUpperCase());
     b.setAttribute('aria-label', t('dir' + d.toUpperCase()));
     b.classList.toggle('on', $('playDir').value === d);
-    b.addEventListener('click', ()=>{ $('playDir').value = d; renderTransportIcons(); process(); });
+    b.addEventListener('click', ()=>{
+      $('playDir').value = d;
+      renderTransportIcons();
+      if(d === 'path' && !pathPoints && img) setPathDrawing(true);   // first time: straight into drawing
+      else if(d !== 'path' && pathDrawing) setPathDrawing(false);
+      process();
+    });
     b.addEventListener('mouseenter', ()=>{ hoverDir = d; });
     b.addEventListener('mouseleave', ()=>{ hoverDir = null; });
     dg.appendChild(b);
@@ -1960,6 +2095,18 @@ function renderTransportIcons(){
     b.addEventListener('mouseleave', ()=>{ hoverCurve = null; });
     cg.appendChild(b);
   });
+  const ng = $('noteIcons'); ng.innerHTML = '';
+  NOTE_STYLES.forEach(([st, svg])=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<svg viewBox="0 0 18 18" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg>';
+    const key = 'note' + st[0].toUpperCase() + st.slice(1);
+    b.title = t(key); b.setAttribute('aria-label', t(key));
+    b.classList.toggle('on', $('noteStyle').value === st);
+    b.addEventListener('click', ()=>{ $('noteStyle').value = st; renderTransportIcons(); redrawPreview(); });
+    ng.appendChild(b);
+  });
+  $('pathRow').hidden = $('playDir').value !== 'path';
 }
 
 function toggleCurveEditor(){
@@ -2218,6 +2365,8 @@ function process(){
   const rows = pitches.length;              // number of pitch lanes
   const dir = readDir();
   lastNotes = layers.map(()=>[]);
+  const plut = dir.isPath ? pathLut(w, h) : null;
+  const cen = dir.isPath ? { steps, rows, nLayers, sx: new Float32Array(steps*rows*nLayers), sy: new Float32Array(steps*rows*nLayers), n: new Float32Array(steps*rows*nLayers) } : null;
 
   // Single pass over every pixel: sort it into a (time step, pitch row) cell
   // via the current direction's forward mapping, and keep the strongest edge
@@ -2236,11 +2385,12 @@ function process(){
       const L = layerOf(px);
       if(L<0) continue;   // 'pick' mode: pixel doesn't match any picked color
       sumR[L]+=pr[px]; sumG[L]+=pg[px]; sumB[L]+=pb[px]; swCount[L]++;
-      const [tau, rho] = dir.fwd(x/w, ny);
+      const [tau, rho] = plut ? [plut.tau[px], plut.rho[px]] : dir.fwd(x/w, ny);
       const ti = clamp(Math.floor(tau*steps), 0, steps-1);
       const pi = clamp(Math.floor(rho*rows), 0, rows-1);
       const idx = (ti*rows+pi)*nLayers + L;
       if(edge[px] > bestEdge[idx]) bestEdge[idx] = edge[px];
+      if(cen){ cen.sx[idx] += (x+0.5)/w; cen.sy[idx] += (y+0.5)/h; cen.n[idx]++; }
     }
   }
   for(let ti=0; ti<steps; ti++){
@@ -2255,6 +2405,7 @@ function process(){
     }
   }
 
+  cellCentroid = cen;
   layers.forEach((L,i)=>{
     L.detectedColor = swCount[i] > 0 ? rgbToHex(sumR[i]/swCount[i], sumG[i]/swCount[i], sumB[i]/swCount[i]) : null;
   });
@@ -2324,7 +2475,10 @@ function paintAnalysisFrame(ctx, ox, oy, w, h, opt){
   const pitches = scaleNotesForRange();
   const rows = pitches.length;
   const dir = readDir();
-  lastNotes.forEach((arr,Li)=>{
+  const noteStyle = $('noteStyle').value;
+  if(dir.isPath) strokePathRail(ctx, ox, oy, w, h, markScale, 'rgba(0,255,0,.35)');
+  if(noteStyle !== 'dots') paintNoteStyle(ctx, ox, oy, w, h, { markScale, alphaFor, showHover, steps, rows, pitches, dir, style: noteStyle });
+  else lastNotes.forEach((arr,Li)=>{
     if(!layers[Li]) return;
     ctx.fillStyle = layers[Li].color;
     ctx.globalAlpha = alphaFor(Li);   // dims muted/non-soloed layers, or all-but-isolated on hover/pin
@@ -2333,7 +2487,7 @@ function paintAnalysisFrame(ctx, ox, oy, w, h, opt){
       if(pIdx < 0) return;
       // n.step is already play-order; inv() maps (time,pitch) fractions straight
       // back to image space, reversal and diagonals included — no extra bookkeeping.
-      const [nx, ny] = dir.inv((n.step+0.5)/steps, (pIdx+0.5)/rows);
+      const [nx, ny] = notePos(dir, Li, n.step, pIdx, steps, rows);
       const cx = ox + nx*w, cy = oy + ny*h;
       const isHover = showHover && hoverNote && hoverNote.layerIdx===Li && hoverNote.step===n.step && hoverNote.midi===n.midi;
       const rad = (2 + (n.vel/127)*4) * (isHover ? 1.7 : 1) * markScale;
@@ -2364,7 +2518,8 @@ function paintAnalysisFrame(ctx, ox, oy, w, h, opt){
   ctx.lineWidth = 1*markScale;
   for(let k=0; k<=steps; k++){
     const ft = stepTimeFrac(k, steps);
-    const [x0n,y0n] = dir.inv(ft, 0), [x1n,y1n] = dir.inv(ft, 1);
+    // drawn path: ticks centered on the rail (its ρ=0 edge can be far off the image)
+    const [x0n,y0n] = dir.inv(ft, dir.isPath ? 0.47 : 0), [x1n,y1n] = dir.inv(ft, dir.isPath ? 0.53 : 1);
     let dx = (x1n-x0n)*w, dy = (y1n-y0n)*h;
     const len = Math.hypot(dx,dy) || 1;
     dx = dx/len*7*markScale; dy = dy/len*7*markScale;
@@ -2377,9 +2532,122 @@ function paintAnalysisFrame(ctx, ox, oy, w, h, opt){
   ctx.restore();
 }
 
+function strokePathRail(ctx, ox, oy, w, h, markScale, color){
+  const m = pathModel();
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5*markScale;
+  ctx.setLineDash([6*markScale, 5*markScale]);
+  ctx.beginPath();
+  for(let k=0;k<PATH_N;k++){
+    const x = ox + m.qx[k]/m.ar*w, y = oy + m.qy[k]*h;
+    if(k) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Note styles other than plain dots: notes pop when the playhead plays them,
+// links join each note to the nearest note of the previous step (same layer,
+// chosen on rest positions so a bouncing note never makes a link jump), and
+// 'spring' / 'water' animate from each note's age in the loop. Not playing:
+// everything rests, all links shown. Sizes are fractions of the frame width so
+// the preview and the 1080 px export look alike.
+function paintNoteStyle(ctx, ox, oy, w, h, o){
+  const { markScale, alphaFor, showHover, steps, rows, pitches, dir, style } = o;
+  const loopS = loopDurationMs()/1000;
+  let nowT = 0, curStep = Infinity;
+  if(playing){
+    const pos = currentLoopPos(steps), k = Math.floor(pos);
+    const a = stepTimeFrac(k, steps), b = stepTimeFrac(k+1, steps);
+    nowT = a + (pos-k)*(b-a); curStep = k;
+  }
+  const U = w/1080;   // 1 unit = 1 px of a full-width 1080 px frame
+  lastNotes.forEach((arr, Li)=>{
+    if(!layers[Li]) return;
+    const col = layers[Li].color;
+    ctx.globalAlpha = alphaFor(Li);
+    const byStep = new Map();
+    arr.forEach(n=>{
+      const pIdx = pitches.indexOf(n.midi);
+      if(pIdx < 0) return;
+      const [nx, ny] = notePos(dir, Li, n.step, pIdx, steps, rows);
+      const rx = ox + nx*w, ry = oy + ny*h;
+      const age = !playing ? 99 : n.step <= curStep ? Math.max(0, (nowT - stepTimeFrac(n.step, steps))*loopS) : null;
+      const ph = (Math.abs((n.step*73856093) ^ (n.midi*19349663) ^ (Li*83492791)) % 1000)/1000*Math.PI*2;
+      let dx = 0, dy = 0;
+      if(age != null && playing){
+        if(style === 'spring'){ const a = 20*U*Math.exp(-age*1.3)*Math.sin(age*7+ph); dx = a*Math.cos(ph); dy = a*Math.sin(ph); }
+        if(style === 'water'){ dx = 3*U*Math.sin(age*1.1+ph); dy = 6*U*Math.sin(age*1.6+ph) + 10*U*Math.exp(-age*2)*Math.sin(age*6); }
+      }
+      if(!byStep.has(n.step)) byStep.set(n.step, []);
+      byStep.get(n.step).push({ n, rx, ry, x: rx+dx, y: ry+dy, age });
+    });
+    const keys = [...byStep.keys()].sort((a,b)=>a-b);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for(let i=1;i<keys.length;i++){
+      const prev = byStep.get(keys[i-1]).filter(q => q.age != null);
+      if(!prev.length) continue;
+      byStep.get(keys[i]).forEach(q=>{
+        if(q.age == null) return;
+        let p = prev[0], bd = Infinity;
+        prev.forEach(c=>{ const d = Math.abs(c.ry-q.ry) + Math.abs(c.rx-q.rx); if(d < bd){ bd = d; p = c; } });
+        const pts = [];
+        if(style === 'water'){
+          const lg = Math.hypot(q.x-p.x, q.y-p.y) || 1, nx = -(q.y-p.y)/lg, ny = (q.x-p.x)/lg;
+          const a = Math.min(10*U, lg*0.08) * (playing ? 0.35 + 0.65*Math.exp(-q.age*1.2) : 0.35);
+          for(let k=0;k<=24;k++){
+            const u = k/24, wv = a*Math.sin(Math.PI*u)*Math.sin(2*Math.PI*(2*u - (playing ? q.age*0.9 : 0)));
+            pts.push([p.x + (q.x-p.x)*u + nx*wv, p.y + (q.y-p.y)*u + ny*wv]);
+          }
+        } else pts.push([p.x,p.y],[q.x,q.y]);
+        ctx.beginPath();
+        pts.forEach(([x,y],k)=> k ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+        ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 4.5*U*markScale; ctx.stroke();
+        ctx.strokeStyle = col; ctx.lineWidth = 2.2*U*markScale; ctx.stroke();
+      });
+    }
+    if(style === 'water' && playing){   // rings on the water: two ellipses widening and fading after each note
+      ctx.strokeStyle = col; ctx.lineWidth = 1.6*U*markScale;
+      byStep.forEach(list => list.forEach(q=>{
+        if(q.age == null) return;
+        [0, 0.25].forEach(dt=>{
+          const a = q.age - dt;
+          if(a < 0 || a >= 1.6) return;
+          const r = (14 + a*55)*U;
+          ctx.save(); ctx.globalAlpha = alphaFor(Li)*0.6*(1 - a/1.6);
+          ctx.beginPath(); ctx.ellipse(q.x, q.y, r, r*0.45, 0, 0, Math.PI*2); ctx.stroke();
+          ctx.restore();
+        });
+      }));
+    }
+    byStep.forEach(list => list.forEach(q=>{
+      const base = (2 + (q.n.vel/127)*4)*markScale;
+      const isHover = showHover && hoverNote && hoverNote.layerIdx===Li && hoverNote.step===q.n.step && hoverNote.midi===q.n.midi;
+      ctx.save();
+      if(q.age == null) ctx.globalAlpha = alphaFor(Li)*0.3;   // not played yet in this loop
+      const rad = base * (q.age != null && playing ? 1 + 1.3*Math.exp(-q.age*10) : 1) * (isHover ? 1.7 : 1);
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(q.x, q.y, rad, 0, Math.PI*2); ctx.fill();
+      if(q.age != null){ ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1*markScale; ctx.stroke(); }
+      if(isHover){ ctx.globalAlpha = 1; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2*markScale; ctx.beginPath(); ctx.arc(q.x, q.y, rad+3*markScale, 0, Math.PI*2); ctx.stroke(); }
+      ctx.restore();
+    }));
+  });
+  ctx.globalAlpha = 1;
+}
+
 function drawPreview(){
   pctx.clearRect(0,0,preview.width,preview.height);
   paintAnalysisFrame(pctx, 0, 0, preview.width, preview.height);
+  if(pathDrawing && pathDraft && pathDraft.length > 1){
+    pctx.save();
+    pctx.strokeStyle = '#00ff00'; pctx.lineWidth = 3; pctx.lineCap = 'round'; pctx.lineJoin = 'round';
+    pctx.beginPath();
+    pathDraft.forEach(([x,y],k)=> k ? pctx.lineTo(x*preview.width, y*preview.height) : pctx.moveTo(x*preview.width, y*preview.height));
+    pctx.stroke();
+    pctx.restore();
+  }
 }
 
 /* ---- MIDI file export (SMF type 1, hand-written) ---- */
@@ -2805,7 +3073,7 @@ function drawPianoRoll(){
 // image side: nearest dot within a small pixel radius on the 2x-resolution
 // canvas; piano-roll side: exact grid cell, same math drawPianoRoll() uses.
 preview.addEventListener('mousemove', e=>{
-  if(cropEditing || pickLayer >= 0 || !img || !lastNotes.length) return;
+  if(cropEditing || pathDrawing || pickLayer >= 0 || !img || !lastNotes.length) return;
   const steps = parseInt($('steps').value);
   const pitches = scaleNotesForRange();
   const rows = pitches.length;
@@ -2819,7 +3087,7 @@ preview.addEventListener('mousemove', e=>{
     arr.forEach(n=>{
       const pIdx = pitches.indexOf(n.midi);
       if(pIdx < 0) return;
-      const [nx,ny] = dir.inv((n.step+0.5)/steps, (pIdx+0.5)/rows);
+      const [nx,ny] = notePos(dir, Li, n.step, pIdx, steps, rows);
       const dx = nx*preview.width-mx, dy = ny*preview.height-my, d = dx*dx+dy*dy;
       if(d < bestD){ bestD = d; best = {layerIdx:Li, step:n.step, midi:n.midi}; }
     });
@@ -2879,6 +3147,34 @@ function drawCropEditor(){
   const hs = 5;
   [[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([hx,hy])=>{ pctx.fillRect(hx-hs,hy-hs,hs*2,hs*2); });
 }
+
+// drawn path editor: press, draw, release — the stroke becomes the playback path
+function setPathDrawing(on){
+  pathDrawing = on && !cropEditing && !!img;
+  pathDraft = null;
+  $('pathBtn').textContent = pathDrawing ? t('btnDrawPathCancel') : t('btnDrawPath');
+  $('pathBtn').classList.toggle('active', pathDrawing);
+  $('pathHint').hidden = !pathDrawing;
+  preview.classList.toggle('pathing', pathDrawing);
+  redrawPreview();
+}
+$('pathBtn').addEventListener('click', ()=> setPathDrawing(!pathDrawing));
+preview.addEventListener('pointerdown', e=>{
+  if(!pathDrawing) return;
+  pathDraft = [normPointFromEvent(e)];
+  preview.setPointerCapture(e.pointerId);
+});
+preview.addEventListener('pointermove', e=>{
+  if(!pathDrawing || !pathDraft) return;
+  const p = normPointFromEvent(e), q = pathDraft[pathDraft.length-1];
+  if(Math.hypot(p[0]-q[0], p[1]-q[1]) > 0.004){ pathDraft.push(p); drawPreview(); }
+});
+preview.addEventListener('pointerup', ()=>{
+  if(!pathDrawing || !pathDraft) return;
+  if(pathDraft.length > 2) pathPoints = pathDraft;
+  setPathDrawing(false);
+  process();
+});
 
 function normPointFromEvent(e){
   const rect = preview.getBoundingClientRect();
@@ -3786,7 +4082,7 @@ toneCurveGraph.addEventListener('pointerup', e=>{ tcDrag=null; try{ toneCurveGra
 
 /* ---- presets: save/load the full Image Analysis + Music + per-layer setup ---- */
 const PRESET_KEYS = ['blackPt','whitePt','gamma','sat','thresh','blur','invert','layers','sepMode',
-  'pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate','playDir','curve','imgOpacity'];
+  'pickTol','scale','root','octLow','octHigh','steps','bars','tempo','gate','playDir','curve','imgOpacity','noteStyle'];
 
 function getUserPresets(){
   try{ return JSON.parse(localStorage.getItem('dessons.presets') || '{}'); }catch(e){ return {}; }
@@ -3803,7 +4099,7 @@ function currentPresetValues(){
   });
   // per layer: instrument + individual sensitivity, applied back by index on load
   const layerOverrides = layers.map(L => ({ program:L.program, thresh:L.thresh, threshCustom:L.threshCustom, name:L.name, auto:L.auto }));
-  return { values, layerOverrides };
+  return { values, layerOverrides, path: pathPoints };
 }
 
 function applyPreset(data){
@@ -3817,7 +4113,7 @@ function applyPreset(data){
     $(id).value = data.values[id];
     $(id).dispatchEvent(new Event('input', {bubbles:true}));
   });
-  const skip = ['layers','sepMode','playDir','curve'];
+  const skip = ['layers','sepMode','playDir','curve','noteStyle'];
   PRESET_KEYS.filter(id => !skip.includes(id)).forEach(id=>{
     if(data.values[id] == null) return;
     const el = $(id);
@@ -3828,6 +4124,8 @@ function applyPreset(data){
   // 'input' on them has no listener to catch it, so set + re-render explicitly instead.
   if(data.values.playDir != null) $('playDir').value = data.values.playDir;
   if(data.values.curve != null) $('curve').value = data.values.curve;
+  if(data.values.noteStyle != null) $('noteStyle').value = data.values.noteStyle;
+  if(data.path !== undefined) pathPoints = data.path;
   renderTransportIcons();
   toggleCurveEditor();
   if(data.layerOverrides){
