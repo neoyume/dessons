@@ -439,6 +439,24 @@
   button#videoExportBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
   button#videoExportBtn.recording{border-color:var(--accent); color:var(--accent); cursor:progress;}
 
+  /* "add to song" — same secondary outline as #videoExportBtn; the link to
+     compose.html sits under it, and flashes once a scene has been added */
+  button#addToSongBtn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
+    background:transparent; color:var(--cyan);
+    border:1.5px solid var(--cyan); padding:7px; font-size:12.5px; font-weight:700; letter-spacing:.3px;
+    border-radius:7px; cursor:pointer; white-space:nowrap;
+    transition:background-color .15s, color .15s, border-color .15s;
+  }
+  button#addToSongBtn svg{width:14px; height:14px; flex:none; display:block;}
+  button#addToSongBtn:hover:not(:disabled){background-color:rgba(77,217,201,.12);}
+  button#addToSongBtn:disabled{background:transparent; border-color:var(--line); color:var(--text-dim); cursor:not-allowed;}
+  .actionCol.songAction{flex-direction:row; align-items:center; width:auto; gap:10px; flex-wrap:wrap;}
+  .songAction #addToSongBtn{width:190px;}
+  .songLink{font-size:11px; color:var(--text-dim); text-decoration:none;}
+  .songLink:hover{color:var(--accent);}
+  .songLink.flash{color:var(--accent);}
+
   button#previewBtn{
     width:100%; background:transparent; color:var(--cyan);
     border:1.5px solid var(--cyan); padding:11.5px; font-size:13.5px; font-weight:600;
@@ -554,6 +572,13 @@
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="1.5" width="8" height="15" rx="1.5"></rect><path d="M7.8 6.4l3.5 2.6-3.5 2.6z" fill="currentColor" stroke="none"></path></svg>
             <span data-i18n="btnVideoExport">Export vidéo</span>
           </button>
+        </div>
+        <div class="actionCol flowAction songAction">
+          <button id="addToSongBtn" disabled>
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="5" width="4" height="8" rx="1"></rect><rect x="7" y="5" width="4" height="8" rx="1"></rect><path d="M14.5 6.5v5M12 9h5"></path></svg>
+            <span data-i18n="btnAddToSong">Ajouter à la chanson</span>
+          </button>
+          <a class="songLink" id="songLink" href="compose.html" data-i18n="songLink">Ouvrir la chanson →</a>
         </div>
         <div class="actionCol flowAction flowActionPlay">
           <button id="playBtn" disabled>
@@ -818,6 +843,7 @@
   </footer>
 </div>
 
+<script src="dessons-core.js"></script>
 <script>
 /* ============================================================
    i18n — the whole UI is bilingual (FR / EN).
@@ -935,6 +961,12 @@ const I18N = {
     midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.",
     footerFree: "Dessons est en source ouverte (source-available) et gratuit pour un usage non commercial (licence PolyForm). Mais le fichier MIDI que tu exportes ou joues t'appartient à 100 % ; utilise-le comme bon te semble, commercialement ou non.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
+    btnAddToSong: "Ajouter à la chanson",
+    songLink: "Ouvrir la chanson →",
+    songScenePrompt: "Nom de cette scène (intro, couplet, refrain…) :",
+    sceneDefaultName: "Scène",
+    songAdded: "« {x} » ajoutée · ouvrir →",
+    songStorageErr: "Impossible d'enregistrer la scène : le stockage du navigateur (IndexedDB) est indisponible ici. Essaie depuis la version en ligne, ou un autre navigateur.",
     btnPreview: "▶ Écouter l'aperçu",
     previewHint: "Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.",
     synthUnavail: "Web Audio indisponible dans ce navigateur",
@@ -1077,6 +1109,12 @@ const I18N = {
     midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>.",
     footerFree: "Neoyume's Dessons is source-available and free for non-commercial usage (PolyForm license). However, the MIDI file you export or play is 100% yours; use it however you want, commercially or not.",
     footerKofi: "☕ Support me on Ko-fi",
+    btnAddToSong: "Add to song",
+    songLink: "Open the song →",
+    songScenePrompt: "Name this scene (intro, verse, chorus…):",
+    sceneDefaultName: "Scene",
+    songAdded: "“{x}” added · open →",
+    songStorageErr: "Couldn't save the scene: browser storage (IndexedDB) isn't available here. Try the online version, or another browser.",
     btnPreview: "▶ Preview sound",
     previewHint: "Preview with the browser's built-in synth — rough sounds, just to judge the loop without a DAW.",
     synthUnavail: "Web Audio unavailable in this browser",
@@ -1984,21 +2022,8 @@ function loopDurationMs(){
 // Playback curve: time-warp the playhead across the loop.
 // Returns, for grid step k of n, the fraction of the loop (0..1) at which it sounds.
 // Linear -> k/n. The others bend that so notes rush / drag / swing.
-function curveFrac(mode, k, n){
-  if(k <= 0) return 0;
-  if(k >= n) return 1;
-  const p = k / n;
-  switch(mode){
-    case 'accel': return 1 - (1 - p) * (1 - p);                 // slow start, fast end
-    case 'decel': return p * p;                                 // fast start, slow end
-    case 'pulse': return p < 0.5                                // dense at both edges of the loop
-      ? 0.5 * (1 - (1 - 2*p) * (1 - 2*p))
-      : 0.5 + 0.5 * (2*p - 1) * (2*p - 1);
-    case 'swing': return Math.min(1, p + ((k % 2) ? 0.28 / n : 0)); // delay every other step
-    case 'custom': return customCurveY(p);                       // user-drawn, see curveEditor
-    default:      return p;                                     // linear
-  }
-}
+// The math lives in dessons-core.js (curveFracAt), shared with compose.html.
+function curveFrac(mode, k, n){ return curveFracAt(mode, k, n, customPoints); }
 function stepTimeFrac(k, n){ return curveFrac($('curve').value, k, n); }
 
 // custom curve: 3 draggable handles at x = .25/.5/.75 (endpoints fixed at 0/1),
@@ -2006,16 +2031,7 @@ function stepTimeFrac(k, n){ return curveFrac($('curve').value, k, n); }
 // monotonic — piecewise-linear interpolation between them.
 let customPoints = [0, 0.25, 0.5, 0.75, 1];
 let customSeeded = false;
-function customCurveY(p){
-  const xs = [0, 0.25, 0.5, 0.75, 1];
-  for(let i=0;i<4;i++){
-    if(p <= xs[i+1] || i===3){
-      const t = (p - xs[i]) / (xs[i+1] - xs[i]);
-      return customPoints[i] + (customPoints[i+1] - customPoints[i]) * t;
-    }
-  }
-  return p;
-}
+function customCurveY(p){ return customCurveAt(p, customPoints); }
 
 /* ---- icon controls (direction + curve) next to the preview button ---- */
 const DIRS = [
@@ -2650,24 +2666,7 @@ function drawPreview(){
   }
 }
 
-/* ---- MIDI file export (SMF type 1, hand-written) ---- */
-function writeVarLen(value){
-  let buffer = value & 0x7F;
-  const bytes=[];
-  while((value >>=7) > 0){
-    buffer <<= 8;
-    buffer |= ((value & 0x7F) | 0x80);
-  }
-  while(true){
-    bytes.push(buffer & 0xFF);
-    if(buffer & 0x80) buffer >>=8; else break;
-  }
-  return bytes;
-}
-function u32(n){return [(n>>24)&255,(n>>16)&255,(n>>8)&255,n&255];}
-function u16(n){return [(n>>8)&255,n&255];}
-function str(s){return Array.from(s).map(c=>c.charCodeAt(0));}
-
+/* ---- MIDI file export (SMF type 1, hand-written — encoding helpers in dessons-core.js) ---- */
 function buildMidi(){
   const PPQ = 480;
   const bars = parseInt($('bars').value);
@@ -2676,15 +2675,7 @@ function buildMidi(){
   const gatePct = parseInt($('gate').value)/100;
   const totalTicks = bars*4*PPQ; // 4/4
 
-  const tracks = [];
-
-  // tempo / meta track
-  {
-    let ev = [];
-    ev = ev.concat(writeVarLen(0), [0xFF,0x51,0x03, ...u32(Math.round(60000000/tempo)).slice(1)]);
-    ev = ev.concat(writeVarLen(0), [0xFF,0x2F,0x00]);
-    tracks.push(ev);
-  }
+  const tracks = [midiTempoTrack(tempo)];
 
   layers.forEach((L,Li)=>{
     let events = []; // {tick, bytes}
@@ -2700,37 +2691,52 @@ function buildMidi(){
       events.push({tick:onTick, bytes:[0x90|chan, n.midi & 0x7F, n.vel & 0x7F]});
       events.push({tick:offTick, bytes:[0x80|chan, n.midi & 0x7F, 0]});
     });
-    events.sort((a,b)=>a.tick-b.tick);
-
-    let trackBytes = [];
-    // track name
-    const nameBytes = str(L.name.slice(0,30));
-    trackBytes = trackBytes.concat(writeVarLen(0), [0xFF,0x03, nameBytes.length, ...nameBytes]);
-    let last=0;
-    events.forEach(e=>{
-      const delta = e.tick-last; last = e.tick;
-      trackBytes = trackBytes.concat(writeVarLen(Math.max(0,Math.round(delta))), e.bytes);
-    });
-    trackBytes = trackBytes.concat(writeVarLen(0), [0xFF,0x2F,0x00]);
-    tracks.push(trackBytes);
+    tracks.push(midiTrack(L.name, events));
   });
 
-  let file = [];
-  file = file.concat(str('MThd'), u32(6), u16(1), u16(tracks.length), u16(PPQ));
-  tracks.forEach(tr=>{
-    file = file.concat(str('MTrk'), u32(tr.length), tr);
-  });
-  return new Uint8Array(file);
+  return midiFile(tracks, PPQ);
 }
 
 $('exportBtn').addEventListener('click', ()=>{
-  const bytes = buildMidi();
-  const blob = new Blob([bytes], {type:'audio/midi'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download='image-to-midi.mid';
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(new Blob([buildMidi()], {type:'audio/midi'}), 'image-to-midi.mid');
+});
+
+/* ---- "Add to song": freeze the current loop as a scene for compose.html ----
+   Stores the notes exactly as buildMidi() would write them (lastNotes + the
+   timing settings that place them), not the image: the arranger never
+   re-analyzes, it only places loops in time. The preset is kept alongside
+   so a scene can be reopened in the workshop later. */
+function currentScene(name){
+  const instr = prog => GM_INSTR.find(g => g.prog === prog);
+  return {
+    id: newSceneId(), name, created: Date.now(),
+    thumb: adjCanvas.width ? adjCanvas.toDataURL('image/jpeg', 0.8) : '',
+    bars: parseInt($('bars').value), steps: parseInt($('steps').value),
+    tempo: parseInt($('tempo').value), gate: parseInt($('gate').value),
+    curve: $('curve').value, customPoints: customPoints.slice(),
+    scale: $('scale').value, root: parseInt($('root').value),
+    layers: layers.map(L => {
+      const g = instr(L.program);
+      return { name: L.name, program: L.program, color: L.color, instr: g ? {fr:g.fr, en:g.en} : null };
+    }),
+    notes: lastNotes.map(arr => arr.map(n => ({ step:n.step, midi:n.midi, vel:n.vel }))),
+    preset: currentPresetValues()
+  };
+}
+$('addToSongBtn').addEventListener('click', ()=>{
+  if(!img) return;
+  loadScenes().then(list=>{
+    const name = (prompt(t('songScenePrompt'), t('sceneDefaultName') + ' ' + (list.length + 1)) || '').trim();
+    if(!name) return;
+    return saveScene(currentScene(name)).then(()=>{
+      notifyScenesChanged();
+      const link = $('songLink');
+      link.textContent = t('songAdded').replace('{x}', name);
+      link.classList.add('flash');
+      clearTimeout(link._t);
+      link._t = setTimeout(()=>{ link.textContent = t('songLink'); link.classList.remove('flash'); }, 3500);
+    });
+  }).catch(()=> alert(t('songStorageErr')));
 });
 
 /* ============================================================
@@ -2781,6 +2787,7 @@ function updatePlayBtnState(){
   // a video export owns the synth scheduler for its whole run — every other
   // transport button stays out of the way until it's done (see setVideoExportBusy)
   previewBtn.disabled = videoExporting || !img || !audioSupported();
+  $('addToSongBtn').disabled = !img;
   updateSynthState();
   updateVideoExportBtn();
   if(!midiSupported()){
@@ -3394,185 +3401,42 @@ function autoStartPreviewOnLoad(skipIfWasMidi){
   startPreviewPlayback();
 }
 
-/* ---- built-in preview synth (Web Audio) ------------------------------- */
-function audioSupported(){
-  return typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
-}
-
-// iPhone/iPad detection (iPadOS 13+ reports as "Mac" but has touch points).
-// Used only to decide the output routing below — nothing else depends on it.
-function isIOS(){
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-let iosAudioEl = null; // kept alive on purpose, see ensureAudio()
+/* ---- built-in preview synth (Web Audio) -------------------------------
+   Graph, timbres and voice envelopes live in dessons-core.js (shared with
+   compose.html); this page only owns the context and its voice tracking. */
+let iosAudioEl = null; // kept alive on purpose, see createSynthBus()
 
 function ensureAudio(){
   if(ac) return true;
   const AC = window.AudioContext || window.webkitAudioContext;
   if(!AC) return false;
   ac = new AC();
-  // iOS Safari unlock trick: start a silent buffer synchronously, in the same
-  // gesture that created the context, before anything else touches the audio
-  // timeline. Harmless everywhere else.
-  try{
-    const buf = ac.createBuffer(1, 1, 22050);
-    const src = ac.createBufferSource();
-    src.buffer = buf; src.connect(ac.destination); src.start(0);
-  }catch(e){}
-  masterGain = ac.createGain();
-  masterGain.gain.value = 0.9;
-  const comp = ac.createDynamicsCompressor();
-  comp.threshold.value = -12; comp.knee.value = 24; comp.ratio.value = 4;
-  comp.attack.value = 0.004; comp.release.value = 0.2;
-  const dry = ac.createGain(); dry.gain.value = 0.85;
-  const wet = ac.createGain(); wet.gain.value = 0.16;
-  const conv = ac.createConvolver();
-  conv.buffer = makeImpulse(1.8, 2.5);
-  masterGain.connect(dry); dry.connect(comp);
-  masterGain.connect(conv); conv.connect(wet); wet.connect(comp);
-  synthOut = comp;   // ensureVideoAudioTap() branches off here without touching the speaker path below
-
-  if(isIOS() && typeof ac.createMediaStreamDestination === 'function'){
-    // iOS Safari mutes plain Web Audio output (ac.destination) whenever the
-    // physical ring/silent switch is set to silent — it treats it as an
-    // "ambient" sound. Routing the signal through a real <audio> element
-    // instead makes it use the "playback" audio session category, which iOS
-    // does NOT silence. This is the standard workaround for that switch.
-    try{
-      const dest = ac.createMediaStreamDestination();
-      comp.connect(dest);
-      const el = document.createElement('audio');
-      el.srcObject = dest.stream;
-      el.autoplay = true;
-      el.setAttribute('playsinline', '');
-      el.style.display = 'none';
-      document.body.appendChild(el);
-      el.play().catch(()=>{});
-      iosAudioEl = el; // keep a reference so nothing garbage-collects it mid-loop
-    }catch(e){
-      comp.connect(ac.destination); // routing failed for some reason: fall back
-    }
-  } else {
-    comp.connect(ac.destination);
-  }
+  unlockAudio(ac);   // synchronous, same gesture — see dessons-core.js
+  const bus = createSynthBus(ac);
+  masterGain = bus.master;
+  synthOut = bus.out;   // ensureVideoAudioTap() branches off here without touching the speaker path
+  if(bus.iosEl) iosAudioEl = bus.iosEl;
   updateSynthState();
   return true;
-}
-
-function makeImpulse(seconds, decay){
-  const rate = ac.sampleRate, len = Math.max(1, Math.floor(rate * seconds));
-  const buf = ac.createBuffer(2, len, rate);
-  for(let ch = 0; ch < 2; ch++){
-    const d = buf.getChannelData(ch);
-    for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
-  }
-  return buf;
-}
-
-// rough General MIDI family -> synth voice shape
-function timbreFor(prog){
-  prog = prog | 0;
-  if(prog >= 8  && prog <= 15)  return {wave:'triangle', atk:0.003, dec:0.5,  sus:0.0,  rel:0.4,  cut:6500, q:0.5, gain:0.24};            // mallets / bells / music box
-  if(prog >= 16 && prog <= 23)  return {wave:'sawtooth', atk:0.02,  dec:0.06, sus:0.85, rel:0.14, cut:2200, q:0.4, gain:0.14};            // organ
-  if(prog >= 24 && prog <= 31)  return {wave:'triangle', atk:0.004, dec:0.35, sus:0.12, rel:0.25, cut:3400, q:0.6, gain:0.22};            // guitar
-  if(prog >= 32 && prog <= 39)  return {wave:'sine',     atk:0.006, dec:0.22, sus:0.45, rel:0.2,  cut:1100, q:0.7, gain:0.28, sub:true};  // bass
-  if(prog >= 40 && prog <= 55)  return {wave:'sawtooth', atk:0.09,  dec:0.2,  sus:0.7,  rel:0.35, cut:2600, q:0.3, gain:0.13};            // strings / ensemble
-  if(prog >= 72 && prog <= 79)  return {wave:'sine',     atk:0.04,  dec:0.1,  sus:0.7,  rel:0.2,  cut:5200, q:0.4, gain:0.20};            // flute / pipe
-  if(prog >= 80 && prog <= 87)  return {wave:'sawtooth', atk:0.006, dec:0.15, sus:0.6,  rel:0.2,  cut:3600, q:0.6, gain:0.15};            // synth lead
-  if(prog >= 88 && prog <= 95)  return {wave:'sawtooth', atk:0.13,  dec:0.3,  sus:0.8,  rel:0.5,  cut:1900, q:0.3, gain:0.12};            // synth pad
-  if(prog >= 96 && prog <= 111) return {wave:'triangle', atk:0.003, dec:0.45, sus:0.0,  rel:0.4,  cut:5800, q:0.5, gain:0.22};            // kalimba / atmospheres
-  if(prog === 114)              return {wave:'square',   atk:0.003, dec:0.4,  sus:0.0,  rel:0.35, cut:4200, q:0.6, gain:0.20};            // steel drums
-  return {wave:'triangle', atk:0.004, dec:0.3, sus:0.22, rel:0.25, cut:3400, q:0.6, gain:0.23};                                          // piano-ish default
 }
 
 function spawnVoice(midi, vel, whenSec, durSec, layerIdx, sustain){
   if(!ac || voices.size > 96) return;
   const L = layers[layerIdx];
-  const tb = timbreFor(L ? L.program : 0);
-  const freq = 440 * Math.pow(2, (midi - 69) / 12);
-  const amp = tb.gain * Math.max(0.06, vel / 127);
-  const t0 = Math.max(whenSec, ac.currentTime + 0.003);
-  const off = Math.max(t0 + durSec, t0 + tb.atk + 0.03);
-  // sustain "pedal" feel for the preview synth: besides ringing the full step
-  // (durSec, set by the caller), boost the held level and stretch the release
-  // tail — this is what actually makes it audible, since most timbres decay
-  // to near-silence during their hold (sus:0 on mallets/steel drums) and have
-  // a short release; a longer note-on time alone barely changes what you hear.
-  const rel = sustain ? tb.rel * 4 : tb.rel;
-  const sus = sustain ? Math.max(tb.sus, 0.55) : tb.sus;
-  const end = off + rel;
-  const decEnd = Math.min(t0 + tb.atk + tb.dec, off);
-  const susLvl = Math.max(0.0002, amp * sus);
-
-  const osc = ac.createOscillator();
-  osc.type = tb.wave;
-  osc.frequency.setValueAtTime(freq, t0);
-
-  const filt = ac.createBiquadFilter();
-  filt.type = 'lowpass';
-  filt.frequency.setValueAtTime(Math.min(tb.cut, ac.sampleRate / 2 - 800), t0);
-  filt.Q.value = tb.q;
-
-  const g = ac.createGain();
-  g.gain.setValueAtTime(0.0002, t0);
-  g.gain.exponentialRampToValueAtTime(Math.max(0.0003, amp), t0 + tb.atk);
-  g.gain.exponentialRampToValueAtTime(susLvl, decEnd);
-  if(decEnd < off) g.gain.setValueAtTime(susLvl, off);
-  g.gain.exponentialRampToValueAtTime(0.0002, end);
-
-  osc.connect(filt); filt.connect(g); g.connect(masterGain);
-
-  let sub = null;
-  if(tb.sub){
-    sub = ac.createOscillator();
-    sub.type = 'sine';
-    sub.frequency.setValueAtTime(freq / 2, t0);
-    const sg = ac.createGain();
-    sg.gain.setValueAtTime(0.0002, t0);
-    sg.gain.exponentialRampToValueAtTime(Math.max(0.0003, amp * 0.7), t0 + tb.atk);
-    sg.gain.exponentialRampToValueAtTime(0.0002, end);
-    sub.connect(sg); sg.connect(masterGain);
-    sub.start(t0); sub.stop(end + 0.05);
-  }
-
-  osc.start(t0);
-  osc.stop(end + 0.05);
-
-  const entry = { osc, g, sub, layerIdx };
+  const entry = playSynthVoice(ac, masterGain, L ? L.program : 0, midi, vel, whenSec, durSec, sustain);
+  entry.layerIdx = layerIdx;
   voices.add(entry);
-  osc.onended = () => voices.delete(entry);
-}
-
-function killVoice(v){
-  const now = ac.currentTime;
-  try{
-    v.g.gain.cancelScheduledValues(now);
-    v.g.gain.setValueAtTime(Math.max(0.0002, v.g.gain.value), now);
-    v.g.gain.exponentialRampToValueAtTime(0.0002, now + 0.05);
-    v.osc.stop(now + 0.06);
-    if(v.sub) v.sub.stop(now + 0.06);
-  }catch(e){}
+  entry.osc.onended = () => voices.delete(entry);
 }
 
 function stopLayerVoices(i){
   if(!ac) return;
-  voices.forEach(v=>{ if(v.layerIdx === i) killVoice(v); });
+  voices.forEach(v=>{ if(v.layerIdx === i) fadeOutVoice(ac, v); });
 }
 
 function stopAllVoices(){
   if(!ac) return;
-  const now = ac.currentTime;
-  voices.forEach(v=>{
-    try{
-      v.g.gain.cancelScheduledValues(now);
-      v.g.gain.setValueAtTime(Math.max(0.0002, v.g.gain.value), now);
-      v.g.gain.exponentialRampToValueAtTime(0.0002, now + 0.05);
-      v.osc.stop(now + 0.06);
-      if(v.sub) v.sub.stop(now + 0.06);
-    }catch(e){}
-  });
+  voices.forEach(v => fadeOutVoice(ac, v));
   voices.clear();
 }
 
