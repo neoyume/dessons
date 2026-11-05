@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dessons · Nodes</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAgKADAAQAAAABAAAAgAAAAABIjgR3AAAMaElEQVR4Ae1dfYgkRxV/3T0zO7u3e7e5O3fv1o05hMTgwRG4jTnEP1Yk+I8IHqjI/RNCEkRDiOAXQry9GFBBEFTwg4giKIgQUPzDKJL1k5x3MfHChfPCEUyO/bjsfeze7MzsTPeUr2ZuN9NTVf1R093TU/fqmNvpV/Wq3vu9X3dXVdd0WZDX9LsDp2BX6+vgsbxaGM0uxwKo2V+Cj618J5pCtqUK2TYXo7UHrwCUWzEUclx0rbQ7r9bZeTUMGvk1LTZmrp3by5hBKMcOCykgAkSA25wGeSaAZ1BscutLNp3AszNjcGTpHijGCGmFHcR+QDOGRn6LFtEXBvdFNpB7fW7mIswtVSPraBbMhgDlymGwrBcBUYicHHgZXp5E0BqRVfJZsARwZP0XaNtjke2zcOhYrhzD8mci62gWzIYA3DgrZn/Dgiocu/aapl/5Uqs5/EyOfrvF+GeVohvVr0UxTv5bTWUIQ7/OherH8yU+VqEGqApkRwCVBSQfKALZEIBZGXJ6oHgm13hGmCXcB1iwYX7RhsUeHKrnihC/pXJPLcN8GM8XjlXVwTHTvB+1eZQvzuP8+EJic+Tx7k1hIbjpPIa9/Sd8xfi5zzD8xdavcW4fJ/gjppqzDGPecxFL57tY1TkOo97ByEbW7Slo2p/GjrOLH39i7Hsw4f3EL8zLEYOnMNjiP89qwuujs3kxM/d2cKw4ZiKSXPJUkvYn3QeQz3gxZHK5NZqk4UbXxbHimMmTHGN52VBp0gQIbZAK5AsBIkC+4pG5NUkTQH7ZsqCEnZne7kzmzg5Ngxwrjpk8yTGWlw2V+ocZocXbBWy46TwC495+obhr34fLn04Lcs9qQN2uCXISyBHgWG0U/gEOE0lQ8o4BY18TFCvOGo4OnkV5YkNEoY2OAMemm84laQ+1BX/EMR+e6bKPojoSKxCQYchsWC/8W4o9j0nvvIGi5m6xzhWAx1d+Nlv80R3N+nUDrP9dhiNOqrQxltSqiomkaLco6T5Ad930fQgQIAIMQZDSNFGDAC8ETURQTz/NaHXqDsA4MDZSy9R9gLMwBuXdhwWtyj4HZVyvLuQN//IdiUu5E20psC/Ai/segPHd4gla3zgPc7jARpLUbGrgGjbLegl1xKtE3TkF4+4vJfVtYidlSSInUVIIXIU7YS+ITxdbcAJa1klJMy0cNh7FWYVXJHntM1kmh84CTj4UkSTPWsFAvy7JIVHaCOyDt6RNMFgF+e9P5DG8VYn6FtApwB/mihVYwG8DGgkJtVH8Kky479VQDlLhoHwDLeX26qc3DpVh5s2nodS6Q7+SvjTPoQ/f16xBvFJ3KgrEJIwAmrYEqFnwKcyNvkQ6oKqurP/i92fwE+hsV3n519WNErybPYyZ++QFUpfiRJo2AbSMU7FGq7JISkzaeYykGlBIPjEVoCDNmsRrKINk6pI2ECrkHbxMU/YEyNQ9aiwMASJAGEKG5xMBDA9wmHtEgDCEDM8nAhge4DD3iABhCBmeH0QAPhxS5WtOBLXRFOeq8wLyvY9voin9zSX050s/2KhiwmOoHNoW4PdTX4SjGxOC3ddxydeu1mlcYOT/jT6fF6xbl33lz+LE8ezI53ChyF6fXDjAleGF1l2COG3Bz3CG78HVz+MSq+CXNVnfKiHl96RtjrL+pvV+WB45pczfztiCi3Co7n8WU3Muo+1/F+jLYBSq9pOw7Ig/ynlp902Av07Jf37AJ2xWYXq7zcC/vBGGD4FUNaUt9+ACtq26WgG+Z2ASmta1gdmXtP8158+B8ejOfH7iXvDaE1yiFRj7AtSVV7waTAWA2t1I57v0caNYDCUMNuHtkQWoO8jAfq56WJeDVz7G1mC2pnQEf2XD87h90eb4W9YSLJeeQdPSXmCJJmHCH87Bga2TiLa40LZTovd/2aP43jKd4z24jtDFq3hJ8n4WjH32zwK4WRbek6a2fox/kQA5TDa7CrNbP8zUMgZPYntRCZCYaerLZmJNSCviPYk8/1TMxqtUdicHv4XKnrpKoUtWOCgCJOsF1aaNABFAGzozFIkAZsRR2wsigDZ0ZigSAcyIo7YXRABt6MxQJAKYEUdtL4gA2tCZoUgEMCOO2l4QAbShM0ORCGBGHLW9IAJoQ2eGIhHAjDhqe0EE0IbODEUigBlx1PaCCKANnRmKRAAz4qjtBRFAGzozFIkAZsRR2wsigDZ0ZigSAcyIo7YXRABt6MxQJAKYEUdtL4gA2tCZoUgEMCOO2l4QAbShM0ORCGBGHLW9IAJoQ2eGIhHAjDhqe0EE0IbODEUigBlx1PaCCKANnRmKRAAz4qjtBRFAGzozFIkAZsRR2wsigDZ0ZigSAcyIo7YXRABt6MxQJAKYEUdtL4gA2tCZoUgEMCOO2l4QAbShM0ORCGBGHLW9IAJoQ2eG4qAIwF/frtzFInFovz3D21K/Tj7xBmNWyN+ePiD7ClAWtwa+Zf4oXIn1vnzVliUyNCZgy/kpvsE/+nvvZbVElbUu8J1AQnYz8VUW7MsbuHv3dOGbGLOktph1gHnT+Pr8qCn6ibtutdr7EchqxtgX4Ib9NFTwzei9WyMU2H6YhN8iN8UtY9ad78J047muOvnZtYqf8FfAMwyEBSMw4n2ySz+br6y9O8VVbD/saiBur9Jt4SH+Knn3BIre1S1O4DvfOvZGaD0Mrgllqs5xJPkXBM9YdRS3+PkRuAW/T5xCN2x05OMrJ4XKuIDB+/D/C9K8sv2bHjk3/KP4CT5zALfsqVafh13uXI9+NocW8E2m5/ETtk2JhyRxQ4xK4xb2ArbJiRWcNj3/SclLj3qz+P+HFIon0B/ue09a4UxWJn428+uC7HLjB7BzRq0ra9rJWOfbx4vG7+Sn/qWJQLydeiv6DTTQPvHsjlafPybv6PAYKq/MsuC+o5rOt+h3uuTb51QNuUol32iMGjPHZhAEiIEHFU0bASJA2gjnvH4iQM4DlLZ5RIC0Ec55/USAnAcobfMGQYBBtLmNY5JtpzGaSNK+bZ8D/wbNAwQq9pF5FXX9s1J9VBZTdS1meVVxPpPIfSiqCmjKr2vqaauFEUA+LrVDZ9IUBuEevi58BjPD2lXo9y3mM3yqCZM4lfN9iD+Cn6TP2H4myXon87f9kcfwVm5wIFrtTZfFClzrAFwauRs3JPYn5mzCe6pLfmHP0V6IMGPYo5O3w87MZ+ZnaxuGV0fvhMlW2QdJA4/c5jTgJuGShPuqS+XtomJwt2tYgjGwioe3D3f+VgoOHGj+HOee79qRbX9h8Acosk9sH9LfpBFgFlwv/QUm3PuFmuvO/2C5+BCMu+IVjjXPw0x793RBTX0FaCs0zwga0LCgUnTBYX4Wdgr2XhNEdZL0h4DDRhTYu3B39TTuQa0+3SUta9zDPhzU+43VuMQeEoUjEIBxYGykNWsQQFoPCYcUASLAkAYuKbP1CGAx1fNldZ8iKYtv93r4Ki5ZUsdEVnpHph4F7BQRvthw03kExr39Qk4LDuPIeI8g96wGLI0+HjpEFBRvU8GbYzMwU/sBdvbETrVnb4LT+o+ATMVZgwnvWZSr5gMEleQFDL6CCy7Efy72TC+P3JN8g4bWyLHimMn/fTlJr/VuAWoLVCOEetsZtR7ldCPAAw/KFdPyW0C3fozvSRMgRtNUNA8IEAHyEIUB2pA0AeS3AN5zrdtpLKMeIHQpNs2xUvX2Q5fex7Mr0fsJVJxVsKzzPhP43YxZBdjbfBTWi9EeA3NaVq3lnh+f+KodqoPV0nEYYwcj98/d5hRsFi7hrK6LRPAnxlbDf9bgVwk66q0+qGyEvAUb5hdtWOwpevrc/fCB6/+M9fO3unMWHziJDz16qh6Kw5pzBspejB/DYFj+dccH4YEj/mcx8+jt4jwO8xYGONTTQfzVPXPQVA5r5IOdmvM3naZyqcN9kXspl3KsOGYZpKT7AHKTLXyMSSkeAhlhlg0B4rlOpTNEIDsC0DUgelgzxCrZUUCQiyxyH7hTi40LLhkcDKpyaPIa7cWj0TtuAU/8k/Y5GwLUx88D2zgay3gXHsU1h6/F0slr4U37V1DyPhvZPIYMqI9fBNiIrKJbMBsCzC3xVbSvxDJy3eJzBpOxdPJauOZcwXmQeP7DUibeZNcHiO9Onm2L542d+PLxeO0HlDYH5AAnKUuNABFAjc1tkZNfApSid5pzH6lCK8OBXTw0sukExrOpU/pPUwC7kARehmMiHTvDdByMfc3G7vxKWMmB5P8fONSCsFGlv+AAAAAASUVORK5CYII=">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  /* same tokens as index.html — keep all three pages in sync if the palette changes */
+  :root{
+    --bg:#002b2a;
+    --glow:#004a48;
+    --panel:#00302f;
+    --panel-2:#003d3c;
+    --line:#0e5856;
+    --text:#f3efe9;
+    --text-dim:#9fbcb9;
+    --accent:#00ff00;
+    --accent-dim:#0b6b1e;
+    --cyan:#4dd9c9;
+    --mono: 'SF Mono', 'Roboto Mono', Consolas, monospace;
+    --sans: 'DotGothic16', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    /* wire / port colors, one per data type */
+    --t-image:#4dd9c9;
+    --t-field:#00ff00;
+    --t-scale:#ffd84d;
+    --t-notes:#ff5fd2;
+    --t-track:#f3efe9;
+    --t-path:#ff6b6b;
+    --t-curve:#8fa8ff;
+  }
+  *{box-sizing:border-box;}
+  button, input, select, textarea{font-family:inherit;}
+  html, body{height:100%;}
+  body{
+    margin:0; background:radial-gradient(120% 100% at 15% -10%, var(--glow) 0%, var(--bg) 55%);
+    color:var(--text); font-family:var(--sans); overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  ::selection{background:var(--cyan); color:var(--bg);}
+
+  header{flex:none; display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; padding:14px 18px; border-bottom:1px solid var(--line);}
+  header h1{
+    margin:0; font-size:28px; font-weight:400; color:var(--accent); letter-spacing:.3px;
+    display:flex; align-items:baseline; gap:10px;
+    filter:drop-shadow(0 0 4px rgba(0,255,0,.35));
+  }
+  header h1 a{color:inherit; text-decoration:none;}
+  header h1 .sub{font-size:16px; color:var(--cyan); filter:none;}
+  .backLink{font-size:12px; color:var(--text-dim); text-decoration:none; border:1px solid var(--line); border-radius:6px; padding:5px 10px;}
+  .backLink:hover{color:var(--text); border-color:var(--accent);}
+  .toolbar{display:flex; gap:6px; flex-wrap:wrap; margin-left:auto;}
+  .langToggle{display:flex; flex:none; border:1px solid var(--line); border-radius:6px; overflow:hidden;}
+  .langToggle button{
+    background:var(--panel); color:var(--text-dim); border:none; cursor:pointer;
+    padding:5px 9px; font-size:11px; font-family:var(--mono); letter-spacing:.6px;
+  }
+  .langToggle button.active{background:var(--accent); color:var(--bg);}
+  .langToggle button:not(.active):hover{color:var(--text);}
+
+  .miniBtn{
+    flex:none; background:var(--panel-2); border:1px solid var(--line); color:var(--text-dim);
+    font-size:11px; padding:5px 9px; border-radius:5px; cursor:pointer; line-height:1.1;
+    transition:border-color .15s, color .15s;
+  }
+  .miniBtn:hover:not(:disabled){color:var(--text); border-color:var(--accent);}
+  .miniBtn:disabled{opacity:.35; cursor:default;}
+  .miniBtn.primary{color:var(--accent); border-color:var(--accent-dim);}
+  .miniBtn.on{background:#e5484d; border-color:#e5484d; color:#fff;}
+
+  /* ---- canvas ---- */
+  #stage{position:relative; flex:1; overflow:hidden; cursor:grab; touch-action:none;
+    background-image:radial-gradient(circle, rgba(159,188,185,.13) 1px, transparent 1.2px);
+    background-size:24px 24px;}
+  #stage.panning{cursor:grabbing;}
+  #stage.dropping{outline:2px dashed var(--accent); outline-offset:-6px;}
+  #world{position:absolute; left:0; top:0; transform-origin:0 0;}
+  #wires{position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible; pointer-events:none;}
+  #wires path{fill:none; stroke-width:2.2; opacity:.85;}
+  #wires path.draft{stroke-dasharray:6 5; opacity:1;}
+  .stageHint{position:absolute; left:14px; bottom:12px; font-size:11px; color:var(--text-dim); pointer-events:none; line-height:1.6; max-width:calc(100% - 28px);}
+
+  /* ---- nodes ---- */
+  .node{
+    position:absolute; width:216px; background:var(--panel); border:1px solid var(--line); border-radius:9px;
+    box-shadow:0 6px 18px rgba(0,0,0,.35); cursor:default; user-select:none;
+  }
+  .node.wide{width:300px;}
+  .node.selected{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 6px 18px rgba(0,0,0,.35);}
+  .nodeHead{
+    display:flex; align-items:center; gap:6px; padding:7px 8px 7px 10px; cursor:grab;
+    border-bottom:1px solid var(--line); border-radius:9px 9px 0 0; background:var(--panel-2);
+  }
+  .nodeHead:active{cursor:grabbing;}
+  .nodeHead .cat{width:8px; height:8px; border-radius:2px; flex:none;}
+  .nodeHead .title{flex:1; font-size:12.5px; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .nodeDel{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; line-height:1; padding:0 2px;}
+  .nodeDel:hover{color:#ff8a8e;}
+  .ports{display:flex; justify-content:space-between; gap:8px; padding:6px 0 2px;}
+  .ports .col{display:flex; flex-direction:column; gap:5px; min-width:0;}
+  .ports .col.out{align-items:flex-end;}
+  .port{position:relative; display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--text-dim); height:16px;}
+  .port.in{padding-left:12px;}
+  .port.out{padding-right:12px;}
+  .port .dot{
+    position:absolute; top:50%; width:13px; height:13px; margin-top:-6.5px; border-radius:50%;
+    background:var(--panel); border:2px solid currentColor; cursor:crosshair;
+  }
+  .port.in .dot{left:-7px;}
+  .port.out .dot{right:-7px;}
+  .port.linked .dot{background:currentColor;}
+  .port .dot:hover, body.wiring .port.compatible .dot{box-shadow:0 0 0 3px rgba(255,255,255,.18); transform:scale(1.15);}
+  body.wiring .port.in:not(.compatible) .dot{opacity:.3;}
+  .ty-image{color:var(--t-image);} .ty-field{color:var(--t-field);} .ty-scale{color:var(--t-scale);}
+  .ty-notes{color:var(--t-notes);} .ty-track{color:var(--t-track);} .ty-path{color:var(--t-path);} .ty-curve{color:var(--t-curve);}
+  .port span{color:var(--text-dim);}
+
+  .nodeBody{padding:4px 10px 10px; display:flex; flex-direction:column; gap:7px;}
+  .prm{display:grid; grid-template-columns:70px 1fr auto; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
+  .prm.full{grid-template-columns:70px 1fr;}
+  .prm .v{font-family:var(--mono); font-size:10.5px; color:var(--accent); min-width:30px; text-align:right;}
+  .prm select, .prm input[type=text]{
+    width:100%; min-width:0; background:var(--panel-2); color:var(--text); border:1px solid var(--line);
+    border-radius:5px; font-size:11px; padding:3px 5px;
+  }
+  .prm input[type=color]{width:100%; height:22px; padding:0 2px; background:var(--panel-2); border:1px solid var(--line); border-radius:5px; cursor:pointer;}
+  .prm input[type=checkbox]{width:14px; height:14px; accent-color:var(--accent); margin:0; cursor:pointer;}
+  input[type=range]{-webkit-appearance:none; width:100%; min-width:0; height:3px; background:var(--line); border-radius:2px; outline:none; margin:0;}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:12px; height:12px; border-radius:50%;
+    background:var(--accent); cursor:pointer; border:2px solid var(--bg); box-shadow:0 0 0 1px var(--accent-dim);
+  }
+  input[type=range]::-moz-range-thumb{width:10px; height:10px; border-radius:50%; background:var(--accent); border:2px solid var(--bg);}
+  .btnRow{display:flex; gap:5px; flex-wrap:wrap;}
+  .btnRow .miniBtn{flex:1;}
+  .thumb{display:block; width:100%; border-radius:5px; background:#06100f; image-rendering:pixelated;}
+  .thumb.pick, .thumb.draw{cursor:crosshair;}
+  .thumb.drag{cursor:ns-resize;}
+  .nodeNote{font-size:10.5px; color:var(--text-dim); line-height:1.4;}
+  .nodeErr{font-size:10.5px; color:#ff8a8e; line-height:1.4;}
+  .midiState{display:flex; align-items:center; gap:7px; font-size:10.5px; color:var(--text-dim); line-height:1.4;}
+  .midiState .dot{width:7px; height:7px; border-radius:50%; background:var(--line); flex:none;}
+  .midiState .dot.on{background:var(--accent); box-shadow:0 0 6px var(--accent);}
+
+  /* ---- add menu ---- */
+  /* octave range: a top-down piano strip you drag across (same as the workshop) */
+  .octaveStrip{width:100%; height:38px; display:block; cursor:pointer; touch-action:none; border-radius:4px; overflow:hidden; border:1px solid var(--line);}
+  .octaveStrip .pw{fill:var(--panel-2); stroke:var(--line); stroke-width:0.5;}
+  .octaveStrip .pb{fill:var(--text-dim);}
+  .octaveStrip .octHi{fill:var(--accent); opacity:.32; pointer-events:none;}
+  .octaveLabels{display:flex; justify-content:space-between; margin-top:3px; font-size:9.5px; color:var(--text-dim); font-family:var(--mono);}
+  .octaveLabels span{flex:1; text-align:center;}
+  /* mini keyboard under Scale/Root: one octave, scale degrees + root */
+  .scaleKeyboard{width:100%; height:34px; display:block; border-radius:4px; overflow:hidden; border:1px solid var(--line);}
+  .scaleKeyboard .pw{fill:var(--panel-2); stroke:var(--line); stroke-width:0.5;}
+  .scaleKeyboard .pb{fill:var(--text-dim);}
+  .scaleKeyboard .pw.scaleKey{fill:var(--accent); opacity:.5;}
+  .scaleKeyboard .pb.scaleKey{fill:var(--accent); opacity:.75;}
+  .scaleKeyboard .pw.rootKey, .scaleKeyboard .pb.rootKey{fill:var(--cyan); opacity:1;}
+  .octHead{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim);}
+  .octHead .v{font-family:var(--mono); font-size:10.5px; color:var(--accent);}
+  /* instrument picker: the user's hand-drawn icon at rest, the real native
+     <select> stretched invisibly on top (same as the workshop's layer rows) */
+  .instrRow{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-dim);}
+  .instrRow .instrName{flex:1; min-width:0; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .instrPicker{position:relative; width:32px; height:32px; flex:none;}
+  .instrIcon{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:6px; background:var(--panel-2);
+    color:var(--text-dim); line-height:1; pointer-events:none; transition:border-color .15s, color .15s;
+    font-family:var(--mono); font-size:11px;
+  }
+  .instrIcon svg{width:20px; height:20px; display:block;}
+  .instrIcon .st0, .instrIcon .st1{fill:currentColor; stroke:var(--panel-2); stroke-width:3px; stroke-miterlimit:10;}
+  .instrIcon .ic-cut{fill:var(--panel-2); stroke:none;}
+  .instrPicker select{position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; opacity:0; cursor:pointer;}
+  .instrPicker:hover .instrIcon{border-color:var(--accent); color:var(--text);}
+
+  #addMenu{
+    position:fixed; z-index:20; min-width:190px; max-height:70vh; overflow:auto; padding:6px;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  #addMenu[hidden]{display:none;}
+  #addMenu h3{margin:8px 6px 4px; font-size:10px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-dim); font-weight:600;}
+  #addMenu button{
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:none; border:none;
+    color:var(--text); font-size:12px; padding:5px 8px; border-radius:5px; cursor:pointer;
+  }
+  #addMenu button:hover, #addMenu button:focus{background:var(--panel-2); outline:none;}
+  #addMenu button i{width:8px; height:8px; border-radius:2px; flex:none;}
+
+  #ny-noise{
+    position:fixed; inset:0; width:100%; height:100%;
+    z-index:9998; pointer-events:none;
+    mix-blend-mode:overlay; opacity:0.1; image-rendering:pixelated;
+  }
+  @media (prefers-reduced-motion: reduce){ #ny-noise{opacity:0.075;} }
+  @media (max-width:700px){ header{padding:10px 12px;} .toolbar{margin-left:0;} }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="index.html">Dessons</a><span class="sub">Nodes</span></h1>
+  <a class="backLink" href="index.html" data-i18n="backToWorkshop">← Atelier</a>
+  <div class="toolbar">
+    <button type="button" class="miniBtn primary" id="addBtn" data-i18n="btnAdd">+ Node</button>
+    <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
+    <button type="button" class="miniBtn" id="newBtn" data-i18n="btnNew">Nouveau</button>
+    <button type="button" class="miniBtn" id="saveBtn" data-i18n="btnSave">⬆ Sauver .json</button>
+    <button type="button" class="miniBtn" id="openBtn" data-i18n="btnOpen">⬇ Ouvrir .json</button>
+    <input type="file" id="graphInput" accept="application/json,.json" hidden>
+  </div>
+  <div class="langToggle" id="langToggle">
+    <button type="button" data-lang="fr">FR</button>
+    <button type="button" data-lang="en">EN</button>
+  </div>
+</header>
+
+<div id="stage">
+  <div id="world"><svg id="wires"></svg></div>
+  <div class="stageHint" data-i18n="stageHint"></div>
+</div>
+<div id="addMenu" hidden></div>
+<input type="file" id="mediaInput" hidden>
+
+<script src="dessons-core.js"></script>
+<script>
+/* ============================================================
+   Dessons — node editor
+   ============================================================
+   The workshop's pipeline (source -> pre-processing -> edge detection ->
+   layer split -> time/pitch grid -> instruments -> loop) cut into nodes
+   joined by typed wires. Nothing new under the hood: every node calls the
+   same primitives as index.html's process() (dessons-core.js). What the
+   graph adds is the freedom to branch, stack and recombine those steps —
+   e.g. two layer filters in a row, a scan per layer with its own direction
+   and step count (polyrhythm), one scale shared by several scans.
+
+   Wire types (port colors):
+     image  {w, h, data}                      RGBA pixels, ≤ MAXDIM
+     field  {w, h, rgb, lum, hue, sat, edge, angle, maxEdge, mask}
+            edge map + the pixels it applies to; layer nodes narrow `mask`
+     scale  {pitches, scale, root}            MIDI pitches, low -> high
+     notes  {steps, curve, notes:[{step, midi, vel, row}], rows, field, dir}
+     track  notes + {name, program, color, mute}
+     path   {points}                          drawn path, normalized [[nx,ny],...]
+     curve  {pts}                             custom curve [0, y1, y2, y3, 1]
+   An image straight from a Source also carries {orig, region}: the full-
+   resolution media and the part of it shown, so Crop can re-sample sharp.
+   Pitches only ever come from a scale node (or the default scale), and the
+   only note-level transform is an octave shift: no off-scale note can exist.
+   ------------------------------------------------------------ */
+const I18N = {
+  fr: {
+    docTitle:'Dessons · Nodes',
+    backToWorkshop:'← Atelier',
+    btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
+    stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic : ajouter un node · Tirer un fil d\'une sortie vers une entrée · Suppr : effacer le node sélectionné · Déposer une image ou une vidéo ici',
+    confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
+    loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
+    camErr:'Webcam indisponible ou refusée.',
+    mediaErr:'Impossible de charger ce fichier.',
+    cycleErr:'Ce branchement créerait une boucle.',
+    catSource:'Source', catImage:'Image', catAnalysis:'Analyse', catLayers:'Calques', catMusic:'Musique', catOut:'Sortie',
+    t_image:'image', t_field:'contours', t_scale:'gamme', t_notes:'notes', t_track:'piste',
+    n_source:'Source', n_invert:'Inverser', n_blur:'Flou', n_tone:'Tons', n_edges:'Contours',
+    n_hueBand:'Bande de teinte', n_lumaBand:'Bande de luminosité', n_colorKey:'Clé couleur', n_orient:'Orientation', n_union:'Union',
+    n_scale:'Gamme', n_scan:'Balayage', n_octave:'Octave', n_limit:'Limiter', n_track:'Piste', n_loop:'Boucle',
+    p_radius:'Rayon', p_black:'Noir', p_white:'Blanc', p_gamma:'Gamma', p_sat:'Saturation',
+    p_method:'Méthode', m_gradient:'Gradient', m_sobel:'Sobel',
+    p_from:'De', p_to:'À', p_minSat:'Sat. min', p_min:'Min', p_max:'Max', p_exclude:'Exclure',
+    p_color:'Couleur', p_tol:'Tolérance',
+    p_scale:'Gamme', p_root:'Fondamentale',
+    p_dir:'Sens', p_steps:'Pas', p_thresh:'Sensibilité', p_curve:'Courbe',
+    p_shift:'Décalage', p_perStep:'Max / pas',
+    p_instr:'Instrument', p_name:'Nom', p_mute:'Muet',
+    p_tempo:'Tempo', p_bars:'Mesures', p_gate:'Gate',
+    in_a:'A', in_b:'B', in_tracks:'pistes',
+    srcImage:'Image', srcVideo:'Vidéo', srcWebcam:'Webcam', srcFreeze:'Figer', srcUnfreeze:'Reprendre',
+    srcEmpty:'Clique Image / Vidéo / Webcam, ou dépose un fichier sur ce node.',
+    keyHint:'Clique l\'aperçu pour prélever une couleur.',
+    btnPlay:'▶ Écouter', btnStop:'■ Stop', btnExport:'Exporter le .mid',
+    loopEmpty:'Branche des pistes ici.',
+    notesWord:'notes', tracksWord:'pistes',
+    curve_linear:'Linéaire', curve_accel:'Accélérée', curve_decel:'Ralentie', curve_pulse:'Pulsée', curve_swing:'Swing',
+    sc_majPenta:'Penta. majeure', sc_minPenta:'Penta. mineure', sc_major:'Majeure', sc_minor:'Mineure',
+    sc_dorian:'Dorienne', sc_wholetone:'Par tons', sc_chromatic:'Chromatique',
+    trackDefault:'Piste',
+    n_midiOut:'Logic (MIDI live)', p_port:'Port', p_channel:'Canal', p_sustain:'Sustain (CC64)', chanWord:'canal',
+    midiHint:'Un node par piste Logic, le son se choisit dans Logic. Le tempo vient de la Boucle. ▶ sur n\'importe lequel les lance tous, synchronisés.',
+    midiNoNotes:'Branche des notes sur l\'entrée (Balayage, Octave, Limiter…).',
+    btnPanic:'Panique', panicTitle:'Coupe toutes les notes, sur tous les canaux de tous les ports MIDI',
+    btnPlayDaw:'▶ Jouer dans Logic', btnStopDaw:'■ Stop',
+    midiUninit:'Web MIDI non initialisé — clique Jouer.', midiUnavail:'Web MIDI indisponible dans ce navigateur (Chrome ou Edge requis). L\'export .mid marche toujours.',
+    midiRequest:'Demande d\'accès MIDI…', midiDenied:'Accès MIDI refusé.',
+    midiNoPort:'Aucun port MIDI. Active le bus IAC (Configuration audio et MIDI → Studio MIDI → Gestionnaire IAC).',
+    midiNoPortOpt:'(aucun port)', midiReady:'Prêt · {x}', midiPlaying:'Lecture · {x}', midiNoLoop:'Ajoute une Boucle : c\'est elle qui donne le tempo.',
+    n_crop:'Recadrage', n_sens:'Sensibilité', n_curve:'Courbe perso.', n_path:'Trajet dessiné',
+    t_path:'trajet', t_curve:'courbe', p_seed:'Partir de', seedNone:'—',
+    cropHint:'Glisse sur l\'aperçu pour cadrer · double-clic : image entière.',
+    curveHint:'Glisse les 3 poignées. Branche-la sur l\'entrée « courbe » d\'un Balayage.',
+    pathHint:'Dessine le trajet sur l\'aperçu. Branche-le sur l\'entrée « trajet » d\'un Balayage : il remplace le sens.',
+    btnAuto:'Auto (Otsu)', sensPass:'{x} % des pixels passent',
+    viaSens:'sensibilité réglée par le node', viaPath:'sens : trajet dessiné', viaCurve:'courbe personnalisée',
+    p_octRange:'Plage d\'octaves'
+  },
+  en: {
+    docTitle:'Dessons · Nodes',
+    backToWorkshop:'← Workshop',
+    btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
+    stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click: add a node · Drag a wire from an output to an input · Delete: remove the selected node · Drop an image or a video here',
+    confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
+    loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
+    camErr:'Webcam unavailable or denied.',
+    mediaErr:'Can\'t load this file.',
+    cycleErr:'This connection would create a loop.',
+    catSource:'Source', catImage:'Image', catAnalysis:'Analysis', catLayers:'Layers', catMusic:'Music', catOut:'Output',
+    t_image:'image', t_field:'edges', t_scale:'scale', t_notes:'notes', t_track:'track',
+    n_source:'Source', n_invert:'Invert', n_blur:'Blur', n_tone:'Tones', n_edges:'Edges',
+    n_hueBand:'Hue band', n_lumaBand:'Brightness band', n_colorKey:'Color key', n_orient:'Orientation', n_union:'Union',
+    n_scale:'Scale', n_scan:'Scan', n_octave:'Octave', n_limit:'Limit', n_track:'Track', n_loop:'Loop',
+    p_radius:'Radius', p_black:'Black', p_white:'White', p_gamma:'Gamma', p_sat:'Saturation',
+    p_method:'Method', m_gradient:'Gradient', m_sobel:'Sobel',
+    p_from:'From', p_to:'To', p_minSat:'Min sat.', p_min:'Min', p_max:'Max', p_exclude:'Exclude',
+    p_color:'Color', p_tol:'Tolerance',
+    p_scale:'Scale', p_root:'Root',
+    p_dir:'Direction', p_steps:'Steps', p_thresh:'Sensitivity', p_curve:'Curve',
+    p_shift:'Shift', p_perStep:'Max / step',
+    p_instr:'Instrument', p_name:'Name', p_mute:'Mute',
+    p_tempo:'Tempo', p_bars:'Bars', p_gate:'Gate',
+    in_a:'A', in_b:'B', in_tracks:'tracks',
+    srcImage:'Image', srcVideo:'Video', srcWebcam:'Webcam', srcFreeze:'Freeze', srcUnfreeze:'Resume',
+    srcEmpty:'Click Image / Video / Webcam, or drop a file on this node.',
+    keyHint:'Click the preview to sample a color.',
+    btnPlay:'▶ Listen', btnStop:'■ Stop', btnExport:'Export .mid',
+    loopEmpty:'Wire tracks in here.',
+    notesWord:'notes', tracksWord:'tracks',
+    curve_linear:'Linear', curve_accel:'Accelerating', curve_decel:'Slowing', curve_pulse:'Pulsing', curve_swing:'Swing',
+    sc_majPenta:'Major penta.', sc_minPenta:'Minor penta.', sc_major:'Major', sc_minor:'Minor',
+    sc_dorian:'Dorian', sc_wholetone:'Whole tone', sc_chromatic:'Chromatic',
+    trackDefault:'Track',
+    n_midiOut:'Logic (live MIDI)', p_port:'Port', p_channel:'Channel', p_sustain:'Sustain (CC64)', chanWord:'ch.',
+    midiHint:'One node per Logic track, the sound is chosen in Logic. The tempo comes from the Loop. ▶ on any of them starts them all, in sync.',
+    midiNoNotes:'Wire notes into the input (Scan, Octave, Limit…).',
+    btnPanic:'Panic', panicTitle:'All notes off, on every channel of every MIDI port',
+    btnPlayDaw:'▶ Play in Logic', btnStopDaw:'■ Stop',
+    midiUninit:'Web MIDI not initialized — click Play.', midiUnavail:'Web MIDI unavailable in this browser (Chrome or Edge required). .mid export still works.',
+    midiRequest:'Requesting MIDI access…', midiDenied:'MIDI access denied.',
+    midiNoPort:'No MIDI port. Enable the IAC bus (Audio MIDI Setup → MIDI Studio → IAC Driver).',
+    midiNoPortOpt:'(no port)', midiReady:'Ready · {x}', midiPlaying:'Playing · {x}', midiNoLoop:'Add a Loop: it sets the tempo.',
+    n_crop:'Crop', n_sens:'Sensitivity', n_curve:'Custom curve', n_path:'Drawn path',
+    t_path:'path', t_curve:'curve', p_seed:'Start from', seedNone:'—',
+    cropHint:'Drag on the preview to frame · double-click: whole image.',
+    curveHint:'Drag the 3 handles. Wire it into a Scan\'s "curve" input.',
+    pathHint:'Draw the path on the preview. Wire it into a Scan\'s "path" input: it replaces the direction.',
+    btnAuto:'Auto (Otsu)', sensPass:'{x} % of pixels pass',
+    viaSens:'sensitivity set by node', viaPath:'direction: drawn path', viaCurve:'custom curve',
+    p_octRange:'Octave range'
+  }
+};
+let LANG = 'en';
+const t = k => (I18N[LANG] && I18N[LANG][k] != null ? I18N[LANG][k] : (I18N.en[k] != null ? I18N.en[k] : k));
+const $ = id => document.getElementById(id);
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const MAXDIM = 260;            // same analysis size as the workshop
+
+function initialLang(){
+  try{ const s = localStorage.getItem('dessons.lang'); if(s === 'fr' || s === 'en') return s; }catch(e){}
+  return (navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en';
+}
+function setLang(lang){
+  LANG = (lang === 'fr' || lang === 'en') ? lang : 'en';
+  try{ localStorage.setItem('dessons.lang', LANG); }catch(e){}
+  document.querySelectorAll('#langToggle button').forEach(b=> b.classList.toggle('active', b.dataset.lang === LANG));
+  document.documentElement.lang = LANG;
+  document.title = t('docTitle');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.dataset.i18n); });
+  nodes.forEach(n => buildNodeEl(n));
+  drawWires();
+  scheduleRun(true);
+}
+document.querySelectorAll('#langToggle button').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)));
+
+/* ---- small shared helpers ---- */
+const TYPE_VAR = {image:'--t-image', field:'--t-field', scale:'--t-scale', notes:'--t-notes', track:'--t-track', path:'--t-path', curve:'--t-curve'};
+const typeColor = ty => getComputedStyle(document.documentElement).getPropertyValue(TYPE_VAR[ty]).trim() || '#fff';
+const CAT_COLOR = {catSource:'#4dd9c9', catImage:'#4dd9c9', catAnalysis:'#00ff00', catLayers:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2'};
+const DIR_KEYS = ['lr','rl','tb','bt','tlbr','brtl','trbl','bltr'];
+const DIR_LABELS = {lr:'→', rl:'←', tb:'↓', bt:'↑', tlbr:'↘', brtl:'↖', trbl:'↙', bltr:'↗'};
+const CURVE_KEYS = ['linear','accel','decel','pulse','swing'];
+const TRACK_COLORS = ['#00ffff','#ff00ff','#ffff00','#00ff66','#ff7a3d','#7a8cff'];
+const DEFAULT_SCALE = {scale:'minPenta', root:0, octLow:3, octHigh:5};
+// the workshop's 6 instruments, plus the ones only this page has for now
+// (no icon drawn yet, the workshop shows instruments as icons)
+const PIZZ_PROGRAM = 45;   // GM "Pizzicato Strings"
+const NODE_INSTR = GM_INSTR.concat([{fr:'Pizzicato', en:'Pizzicato', prog:PIZZ_PROGRAM, icon:null, abbr:'Pz'}]);
+
+function scalePitches(scale, root, octLow, octHigh){
+  const degrees = SCALES[scale] || SCALES.minPenta;
+  const hi = Math.max(octLow, octHigh), out = [];
+  for(let oct = octLow; oct <= hi; oct++){
+    degrees.forEach(d=>{
+      const midi = 12*(oct+1) + root + d;     // C4 = 60
+      if(midi >= 0 && midi <= 127) out.push(midi);
+    });
+  }
+  return out;
+}
+function hsvSat(r,g,b){ const mx = Math.max(r,g,b); return mx ? (mx - Math.min(r,g,b)) / mx : 0; }
+function emptyNotes(){ return {steps:16, curve:'linear', notes:[], rows:1, field:null, dir:'lr'}; }
+// loop fraction where step k of a notes/track value sounds (custom curves carry their points)
+function stepFrac(tr, k){ return curveFracAt(tr.curve, k, tr.steps, tr.customPts); }
+const CUSTOM_X = [0, 0.25, 0.5, 0.75, 1];
+
+/* ============================================================
+   Node definitions
+   ------------------------------------------------------------
+   inputs/outputs: [{id, type, multi?, opt?}] — opt = works unplugged
+   params: [{id, kind:'range'|'select'|'check'|'color'|'text', ...}]
+   compute(p, inp, node) -> {outputId: value}  (null = nothing to pass on)
+   thumb: what the node previews — 'image' | 'field' | 'scan' | 'roll' | 'loop'
+   ============================================================ */
+const NODE_DEFS = {
+  source: {
+    cat:'catSource', outputs:[{id:'image', type:'image'}], params:[], thumb:'image', custom:'source',
+    compute:(p, inp, n)=> ({image: n.frame || null})
+  },
+  invert: {
+    cat:'catImage', inputs:[{id:'image', type:'image'}], outputs:[{id:'image', type:'image'}], params:[], thumb:'image',
+    compute:(p, {image})=>{
+      if(!image) return {image:null};
+      const d = new Uint8ClampedArray(image.data);
+      for(let i=0;i<d.length;i+=4){ d[i]=255-d[i]; d[i+1]=255-d[i+1]; d[i+2]=255-d[i+2]; }
+      return {image:{w:image.w, h:image.h, data:d}};
+    }
+  },
+  blur: {
+    cat:'catImage', inputs:[{id:'image', type:'image'}], outputs:[{id:'image', type:'image'}], thumb:'image',
+    params:[{id:'radius', label:'p_radius', kind:'range', min:0, max:10, step:1, def:2}],
+    compute:(p, {image})=>{
+      if(!image) return {image:null};
+      if(!p.radius) return {image};
+      return {image:{w:image.w, h:image.h, data:boxBlur(image.data, image.w, image.h, p.radius, 3)}};
+    }
+  },
+  tone: {
+    cat:'catImage', inputs:[{id:'image', type:'image'}], outputs:[{id:'image', type:'image'}], thumb:'image',
+    params:[
+      {id:'black', label:'p_black', kind:'range', min:0, max:254, step:1, def:21},
+      {id:'white', label:'p_white', kind:'range', min:1, max:255, step:1, def:234},
+      {id:'gamma', label:'p_gamma', kind:'range', min:0.2, max:3, step:0.05, def:1, fmt:v=>(+v).toFixed(2)},
+      {id:'sat',   label:'p_sat',   kind:'range', min:0, max:200, step:1, def:100, fmt:v=>v+'%'}
+    ],
+    compute:(p, {image})=>{
+      if(!image) return {image:null};
+      const lut = buildToneLUT(p.black, Math.max(p.black+1, p.white), p.gamma);
+      const s = p.sat/100, src = image.data, d = new Uint8ClampedArray(src.length);
+      for(let i=0;i<src.length;i+=4){
+        const [r,g,b] = adjustPixel(src[i], src[i+1], src[i+2], lut, s);
+        d[i]=r; d[i+1]=g; d[i+2]=b; d[i+3]=255;
+      }
+      return {image:{w:image.w, h:image.h, data:d}};
+    }
+  },
+  crop: {
+    cat:'catImage', inputs:[{id:'image', type:'image'}], outputs:[{id:'image', type:'image'}], thumb:'crop', thumbClass:'draw',
+    params:[
+      {id:'x', kind:'hidden', def:0.1}, {id:'y', kind:'hidden', def:0.1},
+      {id:'w', kind:'hidden', def:0.8}, {id:'h', kind:'hidden', def:0.8}
+    ],
+    note:'cropHint',
+    compute:(p, {image}, n)=> ({image: cropImage(image, p, n)}),
+    thumbPointer:(n, c)=> cropPointer(n, c),
+    summary:(n)=>{ const im = n.out && n.out.image; return im ? im.w + '×' + im.h : ''; }
+  },
+  edges: {
+    cat:'catAnalysis', inputs:[{id:'image', type:'image'}], outputs:[{id:'field', type:'field'}], thumb:'field',
+    params:[{id:'method', label:'p_method', kind:'select', def:'gradient', options:()=>[['gradient',t('m_gradient')],['sobel',t('m_sobel')]]}],
+    compute:(p, {image})=>{
+      if(!image) return {field:null};
+      const {w, h, data} = image, N = w*h;
+      const lum = new Float32Array(N), hue = new Float32Array(N), sat = new Float32Array(N);
+      for(let px=0; px<N; px++){
+        const r = data[px*4], g = data[px*4+1], b = data[px*4+2];
+        lum[px] = 0.299*r + 0.587*g + 0.114*b;
+        hue[px] = rgbToHue(r,g,b);
+        sat[px] = hsvSat(r,g,b);
+      }
+      // same two detectors as the workshop: the cheap |Δx|+|Δy| gradient,
+      // or a real Sobel. Both also keep an orientation for the Orientation node.
+      const edge = new Float32Array(N), angle = new Float32Array(N);
+      let maxEdge = 1;
+      for(let y=0;y<h;y++){
+        for(let x=0;x<w;x++){
+          const px = y*w+x;
+          let gx, gy, m;
+          if(p.method === 'sobel'){
+            [gx, gy] = sobelAt(lum, w, h, x, y);
+            m = Math.sqrt(gx*gx + gy*gy);
+          } else {
+            gx = x<w-1 ? lum[px+1]-lum[px] : 0;
+            gy = y<h-1 ? lum[px+w]-lum[px] : 0;
+            m = Math.abs(gx) + Math.abs(gy);
+          }
+          edge[px] = m; angle[px] = Math.atan2(gy, gx);
+          if(m > maxEdge) maxEdge = m;
+        }
+      }
+      const mask = new Uint8Array(N).fill(1);
+      return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask}};
+    }
+  },
+  // per-branch threshold: put one on each layer to tune it on its own
+  sens: {
+    cat:'catAnalysis', inputs:[{id:'field', type:'field'}], outputs:[{id:'field', type:'field'}], thumb:'sens', custom:'sens',
+    params:[{id:'thresh', label:'p_thresh', kind:'range', min:1, max:100, step:1, def:55, fmt:v=>v+'%'}],
+    compute:(p, {field})=> ({field: field ? Object.assign({}, field, {thresh:p.thresh}) : null}),
+    summary:(n)=>{
+      const f = n.out && n.out.field;
+      if(!f) return '';
+      const cutoff = (1 - f.thresh/100) * f.maxEdge;
+      let tot = 0, pass = 0;
+      for(let px=0; px<f.mask.length; px++) if(f.mask[px]){ tot++; if(f.edge[px] >= cutoff) pass++; }
+      return t('sensPass').replace('{x}', tot ? (100*pass/tot).toFixed(1) : '0');
+    }
+  },
+  hueBand: {
+    cat:'catLayers', inputs:[{id:'field', type:'field'}], outputs:[{id:'field', type:'field'}], thumb:'field',
+    params:[
+      {id:'from', label:'p_from', kind:'range', min:0, max:360, step:1, def:0, fmt:v=>v+'°', hue:true},
+      {id:'to',   label:'p_to',   kind:'range', min:0, max:360, step:1, def:120, fmt:v=>v+'°', hue:true},
+      {id:'minSat', label:'p_minSat', kind:'range', min:0, max:100, step:1, def:15, fmt:v=>v+'%'},
+      {id:'exclude', label:'p_exclude', kind:'check', def:false}
+    ],
+    // from > to wraps around red (e.g. 300° -> 40°)
+    compute:(p, {field})=> ({field: narrow(field, p.exclude, px=>{
+      const hh = field.hue[px];
+      const inHue = p.from <= p.to ? (hh >= p.from && hh <= p.to) : (hh >= p.from || hh <= p.to);
+      return inHue && field.sat[px]*100 >= p.minSat;
+    })})
+  },
+  lumaBand: {
+    cat:'catLayers', inputs:[{id:'field', type:'field'}], outputs:[{id:'field', type:'field'}], thumb:'field',
+    params:[
+      {id:'min', label:'p_min', kind:'range', min:0, max:255, step:1, def:0},
+      {id:'max', label:'p_max', kind:'range', min:0, max:255, step:1, def:128},
+      {id:'exclude', label:'p_exclude', kind:'check', def:false}
+    ],
+    compute:(p, {field})=> ({field: narrow(field, p.exclude, px=> field.lum[px] >= p.min && field.lum[px] <= p.max)})
+  },
+  colorKey: {
+    cat:'catLayers', inputs:[{id:'field', type:'field'}], outputs:[{id:'field', type:'field'}], thumb:'field', pick:true,
+    params:[
+      {id:'color', label:'p_color', kind:'color', def:'#3a7d2c'},
+      {id:'tol', label:'p_tol', kind:'range', min:10, max:150, step:1, def:60},
+      {id:'exclude', label:'p_exclude', kind:'check', def:false}
+    ],
+    note:'keyHint',
+    // same test as the workshop's 'pick' mode: RGB distance² within tolerance²
+    compute:(p, {field})=>{
+      const [tr, tg, tb] = hexToRgb(p.color), tol2 = p.tol*p.tol;
+      return {field: narrow(field, p.exclude, px=>{
+        const dr = field.rgb[px*4]-tr, dg = field.rgb[px*4+1]-tg, db = field.rgb[px*4+2]-tb;
+        return dr*dr + dg*dg + db*db <= tol2;
+      })};
+    }
+  },
+  orient: {
+    cat:'catLayers', inputs:[{id:'field', type:'field'}], outputs:[{id:'field', type:'field'}], thumb:'field',
+    params:[
+      {id:'from', label:'p_from', kind:'range', min:0, max:180, step:1, def:0, fmt:v=>v+'°'},
+      {id:'to',   label:'p_to',   kind:'range', min:0, max:180, step:1, def:90, fmt:v=>v+'°'},
+      {id:'exclude', label:'p_exclude', kind:'check', def:false}
+    ],
+    // edge orientation mod 180°, like the workshop's Sobel split
+    compute:(p, {field})=> ({field: narrow(field, p.exclude, px=>{
+      let a = field.angle[px] % Math.PI; if(a < 0) a += Math.PI;
+      a = a * 180 / Math.PI;
+      return p.from <= p.to ? (a >= p.from && a <= p.to) : (a >= p.from || a <= p.to);
+    })})
+  },
+  union: {
+    cat:'catLayers', inputs:[{id:'a', type:'field', label:'in_a'}, {id:'b', type:'field', label:'in_b'}], outputs:[{id:'field', type:'field'}], thumb:'field', params:[],
+    compute:(p, {a, b})=>{
+      if(!a || !b) return {field: a || b || null};
+      if(a.w !== b.w || a.h !== b.h) return {field:a};
+      const mask = new Uint8Array(a.mask.length);
+      for(let i=0;i<mask.length;i++) mask[i] = a.mask[i] | b.mask[i];
+      return {field:Object.assign({}, a, {mask})};
+    }
+  },
+  scale: {
+    cat:'catMusic', outputs:[{id:'scale', type:'scale'}],
+    params:[
+      {id:'scale', label:'p_scale', kind:'select', def:'minPenta', options:()=> Object.keys(SCALES).map(k=>[k, t('sc_'+k)])},
+      {id:'root', label:'p_root', kind:'select', def:'0', options:()=> NOTE_NAMES.map((nm,i)=>[String(i), nm])},
+      {id:'octLow', kind:'hidden', def:3},
+      {id:'octHigh', kind:'hidden', def:5}
+    ],
+    custom:'scale',
+    compute:(p)=>{
+      const root = parseInt(p.root) || 0;
+      return {scale:{pitches:scalePitches(p.scale, root, p.octLow, p.octHigh), scale:p.scale, root}};
+    },
+    summary:(n)=>{ const s = n.out && n.out.scale; return s ? s.pitches.length + ' ' + t('notesWord') : ''; }
+  },
+  scan: {
+    cat:'catMusic', thumb:'scan',
+    inputs:[{id:'field', type:'field'}, {id:'scale', type:'scale', opt:true}, {id:'curve', type:'curve', opt:true}, {id:'path', type:'path', opt:true}],
+    outputs:[{id:'notes', type:'notes'}],
+    params:[
+      {id:'dir', label:'p_dir', kind:'select', def:'lr', options:()=> DIR_KEYS.map(k=>[k, DIR_LABELS[k]])},
+      {id:'steps', label:'p_steps', kind:'range', min:4, max:64, step:1, def:16},
+      {id:'thresh', label:'p_thresh', kind:'range', min:1, max:100, step:1, def:55, fmt:v=>v+'%'},
+      {id:'curve', label:'p_curve', kind:'select', def:'linear', options:()=> CURVE_KEYS.map(k=>[k, t('curve_'+k)])}
+    ],
+    // the workshop's grid: every masked pixel lands in a (time step, pitch row)
+    // cell via the direction's forward mapping; a cell sounds if its strongest
+    // edge clears the cutoff — relative to the whole image's maxEdge, so a
+    // narrow layer keeps the same loudness it would have in the workshop.
+    // A drawn path replaces the direction, like the workshop's 'path' mode:
+    // τ/ρ come from a per-pixel table (cached on the node) and dots sit at the
+    // centroid of the pixels that made them, since inv() of a cell center can
+    // land off them where the path curls.
+    compute:(p, {field, scale, curve, path}, n)=>{
+      if(!field) return {notes:null};
+      const pitches = scale ? scale.pitches : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh);
+      const rows = Math.max(1, pitches.length), steps = p.steps, {w, h} = field;
+      const dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
+      const lut = path ? scanPathLut(n, path.points, w, h) : null;
+      const best = new Float32Array(steps*rows);
+      const cen = lut ? {sx:new Float32Array(steps*rows), sy:new Float32Array(steps*rows), n:new Float32Array(steps*rows)} : null;
+      for(let y=0;y<h;y++){
+        const ny = y/h;
+        for(let x=0;x<w;x++){
+          const px = y*w+x;
+          if(!field.mask[px]) continue;
+          const [tau, rho] = lut ? [lut.tau[px], lut.rho[px]] : dir.fwd(x/w, ny);
+          const ti = clamp(Math.floor(tau*steps), 0, steps-1);
+          const pi = clamp(Math.floor(rho*rows), 0, rows-1);
+          const ci = ti*rows+pi;
+          if(field.edge[px] > best[ci]) best[ci] = field.edge[px];
+          if(cen){ cen.sx[ci] += (x+0.5)/w; cen.sy[ci] += (y+0.5)/h; cen.n[ci]++; }
+        }
+      }
+      // a Sensitivity node upstream sets the threshold, else this node's slider
+      const thresh = field.thresh != null ? field.thresh : p.thresh;
+      const cutoff = (1 - thresh/100) * field.maxEdge, notes = [];
+      if(pitches.length){
+        for(let ti=0; ti<steps; ti++) for(let pi=0; pi<rows; pi++){
+          const ci = ti*rows+pi, v = best[ci];
+          if(v >= cutoff && v > 2){
+            const nt = {step:ti, midi:pitches[pi], row:pi, vel:Math.round(clamp(40 + 87*(v/field.maxEdge), 40, 127))};
+            if(cen && cen.n[ci]){ nt.px = cen.sx[ci]/cen.n[ci]; nt.py = cen.sy[ci]/cen.n[ci]; }
+            notes.push(nt);
+          }
+        }
+      }
+      return {notes:{steps, curve: curve ? 'custom' : p.curve, customPts: curve ? curve.pts : null,
+                     notes, rows, field, dir:p.dir, pathModel: lut ? lut.m : null}};
+    },
+    summary:(n)=>{
+      const o = n.out && n.out.notes;
+      if(!o) return '';
+      const via = [];
+      if(o.field.thresh != null) via.push(t('viaSens') + ' (' + o.field.thresh + '%)');
+      if(o.pathModel) via.push(t('viaPath'));
+      if(o.customPts) via.push(t('viaCurve'));
+      return [o.notes.length + ' ' + t('notesWord')].concat(via).join(' · ');
+    }
+  },
+  curve: {
+    cat:'catMusic', outputs:[{id:'curve', type:'curve'}], thumb:'curve', thumbClass:'drag',
+    params:[
+      {id:'pts', kind:'hidden', def:[0, 0.25, 0.5, 0.75, 1]},
+      // picking a preset copies its shape into the handles, then resets to '—'
+      {id:'seed', label:'p_seed', kind:'select', def:'', options:()=> [['', t('seedNone')]].concat(CURVE_KEYS.map(k=>[k, t('curve_'+k)])),
+       onChange:(n)=>{
+         const m = n.params.seed;
+         if(m) n.params.pts = CUSTOM_X.map((x, i)=> i === 0 ? 0 : i === 4 ? 1 : curveFracAt(m, i, 4));
+         n.params.seed = '';
+       }}
+    ],
+    note:'curveHint',
+    compute:(p)=> ({curve:{pts:p.pts.slice()}}),
+    thumbPointer:(n, c)=> curvePointer(n, c)
+  },
+  path: {
+    cat:'catMusic', inputs:[{id:'image', type:'image', opt:true}], outputs:[{id:'path', type:'path'}], thumb:'path', thumbClass:'draw',
+    params:[{id:'points', kind:'hidden', def:[[0.04,0.7],[0.25,0.3],[0.5,0.55],[0.75,0.25],[0.96,0.6]]}],
+    note:'pathHint',
+    compute:(p)=> ({path:{points:p.points}}),
+    thumbPointer:(n, c)=> pathPointer(n, c)
+  },
+  octave: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'notes', type:'notes'}], thumb:'roll',
+    params:[{id:'shift', label:'p_shift', kind:'range', min:-3, max:3, step:1, def:-1, fmt:v=>(v>0?'+':'')+v}],
+    // whole octaves only: pitch classes (hence the scale) are untouched
+    compute:(p, {notes})=>{
+      if(!notes) return {notes:null};
+      const out = notes.notes.map(n=> Object.assign({}, n, {midi:n.midi + 12*p.shift})).filter(n=> n.midi >= 0 && n.midi <= 127);
+      return {notes:Object.assign({}, notes, {notes:out})};
+    }
+  },
+  limit: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'notes', type:'notes'}], thumb:'roll',
+    params:[{id:'perStep', label:'p_perStep', kind:'range', min:1, max:8, step:1, def:2}],
+    // keep the loudest N notes of each step — tames dense images into lines
+    compute:(p, {notes})=>{
+      if(!notes) return {notes:null};
+      const byStep = new Map();
+      notes.notes.forEach(n=>{ if(!byStep.has(n.step)) byStep.set(n.step, []); byStep.get(n.step).push(n); });
+      const out = [];
+      byStep.forEach(arr=>{ arr.sort((a,b)=> b.vel-a.vel); out.push(...arr.slice(0, p.perStep)); });
+      out.sort((a,b)=> a.step-b.step || a.midi-b.midi);
+      return {notes:Object.assign({}, notes, {notes:out})};
+    }
+  },
+  track: {
+    cat:'catOut', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'track', type:'track'}], thumb:'roll',
+    params:[
+      {id:'name', label:'p_name', kind:'text', def:''},
+      {id:'program', label:'p_instr', kind:'instr', def:'0'},
+      {id:'color', label:'p_color', kind:'color', def:'#00ffff'},
+      {id:'mute', label:'p_mute', kind:'check', def:false}
+    ],
+    compute:(p, {notes}, n)=>{
+      const src = notes || emptyNotes();
+      const name = p.name || ((NODE_INSTR.find(g=> String(g.prog) === p.program) || {})[LANG] || t('trackDefault'));
+      return {track:Object.assign({}, src, {name, program:parseInt(p.program) || 0, color:p.color, mute:!!p.mute, id:n.id})};
+    },
+    summary:(n)=>{ const o = n.out && n.out.track; return o ? o.notes.length + ' ' + t('notesWord') : ''; }
+  },
+  loop: {
+    cat:'catOut', inputs:[{id:'tracks', type:'track', multi:true, label:'in_tracks'}], outputs:[], thumb:'loop', wide:true, custom:'loop',
+    params:[
+      {id:'tempo', label:'p_tempo', kind:'range', min:40, max:200, step:1, def:100, fmt:v=>v+' bpm'},
+      {id:'bars', label:'p_bars', kind:'range', min:1, max:8, step:1, def:2},
+      {id:'gate', label:'p_gate', kind:'range', min:10, max:100, step:1, def:80, fmt:v=>v+'%'}
+    ],
+    compute:(p, {tracks})=>{
+      const L = {tempo:p.tempo, bars:p.bars, gate:p.gate/100, tracks:tracks || []};
+      return {_loop:L};
+    },
+    summary:(n)=>{
+      const L = n.out && n.out._loop; if(!L) return '';
+      return L.tracks.length + ' ' + t('tracksWord') + ' · ' + L.tracks.reduce((a,tr)=> a + tr.notes.length, 0) + ' ' + t('notesWord');
+    }
+  },
+  // live Web MIDI out of one notes wire to a virtual port (IAC on macOS), on
+  // its own channel: one node per Logic track, the sound is chosen in Logic.
+  // The tempo comes from a Loop (see midiLoopOf); all Logic nodes clocked by
+  // the same Loop play together.
+  midiOut: {
+    cat:'catOut', inputs:[{id:'notes', type:'notes'}], outputs:[], custom:'midi',
+    params:[
+      {id:'channel', label:'p_channel', kind:'range', min:1, max:16, step:1, def:1},
+      {id:'sustain', label:'p_sustain', kind:'check', def:false}
+    ],
+    note:'midiHint',
+    compute:()=> ({})
+  }
+};
+const ADD_MENU = [
+  ['catSource', ['source']],
+  ['catImage', ['crop', 'tone', 'blur', 'invert']],
+  ['catAnalysis', ['edges', 'sens']],
+  ['catLayers', ['hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
+  ['catMusic', ['scale', 'scan', 'curve', 'path', 'octave', 'limit']],
+  ['catOut', ['track', 'loop', 'midiOut']]
+];
+
+// layer nodes: copy of the field with mask narrowed to pixels passing test
+// (or failing it, with Exclude). Never widens: a chain of filters = AND.
+function narrow(field, exclude, test){
+  if(!field) return null;
+  const N = field.w*field.h, mask = new Uint8Array(N);
+  for(let px=0; px<N; px++){
+    if(!field.mask[px]) continue;
+    mask[px] = (test(px) ? 1 : 0) ^ (exclude ? 1 : 0);
+  }
+  return Object.assign({}, field, {mask});
+}
+
+/* ============================================================
+   Graph state
+   ============================================================ */
+const nodes = new Map();        // id -> {id, type, x, y, params, el, out, dirty, ...}
+let links = [];                 // {from, fromPort, to, toPort}
+let view = {x:40, y:30, z:0.85};
+let selectedId = null;
+let nextId = 1;
+const stage = $('stage'), world = $('world'), wiresSvg = $('wires');
+
+function defaultParams(type){
+  const p = {};
+  (NODE_DEFS[type].params || []).forEach(d=> p[d.id] = (d.def && typeof d.def === 'object') ? JSON.parse(JSON.stringify(d.def)) : d.def);
+  return p;
+}
+function addNode(type, x, y, params, id){
+  const def = NODE_DEFS[type];
+  if(!def) return null;
+  const n = {id: id || ('n' + (nextId++)), type, x, y, params:Object.assign(defaultParams(type), params || {}), out:{}, dirty:true};
+  if(type === 'track' && !(params && params.color)){
+    n.params.color = TRACK_COLORS[[...nodes.values()].filter(m=> m.type === 'track').length % TRACK_COLORS.length];
+  }
+  if(type === 'midiOut' && !(params && params.channel)){
+    const used = new Set([...nodes.values()].filter(m=> m.type === 'midiOut').map(m=> m.params.channel));
+    n.params.channel = [...Array(16)].map((_, i)=> i + 1).find(c=> !used.has(c)) || 1;
+  }
+  nodes.set(n.id, n);
+  buildNodeEl(n);
+  if(type === 'source' && n.params.img) restoreSourceImage(n);
+  return n;
+}
+function removeNode(id){
+  const n = nodes.get(id);
+  if(!n) return;
+  if(n.type === 'source') stopMedia(n);
+  if(playingLoopId === id) stopPlayback();
+  const downstream = links.filter(l=> l.from === id).map(l=> l.to);
+  links = links.filter(l=> l.from !== id && l.to !== id);
+  n.el.remove();
+  nodes.delete(id);
+  if(selectedId === id) selectedId = null;
+  downstream.forEach(markDirty);
+  refreshLinkedPorts(); drawWires(); saveSoon();
+}
+
+function inputDef(n, portId){ return (NODE_DEFS[n.type].inputs || []).find(p=> p.id === portId); }
+function outputDef(n, portId){ return (NODE_DEFS[n.type].outputs || []).find(p=> p.id === portId); }
+
+// true if `target` can be reached by following wires downstream from `start`
+function reaches(start, target){
+  const seen = new Set(), stack = [start];
+  while(stack.length){
+    const id = stack.pop();
+    if(id === target) return true;
+    if(seen.has(id)) continue;
+    seen.add(id);
+    links.forEach(l=>{ if(l.from === id) stack.push(l.to); });
+  }
+  return false;
+}
+function connect(from, fromPort, to, toPort){
+  const a = nodes.get(from), b = nodes.get(to);
+  if(!a || !b || from === to) return false;
+  const od = outputDef(a, fromPort), id = inputDef(b, toPort);
+  if(!od || !id || od.type !== id.type) return false;
+  if(reaches(to, from)){ alert(t('cycleErr')); return false; }
+  if(links.some(l=> l.from === from && l.fromPort === fromPort && l.to === to && l.toPort === toPort)) return false;
+  if(!id.multi) links = links.filter(l=> !(l.to === to && l.toPort === toPort));
+  links.push({from, fromPort, to, toPort});
+  markDirty(to); refreshLinkedPorts(); drawWires(); saveSoon();
+  return true;
+}
+function disconnect(link){
+  links = links.filter(l=> l !== link);
+  markDirty(link.to); refreshLinkedPorts(); drawWires(); saveSoon();
+}
+
+/* ---- evaluation: lazy, cached, invalidated downstream ---- */
+function markDirty(id){
+  const n = nodes.get(id);
+  if(!n) return;
+  const stack = [id], seen = new Set();
+  while(stack.length){
+    const cur = stack.pop();
+    if(seen.has(cur)) continue;
+    seen.add(cur);
+    const m = nodes.get(cur);
+    if(m) m.dirty = true;
+    links.forEach(l=>{ if(l.from === cur) stack.push(l.to); });
+  }
+  scheduleRun();
+}
+function evalNode(n){
+  if(!n.dirty) return n.out;
+  n.dirty = false;            // set first: a cycle (shouldn't exist) can't recurse forever
+  const def = NODE_DEFS[n.type], inp = {};
+  (def.inputs || []).forEach(port=>{
+    // multi inputs keep wiring order (it's the track -> channel order)
+    const vals = links.filter(l=> l.to === n.id && l.toPort === port.id).map(l=>{
+      const src = nodes.get(l.from);
+      return src ? evalNode(src)[l.fromPort] : null;
+    });
+    inp[port.id] = port.multi ? vals.filter(Boolean) : (vals[0] || null);
+  });
+  try{ n.out = def.compute(n.params, inp, n) || {}; n.error = null; }
+  catch(e){ n.out = {}; n.error = e.message; console.error(e); }
+  n.inp = inp;
+  n.thumbDirty = true;
+  return n.out;
+}
+let runQueued = false;
+function scheduleRun(all){
+  if(all) nodes.forEach(n=> n.thumbDirty = true);
+  if(runQueued) return;
+  runQueued = true;
+  requestAnimationFrame(()=>{
+    runQueued = false;
+    nodes.forEach(n=> evalNode(n));
+    nodes.forEach(n=>{ if(n.thumbDirty){ drawThumb(n); updateSummary(n); n.thumbDirty = false; } });
+  });
+}
+
+/* ============================================================
+   Node DOM
+   ============================================================ */
+function buildNodeEl(n){
+  const def = NODE_DEFS[n.type];
+  const old = n.el;
+  const el = document.createElement('div');
+  el.className = 'node' + (def.wide ? ' wide' : '') + (selectedId === n.id ? ' selected' : '');
+  el.dataset.id = n.id;
+  el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+
+  const head = document.createElement('div');
+  head.className = 'nodeHead';
+  head.innerHTML = '<span class="cat"></span><span class="title"></span><button type="button" class="nodeDel" aria-label="×">×</button>';
+  head.querySelector('.cat').style.background = CAT_COLOR[def.cat];
+  head.querySelector('.title').textContent = t('n_' + n.type);
+  head.querySelector('.nodeDel').addEventListener('click', e=>{ e.stopPropagation(); removeNode(n.id); });
+  head.addEventListener('pointerdown', e=> startNodeDrag(e, n));
+  el.appendChild(head);
+
+  const ports = document.createElement('div');
+  ports.className = 'ports';
+  const colIn = document.createElement('div'), colOut = document.createElement('div');
+  colIn.className = 'col in'; colOut.className = 'col out';
+  (def.inputs || []).forEach(p=> colIn.appendChild(portEl(n, p, 'in')));
+  (def.outputs || []).forEach(p=> colOut.appendChild(portEl(n, p, 'out')));
+  ports.append(colIn, colOut);
+  el.appendChild(ports);
+
+  const body = document.createElement('div');
+  body.className = 'nodeBody';
+  if(def.custom === 'source') buildSourceControls(n, body);
+  (def.params || []).forEach(d=>{ if(d.kind !== 'hidden') body.appendChild(paramEl(n, d)); });
+  if(def.thumb){
+    const c = document.createElement('canvas');
+    c.className = 'thumb' + (def.pick ? ' pick' : '') + (def.thumbClass ? ' ' + def.thumbClass : '');
+    body.appendChild(c);
+    n.thumb = c;
+    if(def.thumbPointer) def.thumbPointer(n, c);
+    if(def.pick) c.addEventListener('click', e=> pickColorFromThumb(n, e));
+    if(def.thumb === 'loop') c.addEventListener('click', ()=> togglePlay(n));
+  }
+  if(def.custom === 'loop') buildLoopControls(n, body);
+  if(def.custom === 'midi') buildMidiControls(n, body);
+  if(def.custom === 'sens') buildSensControls(n, body);
+  if(def.custom === 'scale') buildScaleControls(n, body);
+  if(def.note){ const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t(def.note); body.appendChild(p); }
+  const sum = document.createElement('div'); sum.className = 'nodeNote summary'; body.appendChild(sum);
+  const err = document.createElement('div'); err.className = 'nodeErr'; err.hidden = true; body.appendChild(err);
+  el.appendChild(body);
+
+  el.addEventListener('pointerdown', ()=> selectNode(n.id));
+  if(old) old.replaceWith(el); else world.appendChild(el);
+  n.el = el;
+  n.thumbDirty = true;
+  refreshLinkedPorts();
+}
+
+function portEl(n, p, side){
+  const el = document.createElement('div');
+  el.className = 'port ' + side + ' ty-' + p.type + (p.opt ? ' opt' : '');
+  el.dataset.node = n.id; el.dataset.port = p.id; el.dataset.type = p.type; el.dataset.side = side;
+  el.innerHTML = '<i class="dot"></i><span></span>';
+  el.querySelector('span').textContent = p.label ? t(p.label) : t('t_' + p.type);
+  el.title = t('t_' + p.type);
+  el.querySelector('.dot').addEventListener('pointerdown', e=> startWire(e, n, p, side));
+  return el;
+}
+
+function paramEl(n, d){
+  if(d.kind === 'instr') return instrEl(n, d);
+  const row = document.createElement('label');
+  row.className = 'prm' + (d.kind === 'range' ? '' : ' full');
+  const lab = document.createElement('span'); lab.textContent = t(d.label);
+  row.appendChild(lab);
+  let input;
+  if(d.kind === 'select'){
+    input = document.createElement('select');
+    d.options().forEach(([v, txt])=>{ const o = document.createElement('option'); o.value = v; o.textContent = txt; input.appendChild(o); });
+    input.value = n.params[d.id];
+  } else {
+    input = document.createElement('input');
+    input.type = d.kind === 'check' ? 'checkbox' : d.kind;
+    if(d.kind === 'range'){ input.min = d.min; input.max = d.max; input.step = d.step; input.value = n.params[d.id]; }
+    else if(d.kind === 'check') input.checked = !!n.params[d.id];
+    else input.value = n.params[d.id];
+    if(d.kind === 'check') input.style.justifySelf = 'start';
+  }
+  if(d.hue) input.style.background = 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)';
+  row.appendChild(input);
+  let val = null;
+  if(d.kind === 'range'){
+    val = document.createElement('span'); val.className = 'v';
+    row.appendChild(val);
+  }
+  const show = ()=>{ if(val) val.textContent = d.fmt ? d.fmt(n.params[d.id]) : n.params[d.id]; };
+  show();
+  input.addEventListener(d.kind === 'text' ? 'change' : 'input', ()=>{
+    n.params[d.id] = d.kind === 'check' ? input.checked : d.kind === 'range' ? parseFloat(input.value) : input.value;
+    show();
+    if(n.type === 'midiOut' && d.id === 'sustain') sendSustain(n);
+    if(d.onChange){ d.onChange(n); buildNodeEl(n); drawWires(); }
+    if(n.onParam) n.onParam(d.id);
+    markDirty(n.id); saveSoon();
+  });
+  input.addEventListener('pointerdown', e=> e.stopPropagation());
+  return row;
+}
+
+// instrument: the hand-drawn icon at rest, the native <select> invisible on
+// top of it (real dropdown, keyboard, screen readers), name spelled out beside
+function instrEl(n, d){
+  const row = document.createElement('div');
+  row.className = 'instrRow';
+  const picker = document.createElement('div'); picker.className = 'instrPicker';
+  const icon = document.createElement('span'); icon.className = 'instrIcon'; icon.setAttribute('aria-hidden', 'true');
+  const sel = document.createElement('select');
+  sel.setAttribute('aria-label', t(d.label));
+  NODE_INSTR.forEach(g=> sel.appendChild(new Option(g[LANG] || g.en, String(g.prog))));
+  sel.value = n.params[d.id];
+  const name = document.createElement('span'); name.className = 'instrName';
+  const sync = ()=>{
+    const g = NODE_INSTR.find(x=> String(x.prog) === n.params[d.id]) || NODE_INSTR[0];
+    if(g.icon) icon.innerHTML = g.icon; else icon.textContent = g.abbr;
+    name.textContent = g[LANG] || g.en;
+    picker.title = name.textContent;
+  };
+  sel.addEventListener('change', ()=>{ n.params[d.id] = sel.value; sync(); markDirty(n.id); saveSoon(); });
+  sel.addEventListener('pointerdown', e=> e.stopPropagation());
+  sync();
+  picker.append(icon, sel);
+  row.append(picker, name);
+  return row;
+}
+
+// Scale node: one-octave keyboard (scale degrees + root, read-only) and the
+// top-down piano strip dragged across to pick the octave range
+const OCTAVES = 8;
+function buildScaleControls(n, body){
+  const kb = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  kb.setAttribute('class', 'scaleKeyboard'); kb.setAttribute('viewBox', '0 0 210 60'); kb.setAttribute('preserveAspectRatio', 'none');
+  {
+    const W = 210, H = 60, whiteW = W/7, whiteSemis = [0,2,4,5,7,9,11], blackSemis = [1,3,6,8,10], blackAfterWi = [0,1,3,4,5];
+    let html = '';
+    whiteSemis.forEach((semi, wi)=>{ html += `<rect class="pw" data-semi="${semi}" x="${wi*whiteW}" y="0" width="${whiteW}" height="${H}"></rect>`; });
+    blackAfterWi.forEach((wi, i)=>{ html += `<rect class="pb" data-semi="${blackSemis[i]}" x="${(wi+1)*whiteW - whiteW*0.3}" y="0" width="${whiteW*0.6}" height="${H*0.62}"></rect>`; });
+    kb.innerHTML = html;
+  }
+  const head = document.createElement('div'); head.className = 'octHead';
+  head.innerHTML = '<span></span><span class="v"></span>';
+  head.firstChild.textContent = t('p_octRange');
+  const strip = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  strip.setAttribute('class', 'octaveStrip'); strip.setAttribute('viewBox', '0 0 320 60'); strip.setAttribute('preserveAspectRatio', 'none');
+  {
+    const W = 320, H = 60, octW = W/OCTAVES, whiteW = octW/7, blackAfter = [0,1,3,4,5];
+    let html = '';
+    for(let oct=0; oct<OCTAVES; oct++){
+      const ox = oct*octW;
+      for(let w=0; w<7; w++) html += `<rect class="pw" x="${ox+w*whiteW}" y="0" width="${whiteW}" height="${H}"></rect>`;
+      blackAfter.forEach(wi=>{ html += `<rect class="pb" x="${ox + (wi+1)*whiteW - whiteW*0.3}" y="0" width="${whiteW*0.6}" height="${H*0.62}"></rect>`; });
+    }
+    html += `<rect class="octHi" x="0" y="0" width="${octW}" height="${H}"></rect>`;
+    strip.innerHTML = html;
+  }
+  const labels = document.createElement('div'); labels.className = 'octaveLabels';
+  for(let o=0; o<OCTAVES; o++){ const sp = document.createElement('span'); sp.textContent = o; labels.appendChild(sp); }
+
+  const redraw = ()=>{
+    const root = parseInt(n.params.root) || 0;
+    const inScale = new Set((SCALES[n.params.scale] || []).map(d=> (root + d) % 12));
+    kb.querySelectorAll('rect[data-semi]').forEach(r=>{
+      const semi = parseInt(r.dataset.semi);
+      r.classList.toggle('rootKey', semi === root);
+      r.classList.toggle('scaleKey', semi !== root && inScale.has(semi));
+    });
+    const lo = n.params.octLow, hi = n.params.octHigh, octW = 320/OCTAVES;
+    const hiRect = strip.querySelector('.octHi');
+    hiRect.setAttribute('x', lo*octW); hiRect.setAttribute('width', (hi - lo + 1)*octW);
+    head.lastChild.textContent = lo === hi ? String(lo) : lo + '–' + hi;
+  };
+  n.onParam = id=>{ if(id === 'scale' || id === 'root') redraw(); };
+
+  // drag across the strip like a marker selection (same gesture as the workshop)
+  let dragStart = null;
+  const octOf = e=>{ const r = strip.getBoundingClientRect(); return clamp(Math.floor((e.clientX - r.left)/r.width*OCTAVES), 0, OCTAVES-1); };
+  const setRange = (lo, hi)=>{
+    if(lo === n.params.octLow && hi === n.params.octHigh) return;
+    n.params.octLow = lo; n.params.octHigh = hi;
+    redraw(); markDirty(n.id); saveSoon();
+  };
+  strip.addEventListener('pointerdown', e=>{
+    e.stopPropagation();
+    dragStart = octOf(e); setRange(dragStart, dragStart);
+    strip.setPointerCapture(e.pointerId);
+  });
+  strip.addEventListener('pointermove', e=>{ if(dragStart == null) return; const cur = octOf(e); setRange(Math.min(dragStart, cur), Math.max(dragStart, cur)); });
+  strip.addEventListener('pointerup', ()=>{ dragStart = null; });
+
+  // keyboard right under the Scale/Root selects, octave strip after
+  body.append(kb, head, strip, labels);
+  redraw();
+}
+
+function updateSummary(n){
+  const def = NODE_DEFS[n.type];
+  const sum = n.el.querySelector('.summary'), err = n.el.querySelector('.nodeErr');
+  sum.textContent = def.summary ? def.summary(n) : '';
+  sum.hidden = !sum.textContent;
+  err.hidden = !n.error; err.textContent = n.error || '';
+}
+
+function refreshLinkedPorts(){
+  if(typeof renderMidiState === 'function') renderMidiState();
+  nodes.forEach(n=>{
+    if(!n.el) return;
+    n.el.querySelectorAll('.port').forEach(pe=>{
+      const id = pe.dataset.node, port = pe.dataset.port;
+      const linked = pe.dataset.side === 'in'
+        ? links.some(l=> l.to === id && l.toPort === port)
+        : links.some(l=> l.from === id && l.fromPort === port);
+      pe.classList.toggle('linked', linked);
+    });
+  });
+}
+
+function selectNode(id){
+  selectedId = id;
+  nodes.forEach(m=> m.el && m.el.classList.toggle('selected', m.id === id));
+}
+
+/* ============================================================
+   Thumbnails
+   ============================================================ */
+const scratch = document.createElement('canvas'), scratchCtx = scratch.getContext('2d');
+function sizeThumb(c, w, h){
+  const cssW = c.clientWidth || (c.closest('.node.wide') ? 280 : 196);
+  const dpr = window.devicePixelRatio || 1;
+  const cssH = Math.max(40, Math.round(cssW * h / w));
+  c.style.height = cssH + 'px';
+  c.width = Math.round(cssW * dpr); c.height = Math.round(cssH * dpr);
+  return c.getContext('2d');
+}
+function blitRGBA(ctx, c, w, h, data){
+  scratch.width = w; scratch.height = h;
+  const id = scratchCtx.createImageData(w, h);
+  id.data.set(data);
+  scratchCtx.putImageData(id, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(scratch, 0, 0, c.width, c.height);
+}
+// field view: masked pixels show the image lit by edge strength, the rest is
+// nearly black — what this layer "sees"
+function fieldRGBA(f, dimAll){
+  const N = f.w*f.h, d = new Uint8ClampedArray(N*4);
+  for(let px=0; px<N; px++){
+    const k = f.mask[px] ? (dimAll ? 0.32 : 0.25 + 0.75*Math.min(1, f.edge[px]/f.maxEdge*2.2)) : 0.07;
+    d[px*4] = f.rgb[px*4]*k; d[px*4+1] = f.rgb[px*4+1]*k; d[px*4+2] = f.rgb[px*4+2]*k; d[px*4+3] = 255;
+  }
+  return d;
+}
+
+function drawThumb(n){
+  const def = NODE_DEFS[n.type], c = n.thumb;
+  if(!c) return;
+  const kind = def.thumb;
+  if(kind === 'image'){
+    const im = n.out.image;
+    if(!im){ emptyThumb(c); return; }
+    blitRGBA(sizeThumb(c, im.w, im.h), c, im.w, im.h, im.data);
+  } else if(kind === 'field'){
+    const f = n.out.field;
+    if(!f){ emptyThumb(c); return; }
+    blitRGBA(sizeThumb(c, f.w, f.h), c, f.w, f.h, fieldRGBA(f, false));
+  } else if(kind === 'scan'){
+    const o = n.out.notes;
+    if(!o){ emptyThumb(c); return; }
+    const f = o.field, ctx = sizeThumb(c, f.w, f.h);
+    blitRGBA(ctx, c, f.w, f.h, fieldRGBA(f, true));
+    const dir = DIR_DEFS[o.dir] || DIR_DEFS.lr, r = Math.max(1.5, c.width/120);
+    if(o.pathModel) strokePath(ctx, o.pathModel, c.width, c.height, 'rgba(255,107,107,.55)', true);
+    ctx.fillStyle = typeColor('notes');
+    o.notes.forEach(nt=>{
+      const [nx, ny] = nt.px != null ? [nt.px, nt.py] : dir.inv((nt.step + 0.5)/o.steps, (nt.row + 0.5)/o.rows);
+      ctx.globalAlpha = 0.45 + 0.55*(nt.vel/127);
+      ctx.beginPath(); ctx.arc(nx*c.width, ny*c.height, r, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  } else if(kind === 'roll'){
+    const o = n.out.notes || n.out.track;
+    const ctx = sizeThumb(c, 3, 1);
+    ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, c.width, c.height);
+    if(!o || !o.notes.length) return;
+    drawRoll(ctx, 0, 0, c.width, c.height, [{notes:o.notes, steps:o.steps, curve:'linear', color:n.out.track ? o.color : typeColor('notes')}], 0.8);
+  } else if(kind === 'loop'){
+    drawLoopThumb(n);
+  } else if(kind === 'crop'){
+    drawCropThumb(n);
+  } else if(kind === 'sens'){
+    const f = n.out.field;
+    if(!f){ emptyThumb(c); return; }
+    // the workshop's sensitivity mask: cyan where an edge clears the threshold
+    const d = fieldRGBA(f, true), cutoff = (1 - f.thresh/100) * f.maxEdge;
+    for(let px=0; px<f.w*f.h; px++){
+      if(f.mask[px] && f.edge[px] >= cutoff){ d[px*4] = 0; d[px*4+1] = 255; d[px*4+2] = 255; }
+    }
+    blitRGBA(sizeThumb(c, f.w, f.h), c, f.w, f.h, d);
+  } else if(kind === 'curve'){
+    drawCurveThumb(n);
+  } else if(kind === 'path'){
+    drawPathThumb(n);
+  }
+}
+function emptyThumb(c){
+  const ctx = sizeThumb(c, 3, 1);
+  ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, c.width, c.height);
+}
+// note rects positioned by curve-warped time (linear for single-scan rolls)
+function drawRoll(ctx, x, y, w, h, tracks, gate){
+  let lo = 127, hi = 0;
+  tracks.forEach(tr=> tr.notes.forEach(nt=>{ lo = Math.min(lo, nt.midi); hi = Math.max(hi, nt.midi); }));
+  if(lo > hi) return;
+  lo -= 1; hi += 1;
+  const rowH = h / (hi - lo + 1);
+  tracks.forEach(tr=>{
+    ctx.fillStyle = tr.color;
+    tr.notes.forEach(nt=>{
+      const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + 1);
+      ctx.globalAlpha = (tr.mute ? 0.18 : 0.4 + 0.6*(nt.vel/127));
+      ctx.fillRect(x + f0*w, y + (hi - nt.midi)*rowH, Math.max(1.5, (f1 - f0)*w*gate), Math.max(1.5, rowH - 0.5));
+    });
+  });
+  ctx.globalAlpha = 1;
+}
+function drawLoopThumb(n){
+  const c = n.thumb, L = n.out._loop;
+  const ctx = sizeThumb(c, 2.6, 1);
+  ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, c.width, c.height);
+  if(!L) return;
+  // beat grid
+  const beats = L.bars*4;
+  for(let b=1; b<beats; b++){
+    ctx.fillStyle = b % 4 ? 'rgba(159,188,185,.07)' : 'rgba(159,188,185,.2)';
+    ctx.fillRect(Math.round(b/beats*c.width), 0, 1, c.height);
+  }
+  drawRoll(ctx, 0, 0, c.width, c.height, L.tracks, L.gate);
+  if(playing && playingLoopId === n.id){
+    const x = loopPosNow() % 1 * c.width;
+    ctx.fillStyle = '#00ff00'; ctx.fillRect(x, 0, Math.max(1.5, c.width/300), c.height);
+  }
+}
+
+// thumb-relative normalized pointer position, clamped to [0,1]
+function thumbPoint(c, e){
+  const r = c.getBoundingClientRect();
+  return [clamp((e.clientX - r.left)/r.width, 0, 1), clamp((e.clientY - r.top)/r.height, 0, 1)];
+}
+// one pointer gesture on a thumb: down(pt) once (false = ignore), move(pt) while dragging, up() at the end
+function thumbGesture(c, down, move, up){
+  c.addEventListener('pointerdown', e=>{
+    if(down(thumbPoint(c, e)) === false) return;
+    e.preventDefault(); e.stopPropagation();
+    c.setPointerCapture(e.pointerId);
+    const mv = ev=> move(thumbPoint(c, ev));
+    const end = ()=>{
+      c.removeEventListener('pointermove', mv); c.removeEventListener('pointerup', end); c.removeEventListener('pointercancel', end);
+      up();
+    };
+    c.addEventListener('pointermove', mv); c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+  });
+}
+
+/* ---- Crop: like the workshop's crop, applied to the full-resolution source
+   when the image comes straight from a Source (sharp), else to the pixels it gets ---- */
+function cropImage(image, p, n){
+  if(!image) return null;
+  const x = clamp(p.x, 0, 1), y = clamp(p.y, 0, 1);
+  const w = clamp(p.w, 0.02, 1 - x), h = clamp(p.h, 0.02, 1 - y);
+  if(x <= 0 && y <= 0 && w >= 1 && h >= 1) return image;
+  const m = image.orig;
+  const sw = m && (m.videoWidth || m.naturalWidth || m.width), sh = m && (m.videoHeight || m.naturalHeight || m.height);
+  if(m && sw && sh){
+    if(!n.cropCanvas) n.cropCanvas = document.createElement('canvas');
+    const cv = n.cropCanvas, ctx = cv.getContext('2d', {willReadFrequently:true});
+    const [rx, ry, rw, rh] = image.region;
+    const region = [rx + x*rw, ry + y*rh, w*rw, h*rh];
+    const srcW = region[2]*sw, srcH = region[3]*sh;
+    const s = Math.min(1, MAXDIM/Math.max(srcW, srcH));
+    cv.width = Math.max(1, Math.round(srcW*s)); cv.height = Math.max(1, Math.round(srcH*s));
+    ctx.drawImage(m, region[0]*sw, region[1]*sh, srcW, srcH, 0, 0, cv.width, cv.height);
+    return {w:cv.width, h:cv.height, data:ctx.getImageData(0, 0, cv.width, cv.height).data, orig:m, region};
+  }
+  const x0 = Math.floor(x*image.w), y0 = Math.floor(y*image.h);
+  const cw = Math.max(1, Math.min(image.w - x0, Math.round(w*image.w))), ch = Math.max(1, Math.min(image.h - y0, Math.round(h*image.h)));
+  const d = new Uint8ClampedArray(cw*ch*4);
+  for(let yy=0; yy<ch; yy++){
+    const src = ((y0+yy)*image.w + x0)*4;
+    d.set(image.data.subarray(src, src + cw*4), yy*cw*4);
+  }
+  return {w:cw, h:ch, data:d};
+}
+function drawCropThumb(n){
+  const c = n.thumb, im = n.inp && n.inp.image;
+  if(!im){ emptyThumb(c); return; }
+  const ctx = sizeThumb(c, im.w, im.h);
+  blitRGBA(ctx, c, im.w, im.h, im.data);
+  const p = n.params, W = c.width, H = c.height;
+  ctx.fillStyle = 'rgba(0,0,0,.6)';
+  ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.rect(p.x*W, p.y*H, p.w*W, p.h*H); ctx.fill('evenodd');
+  ctx.strokeStyle = typeColor('image'); ctx.lineWidth = Math.max(1, W/200);
+  ctx.strokeRect(p.x*W, p.y*H, p.w*W, p.h*H);
+}
+// a drag draws a new rectangle (no handles: a new drag replaces the old one, like the workshop)
+function cropPointer(n, c){
+  let start = null;
+  thumbGesture(c,
+    pt=>{ if(!(n.inp && n.inp.image)) return false; start = pt; },
+    pt=>{
+      const x = Math.min(start[0], pt[0]), y = Math.min(start[1], pt[1]);
+      const w = Math.abs(pt[0] - start[0]), h = Math.abs(pt[1] - start[1]);
+      if(w < 0.02 || h < 0.02) return;
+      Object.assign(n.params, {x, y, w, h});
+      markDirty(n.id);
+    },
+    ()=> saveSoon());
+  c.addEventListener('dblclick', ()=>{ Object.assign(n.params, {x:0, y:0, w:1, h:1}); markDirty(n.id); saveSoon(); });
+}
+
+/* ---- Sensitivity: Otsu on the edge magnitudes of the pixels it sees, same as the workshop's Auto ---- */
+function buildSensControls(n, body){
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'miniBtn'; b.textContent = t('btnAuto');
+  b.addEventListener('click', ()=>{
+    const f = n.inp && n.inp.field;
+    if(!f) return;
+    const hist = new Float64Array(256);
+    let total = 0;
+    for(let px=0; px<f.mask.length; px++){
+      if(!f.mask[px]) continue;
+      hist[Math.min(255, Math.floor(f.edge[px]/f.maxEdge*255))]++; total++;
+    }
+    if(!total) return;
+    n.params.thresh = clamp(Math.round((1 - otsuThreshold(hist, total)/255)*100), 1, 100);
+    buildNodeEl(n); drawWires();
+    markDirty(n.id); saveSoon();
+  });
+  body.appendChild(b);
+}
+
+/* ---- Custom curve: 3 handles at x = .25/.5/.75, each clamped between its
+   neighbours while dragged: monotonic by construction (a non-monotonic curve
+   would give negative step lengths), same rule as the workshop's editor ---- */
+const CURVE_PAD = 0.08;
+function drawCurveThumb(n){
+  const c = n.thumb, ctx = sizeThumb(c, 1.6, 1), W = c.width, H = c.height, pts = n.params.pts;
+  const X = x=> (CURVE_PAD + x*(1 - 2*CURVE_PAD))*W, Y = y=> (1 - CURVE_PAD - y*(1 - 2*CURVE_PAD))*H;
+  ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(159,188,185,.18)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(1), Y(1)); ctx.stroke();      // linear reference
+  // 16 steps as ticks along the bottom: where they actually fall in the loop
+  const col = typeColor('curve');
+  ctx.fillStyle = col;
+  for(let k=0; k<16; k++){
+    const f = curveFracAt('custom', k, 16, pts);
+    ctx.fillRect(X(f) - 0.5, Y(0) + 3, Math.max(1, W/260), H*CURVE_PAD*0.6);
+  }
+  ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, W/150);
+  ctx.beginPath();
+  CUSTOM_X.forEach((x, i)=> i ? ctx.lineTo(X(x), Y(pts[i])) : ctx.moveTo(X(x), Y(pts[i])));
+  ctx.stroke();
+  ctx.fillStyle = '#06100f';
+  for(let i=1; i<4; i++){
+    ctx.beginPath(); ctx.arc(X(CUSTOM_X[i]), Y(pts[i]), Math.max(4, W/45), 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+}
+function curvePointer(n, c){
+  let idx = 1;
+  const yOf = pt=> clamp((1 - CURVE_PAD - pt[1])/(1 - 2*CURVE_PAD), 0, 1);
+  thumbGesture(c,
+    pt=>{
+      const x = (pt[0] - CURVE_PAD)/(1 - 2*CURVE_PAD);
+      idx = [1, 2, 3].reduce((a, i)=> Math.abs(CUSTOM_X[i] - x) < Math.abs(CUSTOM_X[a] - x) ? i : a, 1);
+    },
+    pt=>{
+      const pts = n.params.pts.slice();
+      pts[idx] = clamp(yOf(pt), pts[idx - 1], pts[idx + 1]);
+      n.params.pts = pts;
+      markDirty(n.id);
+    },
+    ()=> saveSoon());
+}
+
+/* ---- Drawn path: same model as the workshop (buildPathModel in dessons-core.js) ---- */
+function scanPathLut(n, points, w, h){
+  const key = w + 'x' + h + '|' + JSON.stringify(points);
+  if(n.pathLut && n.pathLut.key === key) return n.pathLut;
+  const m = buildPathModel(points.length > 1 ? points : [[0.02,0.5],[0.98,0.5]], w/h);
+  const tau = new Float32Array(w*h), rho = new Float32Array(w*h);
+  for(let y=0; y<h; y++) for(let x=0; x<w; x++){
+    const [tt, d] = pathProject(m, x/w*m.ar, y/h);
+    tau[y*w+x] = Math.min(tt, 0.99999);
+    rho[y*w+x] = clamp(0.5 - d/(2*m.dmax), 0, 0.99999);
+  }
+  n.pathLut = {key, m, tau, rho};
+  return n.pathLut;
+}
+// dashed rail along a path model (aspect-corrected coords), arrow at the end
+function strokePath(ctx, m, W, H, color, dashed){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(1.5, W/160);
+  if(dashed) ctx.setLineDash([W/45, W/60]);
+  ctx.beginPath();
+  for(let k=0; k<PATH_N; k++){
+    const x = m.qx[k]/m.ar*W, y = m.qy[k]*H;
+    if(k) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const k = PATH_N - 1, ax = m.qx[k]/m.ar*W, ay = m.qy[k]*H;
+  const ang = Math.atan2(ay - m.qy[k-3]*H, ax - m.qx[k-3]/m.ar*W), s = Math.max(6, W/28);
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(ax - s*Math.cos(ang - 0.45), ay - s*Math.sin(ang - 0.45));
+  ctx.lineTo(ax - s*Math.cos(ang + 0.45), ay - s*Math.sin(ang + 0.45));
+  ctx.fill();
+  ctx.restore();
+}
+function drawPathThumb(n){
+  const c = n.thumb, im = n.inp && n.inp.image;
+  const ctx = im ? sizeThumb(c, im.w, im.h) : sizeThumb(c, 1.6, 1), W = c.width, H = c.height;
+  if(im){ blitRGBA(ctx, c, im.w, im.h, im.data); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, W, H); }
+  else { ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, W, H); }
+  const pts = n.pathDraft || n.params.points;
+  if(pts.length < 2) return;
+  if(n.pathDraft){
+    ctx.strokeStyle = typeColor('path'); ctx.lineWidth = Math.max(1.5, W/160);
+    ctx.beginPath(); pts.forEach(([x, y], k)=> k ? ctx.lineTo(x*W, y*H) : ctx.moveTo(x*W, y*H)); ctx.stroke();
+    return;
+  }
+  strokePath(ctx, buildPathModel(pts, W/H), W, H, typeColor('path'), true);
+}
+function pathPointer(n, c){
+  thumbGesture(c,
+    pt=>{ n.pathDraft = [pt]; drawPathThumb(n); },
+    pt=>{
+      const q = n.pathDraft[n.pathDraft.length - 1];
+      if(Math.hypot(pt[0] - q[0], pt[1] - q[1]) > 0.006){ n.pathDraft.push(pt); drawPathThumb(n); }
+    },
+    ()=>{
+      if(n.pathDraft && n.pathDraft.length > 2) n.params.points = n.pathDraft;
+      n.pathDraft = null;
+      markDirty(n.id); saveSoon();
+    });
+}
+
+function pickColorFromThumb(n, e){
+  const f = n.inp && n.inp.field;
+  if(!f) return;
+  const r = n.thumb.getBoundingClientRect();
+  const x = clamp(Math.floor((e.clientX - r.left)/r.width*f.w), 0, f.w-1);
+  const y = clamp(Math.floor((e.clientY - r.top)/r.height*f.h), 0, f.h-1);
+  const i = (y*f.w + x)*4;
+  n.params.color = rgbToHex(f.rgb[i], f.rgb[i+1], f.rgb[i+2]);
+  const ci = n.el.querySelector('input[type=color]'); if(ci) ci.value = n.params.color;
+  markDirty(n.id); saveSoon();
+}
+
+/* ============================================================
+   Source node: image / video / webcam
+   ============================================================ */
+const mediaInput = $('mediaInput');
+let mediaTarget = null;
+function buildSourceControls(n, body){
+  const row = document.createElement('div');
+  row.className = 'btnRow';
+  [['image','srcImage'], ['video','srcVideo'], ['webcam','srcWebcam']].forEach(([k, label])=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn' + (n.kind === k ? ' primary' : ''); b.textContent = t(label);
+    b.addEventListener('click', ()=>{
+      if(k === 'webcam'){ startWebcam(n); return; }
+      mediaTarget = n;
+      mediaInput.accept = k === 'image' ? 'image/*' : 'video/*';
+      mediaInput.value = '';
+      mediaInput.click();
+    });
+    row.appendChild(b);
+  });
+  body.appendChild(row);
+  if(n.kind === 'video' || n.kind === 'webcam'){
+    const fz = document.createElement('button');
+    fz.type = 'button'; fz.className = 'miniBtn'; fz.textContent = t(n.frozen ? 'srcUnfreeze' : 'srcFreeze');
+    fz.addEventListener('click', ()=>{ n.frozen = !n.frozen; fz.textContent = t(n.frozen ? 'srcUnfreeze' : 'srcFreeze'); });
+    body.appendChild(fz);
+  }
+  if(!n.frame){
+    const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t(n.mediaErr || 'srcEmpty');
+    body.appendChild(p);
+  }
+}
+mediaInput.addEventListener('change', ()=>{
+  const f = mediaInput.files[0];
+  if(f && mediaTarget) loadMediaFile(mediaTarget, f);
+});
+
+function stopMedia(n){
+  if(n.stream){ n.stream.getTracks().forEach(tr=> tr.stop()); n.stream = null; }
+  if(n.media && n.media.tagName === 'VIDEO'){ n.media.pause(); n.media.removeAttribute('src'); n.media.srcObject = null; n.media.load(); }
+  if(n.mediaUrl){ URL.revokeObjectURL(n.mediaUrl); n.mediaUrl = null; }
+  n.media = null; n.kind = null; n.frozen = false;
+}
+// copy the current frame, downscaled to MAXDIM, into the node's image value
+function grabFrame(n){
+  const m = n.media;
+  if(!m) return false;
+  const sw = m.videoWidth || m.naturalWidth || m.width, sh = m.videoHeight || m.naturalHeight || m.height;
+  if(!sw || !sh) return false;
+  const s = Math.min(1, MAXDIM/Math.max(sw, sh));
+  const w = Math.max(1, Math.round(sw*s)), h = Math.max(1, Math.round(sh*s));
+  if(!n.canvas) n.canvas = document.createElement('canvas');
+  n.canvas.width = w; n.canvas.height = h;
+  const ctx = n.canvas.getContext('2d', {willReadFrequently:true});
+  ctx.drawImage(m, 0, 0, w, h);
+  n.frame = {w, h, data:ctx.getImageData(0, 0, w, h).data, orig:m, region:[0, 0, 1, 1]};
+  return true;
+}
+function setSourceMedia(n, el, kind){
+  n.media = el; n.kind = kind; n.mediaErr = null;
+  if(grabFrame(n)){
+    if(kind === 'image'){
+      // persisted with the graph: the analysis-size frame only, as a small JPEG
+      try{ n.params.img = n.canvas.toDataURL('image/jpeg', 0.9); }catch(e){}
+    } else n.params.img = null;
+  }
+  buildNodeEl(n); drawWires();
+  markDirty(n.id); saveSoon();
+}
+function loadMediaFile(n, file){
+  stopMedia(n);
+  const isVideo = (file.type || '').startsWith('video/') || /\.(mp4|mov|webm|m4v|ogv)$/i.test(file.name);
+  const url = URL.createObjectURL(file);
+  if(isVideo){
+    const v = document.createElement('video');
+    v.muted = true; v.loop = true; v.playsInline = true; v.src = url;
+    v.addEventListener('loadeddata', ()=>{ n.mediaUrl = url; v.play().catch(()=>{}); setSourceMedia(n, v, 'video'); }, {once:true});
+    v.addEventListener('error', ()=>{ URL.revokeObjectURL(url); n.mediaErr = 'mediaErr'; buildNodeEl(n); }, {once:true});
+  } else {
+    const im = new Image();
+    im.onload = ()=>{ setSourceMedia(n, im, 'image'); URL.revokeObjectURL(url); };
+    im.onerror = ()=>{ URL.revokeObjectURL(url); n.mediaErr = 'mediaErr'; buildNodeEl(n); };
+    im.src = url;
+  }
+}
+async function startWebcam(n){
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ alert(t('camErr')); return; }
+  stopMedia(n);
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:false});
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.srcObject = stream;
+    n.stream = stream;
+    await v.play();
+    const ready = ()=> v.videoWidth ? setSourceMedia(n, v, 'webcam') : requestAnimationFrame(ready);
+    ready();
+  }catch(e){ stopMedia(n); alert(t('camErr')); }
+}
+function restoreSourceImage(n){
+  const im = new Image();
+  im.onload = ()=>{ n.media = im; n.kind = 'image'; grabFrame(n); buildNodeEl(n); drawWires(); markDirty(n.id); };
+  im.src = n.params.img;
+}
+// live sources: re-analyze ~15 fps, like the workshop's liveLoop()
+setInterval(()=>{
+  if(document.hidden) return;
+  nodes.forEach(n=>{
+    if(n.type === 'source' && (n.kind === 'video' || n.kind === 'webcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
+  });
+}, 66);
+
+/* ---- drag & drop a file: onto a source node, else the selected / first one, else a new one ---- */
+stage.addEventListener('dragover', e=>{ e.preventDefault(); stage.classList.add('dropping'); });
+stage.addEventListener('dragleave', e=>{ if(e.target === stage) stage.classList.remove('dropping'); });
+stage.addEventListener('drop', e=>{
+  e.preventDefault(); stage.classList.remove('dropping');
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if(!f) return;
+  const hit = e.target.closest && e.target.closest('.node');
+  let n = hit && nodes.get(hit.dataset.id);
+  if(!n || n.type !== 'source'){
+    const sel = nodes.get(selectedId);
+    n = (sel && sel.type === 'source') ? sel : [...nodes.values()].find(m=> m.type === 'source');
+  }
+  if(!n){ const [wx, wy] = toWorld(e.clientX, e.clientY); n = addNode('source', wx, wy); }
+  loadMediaFile(n, f);
+});
+
+/* ============================================================
+   Loop node: playback (preview synth) + .mid export
+   ============================================================ */
+function buildLoopControls(n, body){
+  const row = document.createElement('div');
+  row.className = 'btnRow';
+  const play = document.createElement('button');
+  play.type = 'button'; play.className = 'miniBtn primary loopPlay';
+  play.textContent = t(playing && playingLoopId === n.id ? 'btnStop' : 'btnPlay');
+  play.classList.toggle('on', playing && playingLoopId === n.id);
+  play.disabled = !audioSupported();
+  play.addEventListener('click', ()=> togglePlay(n));
+  const exp = document.createElement('button');
+  exp.type = 'button'; exp.className = 'miniBtn'; exp.textContent = t('btnExport');
+  exp.addEventListener('click', ()=>{
+    const L = evalNode(n)._loop;
+    if(L && L.tracks.length) downloadBlob(new Blob([buildLoopMidi(L)], {type:'audio/midi'}), 'dessons-nodes.mid');
+  });
+  row.append(play, exp);
+  body.appendChild(row);
+}
+
+// one track per wired Track node, in wiring order; same tick math as the
+// workshop's buildMidi(), but each track keeps its own steps and curve
+function buildLoopMidi(L){
+  const PPQ = 480, totalTicks = L.bars*4*PPQ;
+  const tracks = [midiTempoTrack(L.tempo)];
+  L.tracks.forEach((tr, i)=>{
+    const chan = i % 16, events = [{tick:0, bytes:[0xC0|chan, tr.program & 0x7F]}];
+    tr.notes.forEach(nt=>{
+      const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + 1);
+      const on = Math.round(totalTicks*f0);
+      const off = Math.round(totalTicks*f0 + Math.max(10, totalTicks*(f1 - f0)*L.gate));
+      events.push({tick:on, bytes:[0x90|chan, nt.midi & 0x7F, nt.vel & 0x7F]});
+      events.push({tick:off, bytes:[0x80|chan, nt.midi & 0x7F, 0]});
+    });
+    tracks.push(midiTrack(tr.name, events));
+  });
+  return midiFile(tracks, PPQ);
+}
+
+let ac = null, bus = null, voices = new Set();
+
+/* ---- Pizzicato: Karplus-Strong plucked string ----
+   A period-long burst of noise, re-read in a loop while averaging
+   neighbouring samples: the averaging is a lowpass applied once per pass,
+   so the highs die first and the low end rings — how a real string loses
+   energy. Rendered once per (pitch, brightness) into an AudioBuffer and
+   cached, then played like any sample: no AudioWorklet (needs a separate
+   file, iffy on file://), nothing to fetch. */
+const PIZZ_T60 = 0.32;          // seconds to -60 dB, the same at every pitch: a short, dry pluck
+const pluckCache = new Map();
+function pluckBuffer(ac, midi, bright){
+  const key = midi + ':' + bright;
+  if(pluckCache.has(key)) return pluckCache.get(key);
+  const sr = ac.sampleRate, freq = 440 * Math.pow(2, (midi - 69) / 12);
+  // each new sample averages the sample N back with the one N-1 back:
+  // the loop's period is N - 0.5 samples
+  const N = Math.max(3, Math.round(sr / freq + 0.5));
+  // loss per pass so every pitch decays in PIZZ_T60 (high strings pass more often)
+  const loss = Math.min(0.999, Math.pow(10, -3 / (PIZZ_T60 * freq)));
+  const len = Math.floor(sr * PIZZ_T60 * 1.3);
+  const buf = ac.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  // excitation: lowpassed noise — a fingertip, not a pick; a harder hit lets more highs through
+  const ring = new Float32Array(N), a = 0.18 + 0.17 * bright;
+  let y = 0, mean = 0;
+  for(let i = 0; i < N; i++){ y += a * ((Math.random() * 2 - 1) - y); ring[i] = y; mean += y; }
+  mean /= N;
+  let peak = 1e-6;
+  for(let i = 0; i < N; i++){ ring[i] -= mean; peak = Math.max(peak, Math.abs(ring[i])); }
+  for(let i = 0; i < N; i++) ring[i] /= peak;
+  for(let i = 0, p = 0; i < len; i++){
+    const next = p + 1 === N ? 0 : p + 1;
+    d[i] = ring[p];
+    ring[p] = loss * 0.5 * (ring[p] + ring[next]);
+    p = next;
+  }
+  // an integer N detunes high notes (C6: up to half a sample off a
+  // 42-sample period); the voice corrects it with playbackRate
+  const entry = {buf, rate: freq * (N - 0.5) / sr};
+  pluckCache.set(key, entry);
+  return entry;
+}
+// same contract as playSynthVoice() — returns {osc, g, sub} with osc being
+// the buffer source (start/stop/onended alike), so fadeOutVoice() and the
+// voice cap work unchanged
+function playPluckVoice(ac, dest, midi, vel, whenSec, durSec){
+  const bright = Math.min(3, Math.floor(vel / 32));          // 4 brightness levels, all cached
+  const {buf, rate} = pluckBuffer(ac, midi, bright);
+  const t0 = Math.max(whenSec, ac.currentTime + 0.003);
+  const src = ac.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = rate;
+  // body: a wooden resonance around 450 Hz, a gentle top cut
+  const body = ac.createBiquadFilter();
+  body.type = 'peaking'; body.frequency.value = 450; body.Q.value = 1.1; body.gain.value = 5;
+  const top = ac.createBiquadFilter();
+  top.type = 'lowpass'; top.frequency.value = 4200; top.Q.value = 0.5;
+  const g = ac.createGain();
+  const amp = 0.34 * Math.max(0.08, vel / 127);
+  g.gain.setValueAtTime(amp, t0);
+  // the string rings out on its own; a short gate only damps it a bit earlier
+  const end = Math.min(t0 + buf.duration / rate, t0 + Math.max(durSec, 0.09) + 0.12);
+  g.gain.setValueAtTime(amp, Math.max(t0, end - 0.12));
+  g.gain.exponentialRampToValueAtTime(0.0002, end);
+  src.connect(body); body.connect(top); top.connect(g); g.connect(dest);
+  src.start(t0);
+  src.stop(end + 0.02);
+  return { osc: src, g, sub: null };
+}
+let playing = false, playingLoopId = null, schedTimer = null, rafId = null;
+// position held in loop fractions (2.25 = a quarter into the 3rd pass), so a
+// tempo or bar change mid-play only changes the speed from now on
+let schedPos = 0, schedAt = 0;
+const LOOKAHEAD_MS = 150, SCHED_INTERVAL_MS = 25, MAX_VOICES = 96;
+
+function ensureAudio(){
+  if(ac) return;
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  unlockAudio(ac);   // synchronous, same gesture — see dessons-core.js
+  bus = createSynthBus(ac);
+}
+function loopMsOf(L){ return L.bars*4*60000/L.tempo; }
+// the Loop being played (synth: the one whose ▶ was pressed; MIDI: the one
+// the Logic nodes' Tracks are wired into) — re-read every tick, so edits and
+// rewiring are followed live
+function currentLoop(){
+  const n = nodes.get(playingLoopId);
+  return n ? evalNode(n)._loop : null;
+}
+function loopPosNow(){
+  const L = currentLoop();
+  if(!L) return 0;
+  return Math.max(0, schedPos - (schedAt - performance.now())/loopMsOf(L));
+}
+function startTransport(loopNode, which){
+  sink = which;
+  playing = true; playingLoopId = loopNode.id;
+  schedPos = 0; schedAt = performance.now() + 60;
+  schedTimer = setInterval(scheduler, SCHED_INTERVAL_MS);
+  scheduler();
+  rafId = requestAnimationFrame(playheadFrame);
+  refreshLoopButtons(); renderMidiState();
+}
+// must stay synchronous from the click to the first osc.start() (iOS)
+function togglePlay(n){
+  if(playing && sink === 'synth' && playingLoopId === n.id){ stopPlayback(); return; }
+  if(!audioSupported()) return;
+  stopPlayback();
+  ensureAudio();
+  if(ac.state !== 'running') ac.resume().catch(()=>{});
+  startTransport(n, 'synth');
+}
+function stopPlayback(){
+  if(schedTimer) clearInterval(schedTimer);
+  if(rafId) cancelAnimationFrame(rafId);
+  schedTimer = rafId = null;
+  const was = playingLoopId;
+  playing = false; playingLoopId = null;
+  if(sink === 'midi'){
+    // no stuck notes. Note-ons go out up to LOOKAHEAD_MS ahead and Chrome has
+    // no working clear(), so some may still land after this: each of those
+    // gets its note-off right after its own note-on. Then explicit note-offs
+    // for everything ever played + pedal up + All Sound Off + All Notes Off on
+    // every (port, channel) used, now and once more after the lookahead window.
+    midiPorts.forEach(port=>{ try{ if(typeof port.clear === 'function') port.clear(); }catch(e){} });
+    const now = performance.now();
+    pendingOffs.forEach(o=> o.port.send([0x80|o.chan, o.note, 0], Math.max(now, o.onAt + 1)));
+    const sweep = ()=> midiAllOff(midiPorts, hangingNotes, usedChannels);
+    sweep();
+    const keep = {ports:new Map(midiPorts), notes:new Set(hangingNotes), chans:new Set(usedChannels)};
+    setTimeout(()=>{ if(!(playing && sink === 'midi')) midiAllOff(keep.ports, keep.notes, keep.chans); }, LOOKAHEAD_MS + 150);
+  }
+  hangingNotes.clear(); usedChannels.clear(); midiPorts.clear();
+  pendingOffs = []; activeNotes.clear();
+  if(ac) voices.forEach(v=> fadeOutVoice(ac, v));
+  voices.clear();
+  refreshLoopButtons(); renderMidiState();
+  const ln = nodes.get(was); if(ln){ ln.thumbDirty = true; scheduleRun(); }
+}
+function refreshLoopButtons(){
+  nodes.forEach(n=>{
+    const b = n.el && n.el.querySelector('.loopPlay');
+    if(!b) return;
+    const midi = n.type === 'midiOut';
+    const on = playing && (midi ? sink === 'midi' && midiLoopOf(n) === playingLoopId
+                                : sink === 'synth' && playingLoopId === n.id);
+    b.textContent = t(on ? (midi ? 'btnStopDaw' : 'btnStop') : (midi ? 'btnPlayDaw' : 'btnPlay'));
+    b.classList.toggle('on', on);
+  });
+}
+function scheduler(){
+  const L = currentLoop();     // re-read every tick: edits are heard live
+  if(!playing || !L){ stopPlayback(); return; }
+  const now = performance.now();
+  if(schedAt < now - 250){ schedPos += (now - schedAt)/loopMsOf(L); schedAt = now; }   // jank / tab: resync
+  const horizon = now + LOOKAHEAD_MS;
+  if(schedAt >= horizon) return;
+  const loopMs = loopMsOf(L);
+  const endPos = schedPos + (horizon - schedAt)/loopMs;
+  const audioEpoch = sink === 'synth' ? ac.currentTime - now/1000 : 0;
+  // synth: the Loop's tracks. MIDI: each Logic node clocked by this Loop, with
+  // the notes on its own input (no instrument: Logic's track decides the sound)
+  const voicesSrc = sink === 'midi' ? midiVoices() : L.tracks.map(tr=> ({tr, target:null}));
+  voicesSrc.forEach(({tr, target})=>{
+    if(tr.mute) return;
+    if(target){
+      const key = target.port.id + '|' + target.chan;
+      midiPorts.set(target.port.id, target.port);
+      if(!usedChannels.has(key)){
+        usedChannels.add(key);
+        if(target.n.params.sustain) target.port.send([0xB0|target.chan, 64, 127]);
+      }
+    }
+    tr.notes.forEach(nt=>{
+      const f0 = stepFrac(tr, nt.step);
+      // every pass of this note whose start falls in [schedPos, endPos)
+      for(let k = Math.ceil(schedPos - f0); k + f0 < endPos; k++){
+        const at = schedAt + (k + f0 - schedPos)*loopMs;
+        const span = (stepFrac(tr, nt.step + 1) - f0)*loopMs;
+        const dur = Math.max(15, Math.min(span - 3, span*L.gate));
+        if(target){
+          midiNoteOn(target, nt.midi & 0x7F, nt.vel & 0x7F, at, dur);
+          continue;
+        }
+        if(voices.size >= MAX_VOICES) return;
+        const when = audioEpoch + at/1000;
+        const v = tr.program === PIZZ_PROGRAM
+          ? playPluckVoice(ac, bus.master, nt.midi, nt.vel, when, dur/1000)
+          : playSynthVoice(ac, bus.master, tr.program, nt.midi, nt.vel, when, dur/1000, false);
+        voices.add(v);
+        v.osc.onended = ()=> voices.delete(v);
+      }
+    });
+  });
+  if(sink === 'midi') flushNoteOffs(horizon);
+  schedPos = endPos; schedAt = horizon;
+}
+
+/* ---- Web MIDI (Logic nodes) ---- */
+let sink = 'synth';                 // 'synth' (preview synth) | 'midi' (Web MIDI out)
+let midiAccess = null, midiOuts = [], midiInitPromise = null;
+let midiPorts = new Map();          // port id -> MIDIOutput, every port used since Play
+let hangingNotes = new Set();       // 'portId|chan|note', force-off on stop
+let usedChannels = new Set();       // 'portId|chan'
+// note-offs not sent yet: each goes out only when it enters the lookahead
+// window, so little is ever queued inside the browser (a reload or a closed
+// tab drops whatever is queued there — that was leaving notes held in Logic)
+let pendingOffs = [];               // {key, port, chan, note, onAt, at}
+let activeNotes = new Map();        // key -> its pendingOffs entry while it sounds
+
+// one note-on; on/off strictly alternate per (port, channel, pitch), in time
+// AND in sending order (a receiver may ignore timestamps), even when two Logic
+// nodes share a channel: the same instant = one note; otherwise the previous
+// note's pending off is sent first — at its own time, or just before this
+// note-on if they overlap (a synth receiving on, on, off, off can keep a voice held)
+function midiNoteOn(target, note, vel, at, dur){
+  const key = target.port.id + '|' + target.chan + '|' + note;
+  hangingNotes.add(key);
+  const cur = activeNotes.get(key);
+  if(cur){
+    if(at <= cur.onAt + 1){ cur.at = Math.max(cur.at, at + dur); return; }
+    cur.port.send([0x80|cur.chan, note, 0], Math.min(cur.at, at - 1));
+    pendingOffs = pendingOffs.filter(o=> o !== cur);
+  }
+  target.port.send([0x90|target.chan, note, vel], at);
+  const off = {key, port:target.port, chan:target.chan, note, onAt:at, at:at + dur};
+  pendingOffs.push(off);
+  activeNotes.set(key, off);
+}
+function flushNoteOffs(until){
+  pendingOffs = pendingOffs.filter(o=>{
+    if(o.at >= until) return true;
+    o.port.send([0x80|o.chan, o.note, 0], o.at);
+    if(activeNotes.get(o.key) === o) activeNotes.delete(o.key);
+    return false;
+  });
+}
+function midiAllOff(ports, notes, chans){
+  notes.forEach(key=>{
+    const [pid, chan, note] = key.split('|'), port = ports.get(pid);
+    if(port) port.send([0x80 | +chan, +note, 0]);
+  });
+  chans.forEach(key=>{
+    const [pid, chan] = key.split('|'), port = ports.get(pid);
+    if(!port) return;
+    port.send([0xB0 | +chan, 64, 0]);    // pedal up — always, whatever the Sustain box says
+    port.send([0xB0 | +chan, 120, 0]);   // All Sound Off
+    port.send([0xB0 | +chan, 123, 0]);   // All Notes Off
+  });
+}
+// Panic: note-off on every pitch of every channel of every port, pedal up,
+// All Sound Off / All Notes Off — for notes held by something Dessons can't
+// track (a DAW track that stopped receiving mid-note, another app…)
+async function midiPanic(){
+  if(playing && sink === 'midi') stopPlayback();
+  if(!(await ensureMidi())) return;
+  midiOuts.forEach(port=>{
+    for(let ch=0; ch<16; ch++){
+      port.send([0xB0|ch, 64, 0]); port.send([0xB0|ch, 120, 0]); port.send([0xB0|ch, 123, 0]);
+      for(let nt=0; nt<128; nt++) port.send([0x80|ch, nt, 0]);
+    }
+  });
+}
+let midiState = 'midiUninit';       // access-level state, before anything node-specific
+const midiSupported = ()=> typeof navigator !== 'undefined' && typeof navigator.requestMIDIAccess === 'function';
+
+// the wire feeding a Logic node's notes input
+function midiSourceOf(n){
+  return links.find(l=> l.to === n.id && l.toPort === 'notes') || null;
+}
+// the Loop that clocks a Logic node: the first one reached by following the
+// wires downstream from its notes (usually notes -> Track -> Loop), else the
+// graph's first Loop — notes don't need to go through a Track to reach Logic
+function midiLoopOf(n){
+  const src = midiSourceOf(n);
+  if(!src) return null;
+  const seen = new Set(), queue = [src.from];
+  while(queue.length){
+    const id = queue.shift();
+    if(seen.has(id)) continue;
+    seen.add(id);
+    const m = nodes.get(id);
+    if(m && m.type === 'loop') return id;
+    links.forEach(l=>{ if(l.from === id) queue.push(l.to); });
+  }
+  const first = [...nodes.values()].find(m=> m.type === 'loop');
+  return first ? first.id : null;
+}
+// what the MIDI transport plays this tick: every Logic node clocked by the
+// playing Loop, with the notes on its input and its port/channel
+function midiVoices(){
+  const out = [];
+  nodes.forEach(n=>{
+    if(n.type !== 'midiOut' || midiLoopOf(n) !== playingLoopId) return;
+    const src = midiSourceOf(n), from = src && nodes.get(src.from);
+    const tr = from && evalNode(from)[src.fromPort];
+    const port = portFor(n, midiOuts);
+    if(tr && port) out.push({tr, target:{n, port, chan:(n.params.channel - 1) & 15}});
+  });
+  return out;
+}
+// a node remembers its port by name (ids can change between sessions),
+// else the IAC bus / a "bus" port, else the first
+function portFor(n, outs){
+  return outs.find(p=> p.name === n.params.port) || outs.find(p=> /\bIAC\b|bus/i.test(p.name)) || outs[0] || null;
+}
+function setMidiState(key){ midiState = key; renderMidiState(); }
+// each Logic node says what's missing (access, port, track, loop) or where it plays
+function renderMidiState(){
+  nodes.forEach(n=>{
+    if(n.type !== 'midiOut' || !n.el) return;
+    const st = n.el.querySelector('.midiState');
+    if(!st) return;
+    const loopId = midiLoopOf(n);
+    const on = playing && sink === 'midi' && loopId === playingLoopId;
+    let key = midiState, arg = '';
+    if(midiState === 'midiReady' || midiState === 'midiUninit'){
+      if(!midiSourceOf(n)) key = 'midiNoNotes';
+      else if(!loopId) key = 'midiNoLoop';
+      else if(midiState === 'midiReady'){
+        key = on ? 'midiPlaying' : 'midiReady';
+        const port = portFor(n, midiOuts);
+        arg = (port ? port.name : '—') + ' · ' + t('chanWord') + ' ' + n.params.channel;
+      }
+    }
+    st.querySelector('.dot').classList.toggle('on', on);
+    st.querySelector('span').textContent = t(key).replace('{x}', arg);
+  });
+}
+function sendSustain(n){
+  if(!(playing && sink === 'midi' && midiLoopOf(n) === playingLoopId)) return;
+  const port = portFor(n, midiOuts), chan = (n.params.channel - 1) & 15;
+  if(!port) return;
+  midiPorts.set(port.id, port); usedChannels.add(port.id + '|' + chan);
+  port.send([0xB0|chan, 64, n.params.sustain ? 127 : 0]);
+}
+function ensureMidi(){
+  if(midiAccess) return Promise.resolve(true);
+  if(midiInitPromise) return midiInitPromise;
+  if(!midiSupported()){ setMidiState('midiUnavail'); return Promise.resolve(false); }
+  setMidiState('midiRequest');
+  midiInitPromise = navigator.requestMIDIAccess({sysex:false}).then(acc=>{
+    midiAccess = acc;
+    midiAccess.addEventListener('statechange', refreshPorts);
+    refreshPorts();
+    return true;
+  }).catch(()=>{ setMidiState('midiDenied'); midiInitPromise = null; return false; });
+  return midiInitPromise;
+}
+function refreshPorts(){
+  if(!midiAccess) return;
+  midiOuts = Array.from(midiAccess.outputs.values());
+  nodes.forEach(n=>{
+    if(n.type !== 'midiOut' || !n.el) return;
+    const sel = n.el.querySelector('.portSel');
+    sel.innerHTML = '';
+    if(!midiOuts.length){ sel.appendChild(new Option(t('midiNoPortOpt'), '')); return; }
+    midiOuts.forEach(p=> sel.appendChild(new Option(p.name, p.name)));
+    sel.value = portFor(n, midiOuts).name;
+  });
+  // a port we were playing on vanished: stop (note-offs go to the ports still there)
+  if(playing && sink === 'midi' && [...midiPorts.keys()].some(id=> !midiOuts.some(p=> p.id === id))) stopPlayback();
+  setMidiState(midiOuts.length ? 'midiReady' : 'midiNoPort');
+}
+// ▶ on any Logic node plays every Logic node clocked by the same Loop, on one clock
+async function toggleMidi(n){
+  const loopId = midiLoopOf(n);
+  if(playing && sink === 'midi' && loopId && loopId === playingLoopId){ stopPlayback(); return; }
+  const ok = await ensureMidi();
+  if(!ok) return;
+  if(!midiOuts.length){ setMidiState('midiNoPort'); return; }
+  if(!loopId){ renderMidiState(); return; }      // the node says what's missing
+  stopPlayback();                                // synth or another Loop -> switch
+  startTransport(nodes.get(loopId), 'midi');
+}
+function buildMidiControls(n, body){
+  const row = document.createElement('label');
+  row.className = 'prm full';
+  const lab = document.createElement('span'); lab.textContent = t('p_port');
+  const sel = document.createElement('select'); sel.className = 'portSel';
+  sel.appendChild(new Option(n.params.port || '—', n.params.port || ''));
+  ['pointerdown', 'focus'].forEach(ev=> sel.addEventListener(ev, e=>{ e.stopPropagation(); if(!midiAccess) ensureMidi(); }));
+  sel.addEventListener('change', ()=>{
+    // notes already sent keep their scheduled note-offs on the old port
+    n.params.port = sel.value; saveSoon(); renderMidiState();
+  });
+  row.append(lab, sel);
+  body.appendChild(row);
+  const play = document.createElement('button');
+  play.type = 'button'; play.className = 'miniBtn primary loopPlay';
+  play.addEventListener('click', ()=> toggleMidi(n));
+  const panic = document.createElement('button');
+  panic.type = 'button'; panic.className = 'miniBtn'; panic.textContent = t('btnPanic'); panic.title = t('panicTitle');
+  panic.addEventListener('click', midiPanic);
+  const btns = document.createElement('div'); btns.className = 'btnRow';
+  btns.append(play, panic);
+  body.appendChild(btns);
+  const st = document.createElement('div');
+  st.className = 'midiState';
+  st.innerHTML = '<i class="dot"></i><span></span>';
+  body.appendChild(st);
+  n.onParam = id=>{ if(id === 'channel') renderMidiState(); };
+  // after the node is in the DOM
+  requestAnimationFrame(()=>{ refreshLoopButtons(); renderMidiState(); if(midiAccess) refreshPorts(); });
+}
+
+function playheadFrame(){
+  if(!playing) return;
+  const n = nodes.get(playingLoopId);
+  if(n) drawLoopThumb(n);
+  rafId = requestAnimationFrame(playheadFrame);
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopPlayback(); });
+// reload / close / navigate away while playing: send the note-offs now
+window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); });
+
+/* ============================================================
+   Canvas interaction: pan / zoom, node drag, wiring
+   ============================================================ */
+function applyView(){
+  world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+  stage.style.backgroundPosition = `${view.x}px ${view.y}px`;
+  stage.style.backgroundSize = `${24*view.z}px ${24*view.z}px`;
+}
+function toWorld(cx, cy){
+  const r = stage.getBoundingClientRect();
+  return [(cx - r.left - view.x)/view.z, (cy - r.top - view.y)/view.z];
+}
+stage.addEventListener('pointerdown', e=>{
+  if(e.target !== stage && e.target !== world && e.target !== wiresSvg) return;
+  hideMenu();
+  selectNode(null);
+  const sx = e.clientX, sy = e.clientY, vx = view.x, vy = view.y;
+  stage.setPointerCapture(e.pointerId);
+  stage.classList.add('panning');
+  const move = ev=>{ view.x = vx + ev.clientX - sx; view.y = vy + ev.clientY - sy; applyView(); };
+  const up = ()=>{
+    stage.removeEventListener('pointermove', move); stage.removeEventListener('pointerup', up);
+    stage.classList.remove('panning'); saveSoon();
+  };
+  stage.addEventListener('pointermove', move); stage.addEventListener('pointerup', up);
+});
+stage.addEventListener('wheel', e=>{
+  if(e.target.closest && e.target.closest('select')) return;
+  e.preventDefault();
+  if(e.ctrlKey || e.metaKey){
+    // pinch on a trackpad arrives as ctrl+wheel: zoom around the pointer
+    const r = stage.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const z = clamp(view.z * Math.exp(-e.deltaY*0.01), 0.25, 2);
+    view.x = px - (px - view.x)*z/view.z; view.y = py - (py - view.y)*z/view.z; view.z = z;
+  } else {
+    view.x -= e.deltaX; view.y -= e.deltaY;
+  }
+  applyView(); saveSoon();
+}, {passive:false});
+stage.addEventListener('dblclick', e=>{
+  if(e.target !== stage && e.target !== world) return;
+  showMenu(e.clientX, e.clientY);
+});
+stage.addEventListener('contextmenu', e=>{
+  if(e.target !== stage && e.target !== world) return;
+  e.preventDefault(); showMenu(e.clientX, e.clientY);
+});
+
+function startNodeDrag(e, n){
+  if(e.target.closest('button')) return;
+  e.preventDefault();
+  selectNode(n.id);
+  const sx = e.clientX, sy = e.clientY, ox = n.x, oy = n.y, head = e.currentTarget;
+  head.setPointerCapture(e.pointerId);
+  const move = ev=>{
+    n.x = Math.round(ox + (ev.clientX - sx)/view.z); n.y = Math.round(oy + (ev.clientY - sy)/view.z);
+    n.el.style.left = n.x + 'px'; n.el.style.top = n.y + 'px';
+    drawWires();
+  };
+  const up = ()=>{ head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); saveSoon(); };
+  head.addEventListener('pointermove', move); head.addEventListener('pointerup', up);
+}
+
+// world-space center of a port dot
+function portPos(nodeId, portId, side){
+  const n = nodes.get(nodeId);
+  const pe = n && n.el.querySelector(`.port.${side}[data-port="${portId}"] .dot`);
+  if(!pe) return null;
+  const r = pe.getBoundingClientRect();
+  return toWorld(r.left + r.width/2, r.top + r.height/2);
+}
+function wirePath(a, b){
+  const dx = Math.max(40, Math.abs(b[0] - a[0])*0.5);
+  return `M${a[0]},${a[1]} C${a[0]+dx},${a[1]} ${b[0]-dx},${b[1]} ${b[0]},${b[1]}`;
+}
+let draft = null;   // {fromNode, fromPort, type, pos:[x,y]} while dragging a new wire
+function drawWires(){
+  let html = '';
+  links.forEach(l=>{
+    const a = portPos(l.from, l.fromPort, 'out'), b = portPos(l.to, l.toPort, 'in');
+    const od = nodes.get(l.from) && outputDef(nodes.get(l.from), l.fromPort);
+    if(a && b && od) html += `<path d="${wirePath(a, b)}" stroke="${typeColor(od.type)}"/>`;
+  });
+  if(draft){
+    const a = portPos(draft.fromNode, draft.fromPort, 'out');
+    if(a) html += `<path class="draft" d="${wirePath(a, draft.pos)}" stroke="${typeColor(draft.type)}"/>`;
+  }
+  wiresSvg.innerHTML = html;
+}
+
+function startWire(e, n, p, side){
+  e.preventDefault(); e.stopPropagation();
+  hideMenu();
+  if(side === 'in'){
+    // grabbing a plugged input picks its wire up (last one for multi inputs)
+    const existing = links.filter(l=> l.to === n.id && l.toPort === p.id).pop();
+    if(!existing) return;
+    disconnect(existing);
+    draft = {fromNode:existing.from, fromPort:existing.fromPort, type:p.type, pos:toWorld(e.clientX, e.clientY)};
+  } else {
+    draft = {fromNode:n.id, fromPort:p.id, type:p.type, pos:toWorld(e.clientX, e.clientY)};
+  }
+  document.body.classList.add('wiring');
+  document.querySelectorAll('.port.in').forEach(pe=> pe.classList.toggle('compatible', pe.dataset.type === draft.type && pe.dataset.node !== draft.fromNode));
+  const target = e.target;
+  target.setPointerCapture(e.pointerId);
+  const move = ev=>{ draft.pos = toWorld(ev.clientX, ev.clientY); drawWires(); };
+  const up = ev=>{
+    target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', up);
+    document.body.classList.remove('wiring');
+    const d = draft; draft = null;
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+    const pe = hit && hit.closest('.port.in');
+    if(pe && pe.dataset.type === d.type) connect(d.fromNode, d.fromPort, pe.dataset.node, pe.dataset.port);
+    else if(!hit || !hit.closest('.node')) showMenu(ev.clientX, ev.clientY, d);   // dropped on empty canvas: add a node that takes it
+    drawWires();
+  };
+  target.addEventListener('pointermove', move); target.addEventListener('pointerup', up);
+}
+
+/* ---- add-node menu (optionally filtered to nodes that accept a dragged wire) ---- */
+const addMenu = $('addMenu');
+function showMenu(cx, cy, wire){
+  addMenu.innerHTML = '';
+  const [wx, wy] = toWorld(cx, cy);
+  ADD_MENU.forEach(([cat, types])=>{
+    const ok = types.filter(ty=> !wire || (NODE_DEFS[ty].inputs || []).some(p=> p.type === wire.type));
+    if(!ok.length) return;
+    const h = document.createElement('h3'); h.textContent = t(cat); addMenu.appendChild(h);
+    ok.forEach(ty=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = '<i></i><span></span>';
+      b.querySelector('i').style.background = CAT_COLOR[cat];
+      b.querySelector('span').textContent = t('n_' + ty);
+      b.addEventListener('click', ()=>{
+        hideMenu();
+        const n = addNode(ty, wx, wy - 20);
+        selectNode(n.id);
+        if(wire){
+          const port = NODE_DEFS[ty].inputs.find(p=> p.type === wire.type);
+          connect(wire.fromNode, wire.fromPort, n.id, port.id);
+        }
+        markDirty(n.id); drawWires(); saveSoon();
+      });
+      addMenu.appendChild(b);
+    });
+  });
+  addMenu.hidden = false;
+  const r = addMenu.getBoundingClientRect();
+  addMenu.style.left = Math.min(cx, innerWidth - r.width - 8) + 'px';
+  addMenu.style.top = Math.min(cy, innerHeight - r.height - 8) + 'px';
+  const first = addMenu.querySelector('button'); if(first) first.focus();
+}
+function hideMenu(){ addMenu.hidden = true; }
+document.addEventListener('pointerdown', e=>{ if(!addMenu.hidden && !addMenu.contains(e.target) && e.target.id !== 'addBtn') hideMenu(); });
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){ hideMenu(); return; }
+  if((e.key === 'Delete' || e.key === 'Backspace') && selectedId && !e.target.closest('input, select, textarea')){
+    e.preventDefault(); removeNode(selectedId);
+  }
+});
+$('addBtn').addEventListener('click', ()=>{
+  if(!addMenu.hidden){ hideMenu(); return; }
+  const r = $('addBtn').getBoundingClientRect();
+  showMenu(r.left, r.bottom + 6);
+});
+
+function fitView(){
+  if(!nodes.size) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  nodes.forEach(n=>{
+    x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
+    x1 = Math.max(x1, n.x + n.el.offsetWidth); y1 = Math.max(y1, n.y + n.el.offsetHeight);
+  });
+  const r = stage.getBoundingClientRect(), pad = 40;
+  view.z = clamp(Math.min((r.width - 2*pad)/(x1 - x0), (r.height - 2*pad)/(y1 - y0)), 0.25, 1.2);
+  view.x = pad - x0*view.z + ((r.width - 2*pad) - (x1 - x0)*view.z)/2;
+  view.y = pad - y0*view.z;
+  applyView(); saveSoon();
+}
+$('fitBtn').addEventListener('click', fitView);
+
+/* ============================================================
+   Persistence: localStorage + .json files
+   ============================================================ */
+const GRAPH_KEY = 'dessons.graph';
+function serialize(){
+  return {
+    app:'dessons-nodes', v:1,
+    nodes:[...nodes.values()].map(n=> ({id:n.id, type:n.type, x:n.x, y:n.y, params:n.params})),
+    links, view
+  };
+}
+let saveTimer = null;
+function saveSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(GRAPH_KEY, JSON.stringify(serialize())); }
+    catch(e){ console.warn('graph not saved', e); }
+  }, 300);
+}
+function clearGraph(){
+  stopPlayback();
+  nodes.forEach(n=>{ if(n.type === 'source') stopMedia(n); n.el.remove(); });
+  nodes.clear(); links = []; selectedId = null;
+}
+function loadGraph(g){
+  if(!g || g.app !== 'dessons-nodes' || !Array.isArray(g.nodes)) throw new Error('bad graph');
+  clearGraph();
+  g.nodes.forEach(s=>{ if(NODE_DEFS[s.type]) addNode(s.type, s.x, s.y, s.params, s.id); });
+  nextId = 1 + Math.max(0, ...[...nodes.keys()].map(id=> parseInt(id.slice(1)) || 0));
+  links = (g.links || []).filter(l=> nodes.has(l.from) && nodes.has(l.to)
+    && outputDef(nodes.get(l.from), l.fromPort) && inputDef(nodes.get(l.to), l.toPort));
+  if(g.view) view = g.view;
+  applyView(); refreshLinkedPorts();
+  requestAnimationFrame(drawWires);     // ports have their layout one frame later
+  nodes.forEach(n=> n.dirty = true);
+  scheduleRun(true);
+}
+
+// the starter graph: the workshop's default chain, split in two layers by
+// brightness, each with its own scan — dark lines slow on a bass, bright
+// lines fast on a vibraphone, one shared scale
+function defaultGraph(){
+  clearGraph();
+  const src = addNode('source', 0, 120);
+  const tone = addNode('tone', 260, 120);
+  const edges = addNode('edges', 520, 120);
+  const dark = addNode('lumaBand', 780, 0, {min:0, max:110});
+  const bright = addNode('lumaBand', 780, 330, {min:111, max:255});
+  const scale = addNode('scale', 780, 640);
+  const scanA = addNode('scan', 1040, 0, {steps:8, thresh:50});
+  const scanB = addNode('scan', 1040, 360, {steps:16, thresh:60, dir:'lr'});
+  const oct = addNode('octave', 1300, 0, {shift:-1});
+  const trA = addNode('track', 1560, 0, {program:'38'});
+  const trB = addNode('track', 1560, 360, {program:'11'});
+  const loop = addNode('loop', 1820, 160);
+  const L = (a, ap, b, bp)=> links.push({from:a.id, fromPort:ap, to:b.id, toPort:bp});
+  L(src,'image', tone,'image'); L(tone,'image', edges,'image');
+  L(edges,'field', dark,'field'); L(edges,'field', bright,'field');
+  L(dark,'field', scanA,'field'); L(bright,'field', scanB,'field');
+  L(scale,'scale', scanA,'scale'); L(scale,'scale', scanB,'scale');
+  L(scanA,'notes', oct,'notes'); L(oct,'notes', trA,'notes'); L(scanB,'notes', trB,'notes');
+  L(trA,'track', loop,'tracks'); L(trB,'track', loop,'tracks');
+  refreshLinkedPorts();
+  nodes.forEach(n=> n.dirty = true);
+  scheduleRun(true);
+  requestAnimationFrame(()=>{ drawWires(); fitView(); });
+}
+
+$('newBtn').addEventListener('click', ()=>{ if(confirm(t('confirmNew'))){ defaultGraph(); saveSoon(); } });
+$('saveBtn').addEventListener('click', ()=>{
+  downloadBlob(new Blob([JSON.stringify(serialize(), null, 1)], {type:'application/json'}), 'dessons-graph.json');
+});
+$('openBtn').addEventListener('click', ()=>{ $('graphInput').value = ''; $('graphInput').click(); });
+$('graphInput').addEventListener('change', ()=>{
+  const f = $('graphInput').files[0];
+  if(!f) return;
+  f.text().then(txt=>{ loadGraph(JSON.parse(txt)); saveSoon(); }).catch(()=> alert(t('loadErr')));
+});
+window.addEventListener('resize', drawWires);
+
+/* ---- boot ---- */
+LANG = initialLang();
+let restored = false;
+try{
+  const s = localStorage.getItem(GRAPH_KEY);
+  if(s){ loadGraph(JSON.parse(s)); restored = true; }
+}catch(e){ console.warn('stored graph unreadable', e); }
+if(!restored) defaultGraph();
+applyView();
+setLang(LANG);
+</script>
+
+<!-- grain overlay, same as index.html -->
+<canvas id="ny-noise" aria-hidden="true"></canvas>
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.getElementById('ny-noise');
+  var ctx = canvas.getContext('2d');
+  var NOISE_RES = 480;
+  function resize(){
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    canvas.width = NOISE_RES;
+    canvas.height = Math.round(NOISE_RES * (window.innerHeight / window.innerWidth));
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  function drawNoise(){
+    var imageData = ctx.createImageData(canvas.width, canvas.height);
+    var buf = imageData.data;
+    for(var i=0; i<buf.length; i+=4){
+      var shade = (Math.random()*255) | 0;
+      buf[i]=shade; buf[i+1]=shade; buf[i+2]=shade; buf[i+3]=255;
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
+  if(reduceMotion){ drawNoise(); }
+  else { (function animate(){ drawNoise(); requestAnimationFrame(animate); })(); }
+})();
+</script>
+</body>
+</html>

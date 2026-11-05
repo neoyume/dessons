@@ -267,6 +267,233 @@ function fadeOutVoice(ac, v){
   }catch(e){}
 }
 
+/* ---- Image analysis primitives (pure: pixel buffers in, numbers out) ----
+   Used by index.html's process() and by nodes.html's node graph. */
+function rgbToHue(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0; const d=max-min;
+  if(d===0) h=0;
+  else if(max===r) h=60*(((g-b)/d)%6);
+  else if(max===g) h=60*((b-r)/d+2);
+  else h=60*((r-g)/d+4);
+  if(h<0) h+=360;
+  return h;
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+function rgbToHex(r,g,b){
+  const h = x => Math.round(clamp(x,0,255)).toString(16).padStart(2,'0');
+  return '#'+h(r)+h(g)+h(b);
+}
+function hexToRgb(hex){
+  const n = parseInt(hex.slice(1), 16) || 0;
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+
+// box blur approximates a gaussian in 3 passes (horizontal+vertical each) —
+// visually near-identical to a true gaussian, much cheaper in plain JS.
+// Sliding-window sum keeps each pass O(w*h) regardless of radius.
+function boxBlurPass(data, w, h, r, horizontal){
+  const out = new Uint8ClampedArray(data.length);
+  const size = r*2+1;
+  if(horizontal){
+    for(let y=0;y<h;y++){
+      const row = y*w*4;
+      for(let c=0;c<4;c++){
+        let sum=0;
+        for(let k=-r;k<=r;k++) sum += data[row + clamp(k,0,w-1)*4 + c];
+        for(let x=0;x<w;x++){
+          out[row + x*4 + c] = sum/size;
+          sum += data[row + clamp(x+r+1,0,w-1)*4+c] - data[row + clamp(x-r,0,w-1)*4+c];
+        }
+      }
+    }
+  } else {
+    for(let x=0;x<w;x++){
+      for(let c=0;c<4;c++){
+        let sum=0;
+        for(let k=-r;k<=r;k++) sum += data[(clamp(k,0,h-1)*w+x)*4+c];
+        for(let y=0;y<h;y++){
+          out[(y*w+x)*4+c] = sum/size;
+          sum += data[(clamp(y+r+1,0,h-1)*w+x)*4+c] - data[(clamp(y-r,0,h-1)*w+x)*4+c];
+        }
+      }
+    }
+  }
+  return out;
+}
+function boxBlur(data, w, h, radius, passes){
+  let cur = data;
+  for(let p=0;p<passes;p++){
+    cur = boxBlurPass(cur, w, h, radius, true);
+    cur = boxBlurPass(cur, w, h, radius, false);
+  }
+  return cur;
+}
+
+// tone curve: black point / white point / gamma -> a 256-entry lookup table.
+// Applied via direct index (data[i] -> lut[data[i]]), so it's O(1) per pixel
+// however elaborate the curve. Defaults (21 / 234 / 1.00) reproduce the old
+// fixed "Contrast 120%" slider almost exactly.
+function buildToneLUT(blackPt, whitePt, gamma){
+  const lut = new Uint8Array(256);
+  const range = Math.max(1, whitePt - blackPt);
+  for(let i=0;i<256;i++){
+    let v = clamp((i - blackPt) / range, 0, 1);
+    if(gamma !== 1) v = Math.pow(v, 1/gamma);
+    lut[i] = Math.round(v*255);
+  }
+  return lut;
+}
+// tone curve + saturation for one pixel — the single place both the analysis
+// (process) and the preview/eyedropper (via adjCanvas) get their colors from.
+function adjustPixel(r,g,b,lut,satPct){
+  r=lut[r]; g=lut[g]; b=lut[b];
+  const y = 0.299*r + 0.587*g + 0.114*b;
+  return [clamp(y+(r-y)*satPct,0,255), clamp(y+(g-y)*satPct,0,255), clamp(y+(b-y)*satPct,0,255)];
+}
+
+// Sobel gradient at one pixel (edges clamped/replicated) — returns [gx,gy].
+function sobelAt(lum, w, h, x, y){
+  const xm = x>0?x-1:0, xp = x<w-1?x+1:w-1;
+  const ym = y>0?y-1:0, yp = y<h-1?y+1:h-1;
+  const tl=lum[ym*w+xm], tc=lum[ym*w+x], tr=lum[ym*w+xp];
+  const ml=lum[y*w+xm],                 mr=lum[y*w+xp];
+  const bl=lum[yp*w+xm], bc=lum[yp*w+x], br=lum[yp*w+xp];
+  return [ (tr+2*mr+br) - (tl+2*ml+bl), (bl+2*bc+br) - (tl+2*tc+tr) ];
+}
+
+// Otsu's method on an arbitrary histogram: the threshold bin that maximizes
+// between-class variance. Standard algorithm, ~15 lines.
+function otsuThreshold(hist, total){
+  let sum=0; for(let i=0;i<256;i++) sum += i*hist[i];
+  let sumB=0, wB=0, varMax=0, threshold=0;
+  for(let t=0;t<256;t++){
+    wB += hist[t]; if(wB===0) continue;
+    const wF = total - wB; if(wF===0) break;
+    sumB += t*hist[t];
+    const mB = sumB/wB, mF = (sum-sumB)/wF;
+    const varBetween = wB*wF*(mB-mF)*(mB-mF);
+    if(varBetween > varMax){ varMax = varBetween; threshold = t; }
+  }
+  return threshold;
+}
+
+/* ---- Musical constants ---- */
+const SCALES = {
+  majPenta:[0,2,4,7,9], minPenta:[0,3,5,7,10],
+  major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10],
+  dorian:[0,2,3,5,7,9,10], wholetone:[0,2,4,6,8,10], chromatic:[0,1,2,3,4,5,6,7,8,9,10,11]
+};
+
+// Playback direction: maps normalized image coords (nx,ny ∈ [0,1), y downward)
+// to (τ,ρ) = (time fraction, pitch fraction), both ∈ [0,1). fwd is used to sort
+// pixels into the grid; inv (its exact algebraic inverse) is used to place note
+// dots and the playhead back onto the image. All 8 are affine in (nx,ny), so a
+// line of constant τ (the playhead) is always a straight line in image space —
+// horizontal/vertical for the 4 cardinal directions, a real diagonal for the
+// other 4. Diagonal pitch runs along the *other* diagonal, high on the
+// top-right side — same "top/right = high" convention as the cardinal modes.
+const DIR_DEFS = {
+  lr:   { fwd:(nx,ny)=>[nx,               1-ny],       inv:(t,r)=>[t,           1-r] },
+  rl:   { fwd:(nx,ny)=>[1-nx,             1-ny],       inv:(t,r)=>[1-t,         1-r] },
+  tb:   { fwd:(nx,ny)=>[ny,               nx],         inv:(t,r)=>[r,           t]   },
+  bt:   { fwd:(nx,ny)=>[1-ny,             nx],         inv:(t,r)=>[r,           1-t] },
+  tlbr: { fwd:(nx,ny)=>[(nx+ny)/2,        (nx-ny+1)/2], inv:(t,r)=>[t+r-0.5,    t-r+0.5] },
+  brtl: { fwd:(nx,ny)=>[1-(nx+ny)/2,      (nx-ny+1)/2], inv:(t,r)=>[0.5-t+r,    1.5-t-r] },
+  trbl: { fwd:(nx,ny)=>[(ny-nx+1)/2,      (nx+ny)/2],   inv:(t,r)=>[r-t+0.5,    r+t-0.5] },
+  bltr: { fwd:(nx,ny)=>[(nx-ny+1)/2,      (nx+ny)/2],   inv:(t,r)=>[r+t-0.5,    r-t+0.5] }
+};
+
+/* ---- Hand-drawn instrument icons, one per GM_INSTR entry below. Inlined
+   as SVG markup (not external <img src> files) so the zero-dependency /
+   works-from-file:// promise holds — nothing to fetch. Kept verbatim from
+   the source drawings (viewBox 0 0 78.8 80, class="st0"/"st1" on every
+   shape); the theme re-colouring is done entirely in .instrIcon CSS, the
+   only local edit here is class="ic-cut" on the shapes that must punch
+   through as dark cutouts (piano + bass keys). ---- */
+const INSTR_ICONS = {
+  piano:'<svg viewBox="0 0 78.8 80"><rect class="st1" x="3.7" y="4" width="71.8" height="71.8"/><rect class="st1" x="26.2" y="4" width="24.5" height="71.8"/><rect class="ic-cut" x="19" y="5.5" width="13.4" height="46.2"/><rect class="ic-cut" x="45.1" y="5.5" width="13.4" height="46.2"/></svg>',
+  organ:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="2.8" y="31.8" width="13.2" height="45.6"/><rect class="st0" x="63.2" y="31.9" width="13.2" height="45.6"/><rect class="st0" x="17.9" y="18.4" width="13.2" height="59"/><rect class="st0" x="48.1" y="18.4" width="13.2" height="59"/><rect class="st0" x="33" y="7.3" width="13.2" height="70.1"/></svg>',
+  vibraphone:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="32.2" y="3.2" width="13.4" height="46.2" transform="translate(77.7 52.5) rotate(-180)"/><rect class="st0" x="47.1" y="3.2" width="13.4" height="59.8" transform="translate(107.6 66.1) rotate(-180)"/><rect class="st0" x="2.3" y="3.2" width="13.4" height="27.5" transform="translate(18 33.9) rotate(-180)"/><rect class="st0" x="17.2" y="3.2" width="13.4" height="35.6" transform="translate(47.8 42) rotate(-180)"/><rect class="st0" x="62.1" y="3.2" width="13.4" height="71" transform="translate(137.5 77.3) rotate(-180)"/></svg>',
+  bass:'<svg viewBox="0 0 78.8 80"><rect class="st1" x="3.7" y="4.9" width="71.8" height="71.8"/><rect class="st1" x="3.6" y="2.9" width="71.8" height="26.8"/><rect class="st1" x="26.2" y="29.7" width="24.5" height="46.7"/><rect class="ic-cut" x="18.9" y="28.3" width="13.4" height="30.5"/><rect class="ic-cut" x="45.1" y="28.3" width="13.4" height="30.5"/><circle class="st1" cx="24.9" cy="15.9" r="9"/><circle class="st1" cx="53.7" cy="15.9" r="9"/></svg>',
+  flute:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="32.7" y="8.1" width="12.5" height="66.2" transform="translate(34.8 97.8) rotate(-132.4)"/><rect class="st0" x="60.4" y="7.8" width="12.5" height="16.2" rx="4.5" ry="4.5" transform="translate(99.8 75.9) rotate(-132.4)"/><rect class="st0" x="7.2" y="56.8" width="8.6" height="19.7" rx="4.3" ry="4.3" transform="translate(-42.2 25.6) rotate(-42.8)"/><rect class="st0" x="20.3" y="46.4" width="4" height="19.7" rx="2" ry="2" transform="translate(-31.5 28.6) rotate(-41.2)"/><rect class="st0" x="65.3" y="14.5" width="2.2" height="3.7" rx=".8" ry=".8" transform="translate(5.7 47.8) rotate(-41.2)"/><circle class="st0" cx="30.8" cy="48.8" r="2.2"/><circle class="st0" cx="38.7" cy="41.7" r="2.2"/><circle class="st0" cx="46.3" cy="34.8" r="2.2"/><circle class="st0" cx="54.8" cy="27.2" r="2.2"/></svg>',
+  steel:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="3.5" y="4" width="71.8" height="71.8" rx="31" ry="31"/><rect class="st0" x="24.7" y="25.2" width="28.9" height="28.9" rx="14.4" ry="14.4"/><rect class="st0" x="46.7" y="9.8" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="10.3" y="10.6" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="9.4" y="47.4" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="47.4" y="47.9" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="5.6" y="31.5" width="15.7" height="15.7" rx="7.8" ry="7.8"/><rect class="st0" x="56.9" y="31.5" width="15.7" height="15.7" rx="7.8" ry="7.8"/><rect class="st0" x="30.4" y="5.5" width="15.7" height="15.7" rx="7.8" ry="7.8" transform="translate(51.6 -25) rotate(90)"/><rect class="st0" x="30.4" y="56.8" width="15.7" height="15.7" rx="7.8" ry="7.8" transform="translate(102.9 26.4) rotate(90)"/></svg>'
+};
+
+/* ---- General MIDI instrument shortlist (bilingual label + program number
+   + a small hand-drawn SVG icon shown at rest instead of the name, see
+   .instrPicker in renderLayerList()). Limited to exactly 6 — one per layer at the max —
+   deliberately picked one per timbreFor() bucket (see the Web Audio synth
+   further down) rather than a broad GM sampling: the original 19-entry
+   list had several instruments landing in the *same* timbreFor() branch
+   (e.g. Celesta/Vibraphone/Marimba/Music Box/Tubular Bells/Xylophone all
+   hit the 8-15 "mallets" bucket and sounded byte-for-byte identical in the
+   preview synth) — user feedback after actually listening to all of them.
+   Each of these 6 hits a different branch: default/triangle (Piano),
+   sawtooth-sustained (Organ), triangle-no-sustain-bright (Vibraphone),
+   sine+sub-lowpass (Synth Bass), sine-sustained-bright (Flute), and the
+   only square-wave branch (Steel Drums) — maximally distinct in the
+   browser preview *and* still sensible, common General MIDI picks for
+   the real .mid export. ---- */
+const GM_INSTR = [
+  {fr:"Piano acoustique",  en:"Acoustic Piano",    prog:0,   icon:INSTR_ICONS.piano},
+  {fr:"Orgue",             en:"Organ",             prog:19,  icon:INSTR_ICONS.organ},
+  {fr:"Vibraphone",        en:"Vibraphone",        prog:11,  icon:INSTR_ICONS.vibraphone},
+  {fr:"Basse synthé",      en:"Synth Bass",        prog:38,  icon:INSTR_ICONS.bass},
+  {fr:"Flûte",             en:"Flute",             prog:73,  icon:INSTR_ICONS.flute},
+  {fr:"Steel drums",       en:"Steel Drums",       prog:114, icon:INSTR_ICONS.steel}
+];
+
+/* ---- Drawn path ('path' direction) ----
+   raw = [[nx,ny],...] normalized on the image, ar = image width/height.
+   Resampled at equal arc length in aspect-corrected space; τ = position of
+   the nearest point on the path, ρ from the signed distance to it, scaled by
+   dmax (the farthest pixel). See index.html's DIR_DEFS.path for the mapping. */
+const PATH_N = 160;
+function buildPathModel(raw, ar){
+  const P = raw.map(([x,y]) => [x*ar, y]);
+  const cum = [0];
+  for(let i=1;i<P.length;i++) cum.push(cum[i-1] + Math.hypot(P[i][0]-P[i-1][0], P[i][1]-P[i-1][1]));
+  const total = cum[cum.length-1] || 1;
+  // resample at equal arc length: even time per unit of path, whatever the drawing speed
+  const qx = new Float64Array(PATH_N), qy = new Float64Array(PATH_N);
+  for(let k=0, j=0; k<PATH_N; k++){
+    const target = total * k/(PATH_N-1);
+    while(j < P.length-2 && cum[j+1] < target) j++;
+    const seg = (cum[j+1]-cum[j]) || 1, u = clamp((target-cum[j])/seg, 0, 1);
+    qx[k] = P[j][0] + (P[j+1][0]-P[j][0])*u;
+    qy[k] = P[j][1] + (P[j+1][1]-P[j][1])*u;
+  }
+  const m = { ar, qx, qy, dmax: 1 };
+  let dmax = 1e-3;
+  for(let gy=0; gy<=40; gy++) for(let gx=0; gx<=40; gx++){
+    const d = Math.abs(pathProject(m, gx/40*ar, gy/40)[1]);
+    if(d > dmax) dmax = d;
+  }
+  m.dmax = dmax * 1.001;
+  return m;
+}
+// -> [τ, signed distance] for a point in aspect-corrected space
+function pathProject(m, x, y){
+  const {qx, qy} = m;
+  let best = Infinity, bt = 0, bs = 0;
+  for(let i=0;i<PATH_N-1;i++){
+    const ax = qx[i], ay = qy[i], dx = qx[i+1]-ax, dy = qy[i+1]-ay;
+    const l2 = dx*dx+dy*dy || 1e-12;
+    const u = clamp(((x-ax)*dx + (y-ay)*dy)/l2, 0, 1);
+    const ex = x-(ax+dx*u), ey = y-(ay+dy*u), d2 = ex*ex+ey*ey;
+    if(d2 < best){ best = d2; bt = (i+u)/(PATH_N-1); bs = (dx*(y-ay) - dy*(x-ax)) >= 0 ? 1 : -1; }
+  }
+  return [bt, bs*Math.sqrt(best)];
+}
+function pathPointAt(m, t){
+  const f = clamp(t, 0, 1)*(PATH_N-1), i = Math.min(PATH_N-2, Math.floor(f)), u = f-i;
+  const dx = m.qx[i+1]-m.qx[i], dy = m.qy[i+1]-m.qy[i], l = Math.hypot(dx,dy) || 1;
+  return [m.qx[i]+dx*u, m.qy[i]+dy*u, -dy/l, dx/l];   // point + unit normal (positive side)
+}
+
 /* ---- Song scenes (IndexedDB, shared by the workshop and the arranger) ----
    A scene is a frozen loop: the notes the workshop computed, plus what's
    needed to place them in time (bars/steps/curve/gate) and to show them

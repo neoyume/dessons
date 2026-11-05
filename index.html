@@ -456,6 +456,18 @@
   .songLink{font-size:11px; color:var(--text-dim); text-decoration:none;}
   .songLink:hover{color:var(--accent);}
   .songLink.flash{color:var(--accent);}
+  .actionCol.songAction[hidden]{display:none;}  /* song page on standby, see CLAUDE.md */
+
+  /* link to nodes.html — an <a> dressed as the secondary outline button */
+  a#nodesBtn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
+    background:transparent; color:var(--cyan); text-decoration:none;
+    border:1.5px solid var(--cyan); padding:7px; font-size:12.5px; font-weight:700; letter-spacing:.3px;
+    border-radius:7px; white-space:nowrap;
+    transition:background-color .15s, color .15s, border-color .15s;
+  }
+  a#nodesBtn svg{width:14px; height:14px; flex:none; display:block;}
+  a#nodesBtn:hover{background-color:rgba(77,217,201,.12);}
 
   button#previewBtn{
     width:100%; background:transparent; color:var(--cyan);
@@ -573,7 +585,13 @@
             <span data-i18n="btnVideoExport">Export vidéo</span>
           </button>
         </div>
-        <div class="actionCol flowAction songAction">
+        <div class="actionCol flowAction">
+          <a id="nodesBtn" href="nodes.html">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="5" height="4" rx="1"></rect><rect x="11.5" y="11.5" width="5" height="4" rx="1"></rect><path d="M6.5 4.5c5 0 0 9 5 9"></path></svg>
+            <span data-i18n="btnNodes">Mode Nodes</span>
+          </a>
+        </div>
+        <div class="actionCol flowAction songAction" hidden>
           <button id="addToSongBtn" disabled>
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="5" width="4" height="8" rx="1"></rect><rect x="7" y="5" width="4" height="8" rx="1"></rect><path d="M14.5 6.5v5M12 9h5"></path></svg>
             <span data-i18n="btnAddToSong">Ajouter à la chanson</span>
@@ -961,6 +979,7 @@ const I18N = {
     midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.",
     footerFree: "Dessons est en source ouverte (source-available) et gratuit pour un usage non commercial (licence PolyForm). Mais le fichier MIDI que tu exportes ou joues t'appartient à 100 % ; utilise-le comme bon te semble, commercialement ou non.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
+    btnNodes: "Mode Nodes",
     btnAddToSong: "Ajouter à la chanson",
     songLink: "Ouvrir la chanson →",
     songScenePrompt: "Nom de cette scène (intro, couplet, refrain…) :",
@@ -1109,6 +1128,7 @@ const I18N = {
     midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>.",
     footerFree: "Neoyume's Dessons is source-available and free for non-commercial usage (PolyForm license). However, the MIDI file you export or play is 100% yours; use it however you want, commercially or not.",
     footerKofi: "☕ Support me on Ko-fi",
+    btnNodes: "Node mode",
     btnAddToSong: "Add to song",
     songLink: "Open the song →",
     songScenePrompt: "Name this scene (intro, verse, chorus…):",
@@ -1191,54 +1211,10 @@ document.querySelectorAll('#langToggle button').forEach(b=>{
   b.addEventListener('click', ()=> setLang(b.dataset.lang));
 });
 
-/* ---- Hand-drawn instrument icons, one per GM_INSTR entry below. Inlined
-   as SVG markup (not external <img src> files) so the zero-dependency /
-   works-from-file:// promise holds — nothing to fetch. Kept verbatim from
-   the source drawings (viewBox 0 0 78.8 80, class="st0"/"st1" on every
-   shape); the theme re-colouring is done entirely in .instrIcon CSS, the
-   only local edit here is class="ic-cut" on the shapes that must punch
-   through as dark cutouts (piano + bass keys). ---- */
-const INSTR_ICONS = {
-  piano:'<svg viewBox="0 0 78.8 80"><rect class="st1" x="3.7" y="4" width="71.8" height="71.8"/><rect class="st1" x="26.2" y="4" width="24.5" height="71.8"/><rect class="ic-cut" x="19" y="5.5" width="13.4" height="46.2"/><rect class="ic-cut" x="45.1" y="5.5" width="13.4" height="46.2"/></svg>',
-  organ:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="2.8" y="31.8" width="13.2" height="45.6"/><rect class="st0" x="63.2" y="31.9" width="13.2" height="45.6"/><rect class="st0" x="17.9" y="18.4" width="13.2" height="59"/><rect class="st0" x="48.1" y="18.4" width="13.2" height="59"/><rect class="st0" x="33" y="7.3" width="13.2" height="70.1"/></svg>',
-  vibraphone:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="32.2" y="3.2" width="13.4" height="46.2" transform="translate(77.7 52.5) rotate(-180)"/><rect class="st0" x="47.1" y="3.2" width="13.4" height="59.8" transform="translate(107.6 66.1) rotate(-180)"/><rect class="st0" x="2.3" y="3.2" width="13.4" height="27.5" transform="translate(18 33.9) rotate(-180)"/><rect class="st0" x="17.2" y="3.2" width="13.4" height="35.6" transform="translate(47.8 42) rotate(-180)"/><rect class="st0" x="62.1" y="3.2" width="13.4" height="71" transform="translate(137.5 77.3) rotate(-180)"/></svg>',
-  bass:'<svg viewBox="0 0 78.8 80"><rect class="st1" x="3.7" y="4.9" width="71.8" height="71.8"/><rect class="st1" x="3.6" y="2.9" width="71.8" height="26.8"/><rect class="st1" x="26.2" y="29.7" width="24.5" height="46.7"/><rect class="ic-cut" x="18.9" y="28.3" width="13.4" height="30.5"/><rect class="ic-cut" x="45.1" y="28.3" width="13.4" height="30.5"/><circle class="st1" cx="24.9" cy="15.9" r="9"/><circle class="st1" cx="53.7" cy="15.9" r="9"/></svg>',
-  flute:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="32.7" y="8.1" width="12.5" height="66.2" transform="translate(34.8 97.8) rotate(-132.4)"/><rect class="st0" x="60.4" y="7.8" width="12.5" height="16.2" rx="4.5" ry="4.5" transform="translate(99.8 75.9) rotate(-132.4)"/><rect class="st0" x="7.2" y="56.8" width="8.6" height="19.7" rx="4.3" ry="4.3" transform="translate(-42.2 25.6) rotate(-42.8)"/><rect class="st0" x="20.3" y="46.4" width="4" height="19.7" rx="2" ry="2" transform="translate(-31.5 28.6) rotate(-41.2)"/><rect class="st0" x="65.3" y="14.5" width="2.2" height="3.7" rx=".8" ry=".8" transform="translate(5.7 47.8) rotate(-41.2)"/><circle class="st0" cx="30.8" cy="48.8" r="2.2"/><circle class="st0" cx="38.7" cy="41.7" r="2.2"/><circle class="st0" cx="46.3" cy="34.8" r="2.2"/><circle class="st0" cx="54.8" cy="27.2" r="2.2"/></svg>',
-  steel:'<svg viewBox="0 0 78.8 80"><rect class="st0" x="3.5" y="4" width="71.8" height="71.8" rx="31" ry="31"/><rect class="st0" x="24.7" y="25.2" width="28.9" height="28.9" rx="14.4" ry="14.4"/><rect class="st0" x="46.7" y="9.8" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="10.3" y="10.6" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="9.4" y="47.4" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="47.4" y="47.9" width="20.8" height="20.8" rx="10.4" ry="10.4"/><rect class="st0" x="5.6" y="31.5" width="15.7" height="15.7" rx="7.8" ry="7.8"/><rect class="st0" x="56.9" y="31.5" width="15.7" height="15.7" rx="7.8" ry="7.8"/><rect class="st0" x="30.4" y="5.5" width="15.7" height="15.7" rx="7.8" ry="7.8" transform="translate(51.6 -25) rotate(90)"/><rect class="st0" x="30.4" y="56.8" width="15.7" height="15.7" rx="7.8" ry="7.8" transform="translate(102.9 26.4) rotate(90)"/></svg>'
-};
-
-/* ---- General MIDI instrument shortlist (bilingual label + program number
-   + a small hand-drawn SVG icon shown at rest instead of the name, see
-   .instrPicker in renderLayerList()). Limited to exactly 6 — one per layer at the max —
-   deliberately picked one per timbreFor() bucket (see the Web Audio synth
-   further down) rather than a broad GM sampling: the original 19-entry
-   list had several instruments landing in the *same* timbreFor() branch
-   (e.g. Celesta/Vibraphone/Marimba/Music Box/Tubular Bells/Xylophone all
-   hit the 8-15 "mallets" bucket and sounded byte-for-byte identical in the
-   preview synth) — user feedback after actually listening to all of them.
-   Each of these 6 hits a different branch: default/triangle (Piano),
-   sawtooth-sustained (Organ), triangle-no-sustain-bright (Vibraphone),
-   sine+sub-lowpass (Synth Bass), sine-sustained-bright (Flute), and the
-   only square-wave branch (Steel Drums) — maximally distinct in the
-   browser preview *and* still sensible, common General MIDI picks for
-   the real .mid export. ---- */
-const GM_INSTR = [
-  {fr:"Piano acoustique",  en:"Acoustic Piano",    prog:0,   icon:INSTR_ICONS.piano},
-  {fr:"Orgue",             en:"Organ",             prog:19,  icon:INSTR_ICONS.organ},
-  {fr:"Vibraphone",        en:"Vibraphone",        prog:11,  icon:INSTR_ICONS.vibraphone},
-  {fr:"Basse synthé",      en:"Synth Bass",        prog:38,  icon:INSTR_ICONS.bass},
-  {fr:"Flûte",             en:"Flute",             prog:73,  icon:INSTR_ICONS.flute},
-  {fr:"Steel drums",       en:"Steel Drums",       prog:114, icon:INSTR_ICONS.steel}
-];
 // used to suggest "Rhythm" instead of "Layer N" for a freshly-created layer
 // that already has a percussion instrument assigned — see rebuildLayers().
 const PERCUSSIVE_PROGRAMS = new Set([11, 114]); // Vibraphone, Steel Drums
 
-const SCALES = {
-  majPenta:[0,2,4,7,9], minPenta:[0,3,5,7,10],
-  major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10],
-  dorian:[0,2,3,5,7,9,10], wholetone:[0,2,4,6,8,10], chromatic:[0,1,2,3,4,5,6,7,8,9,10,11]
-};
 
 // Ready-made presets, shipped in the source — edit/add entries here and they
 // show up in the dropdown next to the user's own saved ones. Same shape as
@@ -1897,24 +1873,6 @@ function scaleNotesForRange(){
   return notes; // ascending, low->high
 }
 
-// Playback direction: maps normalized image coords (nx,ny ∈ [0,1), y downward)
-// to (τ,ρ) = (time fraction, pitch fraction), both ∈ [0,1). fwd is used to sort
-// pixels into the grid; inv (its exact algebraic inverse) is used to place note
-// dots and the playhead back onto the image. All 8 are affine in (nx,ny), so a
-// line of constant τ (the playhead) is always a straight line in image space —
-// horizontal/vertical for the 4 cardinal directions, a real diagonal for the
-// other 4. Diagonal pitch runs along the *other* diagonal, high on the
-// top-right side — same "top/right = high" convention as the cardinal modes.
-const DIR_DEFS = {
-  lr:   { fwd:(nx,ny)=>[nx,               1-ny],       inv:(t,r)=>[t,           1-r] },
-  rl:   { fwd:(nx,ny)=>[1-nx,             1-ny],       inv:(t,r)=>[1-t,         1-r] },
-  tb:   { fwd:(nx,ny)=>[ny,               nx],         inv:(t,r)=>[r,           t]   },
-  bt:   { fwd:(nx,ny)=>[1-ny,             nx],         inv:(t,r)=>[r,           1-t] },
-  tlbr: { fwd:(nx,ny)=>[(nx+ny)/2,        (nx-ny+1)/2], inv:(t,r)=>[t+r-0.5,    t-r+0.5] },
-  brtl: { fwd:(nx,ny)=>[1-(nx+ny)/2,      (nx-ny+1)/2], inv:(t,r)=>[0.5-t+r,    1.5-t-r] },
-  trbl: { fwd:(nx,ny)=>[(ny-nx+1)/2,      (nx+ny)/2],   inv:(t,r)=>[r-t+0.5,    r+t-0.5] },
-  bltr: { fwd:(nx,ny)=>[(nx-ny+1)/2,      (nx+ny)/2],   inv:(t,r)=>[r+t-0.5,    r-t+0.5] }
-};
 function readDir(){
   return DIR_DEFS[$('playDir').value] || DIR_DEFS.lr;
 }
@@ -1930,52 +1888,15 @@ function readDir(){
 let pathPoints = null;              // [[nx,ny],...] normalized on the analyzed image, null = not drawn yet
 let pathDrawing = false, pathDraft = null;
 let pathModelCache = null, pathLutCache = null;
-const PATH_N = 160;
 function pathModel(){
   const ar = (imgCanvas && imgCanvas.width && imgCanvas.height) ? imgCanvas.width/imgCanvas.height : 1;
   const raw = (pathPoints && pathPoints.length > 1) ? pathPoints : [[0.02,0.5],[0.98,0.5]];
   const key = ar + '|' + JSON.stringify(raw);
   if(pathModelCache && pathModelCache.key === key) return pathModelCache;
-  const P = raw.map(([x,y]) => [x*ar, y]);
-  const cum = [0];
-  for(let i=1;i<P.length;i++) cum.push(cum[i-1] + Math.hypot(P[i][0]-P[i-1][0], P[i][1]-P[i-1][1]));
-  const total = cum[cum.length-1] || 1;
-  // resample at equal arc length: even time per unit of path, whatever the drawing speed
-  const qx = new Float64Array(PATH_N), qy = new Float64Array(PATH_N);
-  for(let k=0, j=0; k<PATH_N; k++){
-    const target = total * k/(PATH_N-1);
-    while(j < P.length-2 && cum[j+1] < target) j++;
-    const seg = (cum[j+1]-cum[j]) || 1, u = clamp((target-cum[j])/seg, 0, 1);
-    qx[k] = P[j][0] + (P[j+1][0]-P[j][0])*u;
-    qy[k] = P[j][1] + (P[j+1][1]-P[j][1])*u;
-  }
-  const m = { key, ar, qx, qy, dmax: 1 };
-  let dmax = 1e-3;
-  for(let gy=0; gy<=40; gy++) for(let gx=0; gx<=40; gx++){
-    const d = Math.abs(pathProject(m, gx/40*ar, gy/40)[1]);
-    if(d > dmax) dmax = d;
-  }
-  m.dmax = dmax * 1.001;
+  const m = buildPathModel(raw, ar);   // dessons-core.js
+  m.key = key;
   pathModelCache = m;
   return m;
-}
-// -> [τ, signed distance] for a point in aspect-corrected space
-function pathProject(m, x, y){
-  const {qx, qy} = m;
-  let best = Infinity, bt = 0, bs = 0;
-  for(let i=0;i<PATH_N-1;i++){
-    const ax = qx[i], ay = qy[i], dx = qx[i+1]-ax, dy = qy[i+1]-ay;
-    const l2 = dx*dx+dy*dy || 1e-12;
-    const u = clamp(((x-ax)*dx + (y-ay)*dy)/l2, 0, 1);
-    const ex = x-(ax+dx*u), ey = y-(ay+dy*u), d2 = ex*ex+ey*ey;
-    if(d2 < best){ best = d2; bt = (i+u)/(PATH_N-1); bs = (dx*(y-ay) - dy*(x-ax)) >= 0 ? 1 : -1; }
-  }
-  return [bt, bs*Math.sqrt(best)];
-}
-function pathPointAt(m, t){
-  const f = clamp(t, 0, 1)*(PATH_N-1), i = Math.min(PATH_N-2, Math.floor(f)), u = f-i;
-  const dx = m.qx[i+1]-m.qx[i], dy = m.qy[i+1]-m.qy[i], l = Math.hypot(dx,dy) || 1;
-  return [m.qx[i]+dx*u, m.qy[i]+dy*u, -dy/l, dx/l];   // point + unit normal (positive side)
 }
 // per-pixel (τ,ρ) for the analysis grid, cached until the path or grid size changes
 function pathLut(w, h){
@@ -2166,94 +2087,6 @@ function initCurveEditor(){
   redrawCurveEditor();
 }
 
-// box blur approximates a gaussian in 3 passes (horizontal+vertical each) —
-// visually near-identical to a true gaussian, much cheaper in plain JS.
-// Sliding-window sum keeps each pass O(w*h) regardless of radius.
-function boxBlurPass(data, w, h, r, horizontal){
-  const out = new Uint8ClampedArray(data.length);
-  const size = r*2+1;
-  if(horizontal){
-    for(let y=0;y<h;y++){
-      const row = y*w*4;
-      for(let c=0;c<4;c++){
-        let sum=0;
-        for(let k=-r;k<=r;k++) sum += data[row + clamp(k,0,w-1)*4 + c];
-        for(let x=0;x<w;x++){
-          out[row + x*4 + c] = sum/size;
-          sum += data[row + clamp(x+r+1,0,w-1)*4+c] - data[row + clamp(x-r,0,w-1)*4+c];
-        }
-      }
-    }
-  } else {
-    for(let x=0;x<w;x++){
-      for(let c=0;c<4;c++){
-        let sum=0;
-        for(let k=-r;k<=r;k++) sum += data[(clamp(k,0,h-1)*w+x)*4+c];
-        for(let y=0;y<h;y++){
-          out[(y*w+x)*4+c] = sum/size;
-          sum += data[(clamp(y+r+1,0,h-1)*w+x)*4+c] - data[(clamp(y-r,0,h-1)*w+x)*4+c];
-        }
-      }
-    }
-  }
-  return out;
-}
-function boxBlur(data, w, h, radius, passes){
-  let cur = data;
-  for(let p=0;p<passes;p++){
-    cur = boxBlurPass(cur, w, h, radius, true);
-    cur = boxBlurPass(cur, w, h, radius, false);
-  }
-  return cur;
-}
-
-// tone curve: black point / white point / gamma -> a 256-entry lookup table.
-// Applied via direct index (data[i] -> lut[data[i]]), so it's O(1) per pixel
-// however elaborate the curve. Defaults (21 / 234 / 1.00) reproduce the old
-// fixed "Contrast 120%" slider almost exactly.
-function buildToneLUT(blackPt, whitePt, gamma){
-  const lut = new Uint8Array(256);
-  const range = Math.max(1, whitePt - blackPt);
-  for(let i=0;i<256;i++){
-    let v = clamp((i - blackPt) / range, 0, 1);
-    if(gamma !== 1) v = Math.pow(v, 1/gamma);
-    lut[i] = Math.round(v*255);
-  }
-  return lut;
-}
-// tone curve + saturation for one pixel — the single place both the analysis
-// (process) and the preview/eyedropper (via adjCanvas) get their colors from.
-function adjustPixel(r,g,b,lut,satPct){
-  r=lut[r]; g=lut[g]; b=lut[b];
-  const y = 0.299*r + 0.587*g + 0.114*b;
-  return [clamp(y+(r-y)*satPct,0,255), clamp(y+(g-y)*satPct,0,255), clamp(y+(b-y)*satPct,0,255)];
-}
-
-// Sobel gradient at one pixel (edges clamped/replicated) — returns [gx,gy].
-function sobelAt(lum, w, h, x, y){
-  const xm = x>0?x-1:0, xp = x<w-1?x+1:w-1;
-  const ym = y>0?y-1:0, yp = y<h-1?y+1:h-1;
-  const tl=lum[ym*w+xm], tc=lum[ym*w+x], tr=lum[ym*w+xp];
-  const ml=lum[y*w+xm],                 mr=lum[y*w+xp];
-  const bl=lum[yp*w+xm], bc=lum[yp*w+x], br=lum[yp*w+xp];
-  return [ (tr+2*mr+br) - (tl+2*ml+bl), (bl+2*bc+br) - (tl+2*tc+tr) ];
-}
-
-// Otsu's method on an arbitrary histogram: the threshold bin that maximizes
-// between-class variance. Standard algorithm, ~15 lines.
-function otsuThreshold(hist, total){
-  let sum=0; for(let i=0;i<256;i++) sum += i*hist[i];
-  let sumB=0, wB=0, varMax=0, threshold=0;
-  for(let t=0;t<256;t++){
-    wB += hist[t]; if(wB===0) continue;
-    const wF = total - wB; if(wF===0) break;
-    sumB += t*hist[t];
-    const mB = sumB/wB, mF = (sum-sumB)/wF;
-    const varBetween = wB*wF*(mB-mF)*(mB-mF);
-    if(varBetween > varMax){ varMax = varBetween; threshold = t; }
-  }
-  return threshold;
-}
 
 function process(){
   if(!img) return;
@@ -2439,27 +2272,6 @@ function process(){
   $('noteCount').textContent = total + ' ' + t('notesWord');
 }
 
-function rgbToHue(r,g,b){
-  r/=255; g/=255; b/=255;
-  const max=Math.max(r,g,b), min=Math.min(r,g,b);
-  let h=0; const d=max-min;
-  if(d===0) h=0;
-  else if(max===r) h=60*(((g-b)/d)%6);
-  else if(max===g) h=60*((b-r)/d+2);
-  else h=60*((r-g)/d+4);
-  if(h<0) h+=360;
-  return h;
-}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-
-function rgbToHex(r,g,b){
-  const h = x => Math.round(clamp(x,0,255)).toString(16).padStart(2,'0');
-  return '#'+h(r)+h(g)+h(b);
-}
-function hexToRgb(hex){
-  const n = parseInt(hex.slice(1), 16) || 0;
-  return [(n>>16)&255, (n>>8)&255, n&255];
-}
 
 // Paints the analysis view — adjusted image, the black scrim, the note dots
 // and the playback-curve ticks — into an arbitrary rect of an arbitrary 2D
