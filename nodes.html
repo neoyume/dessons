@@ -274,7 +274,7 @@ const I18N = {
     t_image:'image', t_field:'contours', t_scale:'gamme', t_notes:'notes', t_track:'piste',
     n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_srcMidi:'Fichier MIDI', n_sigRange:'Plage', n_clip:'Clip vidéo',
     t_midi:'midi', t_signal:'signal', s_env:'niveau', s_pitch:'hauteur', s_pos:'position', in_signal:'signal',
-    p_part:'Piste', midiAll:'Toutes', p_lo:'Bas', p_hi:'Haut', p_passBars:'Mesures par passage',
+    p_part:'Piste', p_repeats:'Boucles', midiAll:'Toutes', p_lo:'Bas', p_hi:'Haut', p_passBars:'Mesures par passage',
     srcPickMidi:'Charger un .mid', midiFileErr:'Fichier MIDI illisible.', midiSum:'{n} notes · {s} s', midiDrums:'Batterie dessinée, pas jouée.', midiEmpty:'Charge un .mid ou dépose-le ici.',
     btnClipExport:'Exporter la vidéo', clipRec:'Enregistrement {x}', clipNoRec:'Export vidéo indisponible dans ce navigateur.',
     n_rgbaSplit:'Séparer RVBA', n_rgbaCombine:'Combiner RVBA',
@@ -339,7 +339,7 @@ const I18N = {
     t_image:'image', t_field:'edges', t_scale:'scale', t_notes:'notes', t_track:'track',
     n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_srcMidi:'MIDI file', n_sigRange:'Range', n_clip:'Video clip',
     t_midi:'midi', t_signal:'signal', s_env:'level', s_pitch:'pitch', s_pos:'position', in_signal:'signal',
-    p_part:'Track', midiAll:'All', p_lo:'Low', p_hi:'High', p_passBars:'Bars per pass',
+    p_part:'Track', p_repeats:'Loops', midiAll:'All', p_lo:'Low', p_hi:'High', p_passBars:'Bars per pass',
     srcPickMidi:'Load a .mid', midiFileErr:'Unreadable MIDI file.', midiSum:'{n} notes · {s} s', midiDrums:'Drums are drawn, not played.', midiEmpty:'Load a .mid or drop it here.',
     btnClipExport:'Export the video', clipRec:'Recording {x}', clipNoRec:'Video export unavailable in this browser.',
     n_rgbaSplit:'Separate RGBA', n_rgbaCombine:'Combine RGBA',
@@ -520,21 +520,39 @@ const NODE_DEFS = {
   },
   clip: {
     cat:'catOut', custom:'clip', thumb:'clip', outputs:[],
-    inputs:[{id:'image', type:'image', opt:true}, {id:'midi', type:'midi', multi:true}],
-    params:[{id:'bars', label:'p_passBars', kind:'range', min:1, max:16, step:1, def:4}],
+    inputs:[
+      {id:'image', type:'image', opt:true}, {id:'midi', type:'midi', multi:true, opt:true},
+      {id:'tracks', type:'track', multi:true, opt:true, label:'in_tracks'}, {id:'notes', type:'notes', multi:true, opt:true}
+    ],
+    params:[
+      {id:'bars', label:'p_passBars', kind:'range', min:1, max:16, step:1, def:4},
+      {id:'tempo', label:'p_tempo', kind:'range', min:40, max:200, step:1, def:100, fmt:v=>v+' bpm'},
+      {id:'repeats', label:'p_repeats', kind:'range', min:1, max:32, step:1, def:4}
+    ],
     compute:(p, inp, n)=>{
-      const parts = inp.midi || [];
-      if(!parts.length) return {_clip:null};
+      const parts = inp.midi || [], loops = (inp.tracks || []).filter(tr=> !tr.mute).concat(inp.notes || []);
+      if(!parts.length && !loops.length) return {_clip:null};
       if(!n.parts || n.parts.length !== parts.length || parts.some((m, i)=> m !== n.parts[i])){
         n.parts = parts;
-        n.merged = parts.length === 1 ? parts[0].notes : parts.flatMap(m=> m.notes).sort((a, b)=> a.sec - b.sec);
+        n.merged = parts.flatMap(m=> m.notes);
       }
-      const notes = n.merged;
+      // a file sets the clock; otherwise the node's own tempo does
+      const file = parts.length ? parts[0].file : {segs:[{tick:0, sec:0, us:60e6/p.tempo}], ppq:1, duration:0};
+      const spb = file.segs[0].us/1e6, loopBeats = p.bars*4, played = [];
+      loops.forEach((tr, i)=>{
+        for(let r=0; r<p.repeats; r++) tr.notes.forEach(nt=>{
+          const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + 1);
+          const beat = (r + f0)*loopBeats, len = (f1 - f0)*loopBeats*0.8;
+          played.push({sec:beat*spb, dur:len*spb, beat, beatEnd:beat + len, midi:nt.midi, vel:nt.vel, layer:i, prog:tr.program || 0, drums:false, col:tr.color});
+        });
+      });
+      const notes = played.length ? n.merged.concat(played).sort((a, b)=> a.sec - b.sec)
+        : parts.length > 1 ? n.merged.slice().sort((a, b)=> a.sec - b.sec) : n.merged;
       if(!notes.length) return {_clip:null};
       return {_clip:{
-        notes, file:parts[0].file, bars:p.bars, image:inp.image,
-        lo:parts.reduce((a, m)=> Math.min(a, m.lo), 127), hi:parts.reduce((a, m)=> Math.max(a, m.hi), 0),
-        duration:Math.max(...parts.map(m=> m.file.duration)) + 1.2    // room for the release and reverb tail
+        notes, file, bars:p.bars, image:inp.image,
+        lo:notes.reduce((a, x)=> x.drums ? a : Math.min(a, x.midi), 127), hi:notes.reduce((a, x)=> x.drums ? a : Math.max(a, x.midi), 0),
+        duration:Math.max(file.duration, loops.length ? p.repeats*loopBeats*spb : 0) + 1.2    // room for the release and reverb tail
       }};
     }
   },
@@ -2200,7 +2218,7 @@ function paintClip(ctx, C, sec){
   ctx.save();
   ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
   lit.forEach(n=>{
-    const f = 1 - (sec - n.sec)/memory, age = sec - n.sec, x = px(n.beat), y = py(n.midi), col = TRACK_COLORS[n.layer % TRACK_COLORS.length];
+    const f = 1 - (sec - n.sec)/memory, age = sec - n.sec, x = px(n.beat), y = py(n.midi), col = n.col || TRACK_COLORS[n.layer % TRACK_COLORS.length];
     ctx.globalAlpha = 0.25 + 0.75*f;
     ctx.fillStyle = ctx.strokeStyle = col;
     const len = (Math.min(beat, n.beatEnd) - n.beat)/win*box.w;
@@ -2242,7 +2260,7 @@ function startClip(n, record){
   stopPlayback();
   ensureAudio();
   if(ac.state !== 'running') ac.resume().catch(()=>{});
-  const st = {id:n.id, C, t0:performance.now() + 150, next:0, frames:0, rec:null, chunks:[], canvas:null, ctx:null, stream:null};
+  const st = {id:n.id, C, t0:performance.now() + 150, done:-Infinity, frames:0, rec:null, chunks:[], canvas:null, ctx:null, stream:null};
   if(record){
     if(!clipExportSupported()) return;
     if(!clipTap){ clipTap = ac.createMediaStreamDestination(); bus.out.connect(clipTap); }
@@ -2273,12 +2291,15 @@ function startClip(n, record){
   clipRaf = requestAnimationFrame(clipFrame);
   buildNodeEl(n); drawWires();
 }
+// by time window, not by index: notes coming from a Scan change while it plays
 function clipSchedule(){
   const st = clipState;
-  if(!st) return;
+  if(!st || st.t0 === Infinity) return;
   const now = performance.now(), horizon = now + LOOKAHEAD_MS, notes = st.C.notes, epoch = ac.currentTime - now/1000;
-  for(; st.next < notes.length; st.next++){
-    const nt = notes[st.next], at = st.t0 + nt.sec*1000;
+  let i = 0, hi = notes.length;
+  while(i < hi){ const m = (i + hi)>>1; if(st.t0 + notes[m].sec*1000 < st.done) i = m + 1; else hi = m; }
+  for(; i < notes.length; i++){
+    const nt = notes[i], at = st.t0 + nt.sec*1000;
     if(at >= horizon) break;
     if(nt.drums || voices.size >= MAX_VOICES) continue;
     const v = nt.prog === PIZZ_PROGRAM
@@ -2287,6 +2308,7 @@ function clipSchedule(){
     voices.add(v);
     v.osc.onended = ()=> voices.delete(v);
   }
+  st.done = horizon;
 }
 function clipFrame(){
   const st = clipState;
