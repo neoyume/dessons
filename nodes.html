@@ -271,6 +271,8 @@
   <a class="backLink" href="index.html" data-i18n="backToWorkshop">← Atelier</a>
   <div class="toolbar">
     <button type="button" class="miniBtn primary" id="addBtn" data-i18n="btnAdd">+ Node</button>
+    <button type="button" class="miniBtn" id="undoBtn" data-i18n-title="btnUndo" disabled>↶</button>
+    <button type="button" class="miniBtn" id="redoBtn" data-i18n-title="btnRedo" disabled>↷</button>
     <button type="button" class="miniBtn" id="sideBtn" data-i18n="btnSidebar" aria-controls="nodeSidebar">Liste</button>
     <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
     <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
@@ -327,7 +329,7 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Atelier',
     catTools:'Outils', n_reroute:'Reroute', n_cableClip:'Attache-câbles', n_frame:'Cadre de groupe', t_any:'libre',
-    btnSidebar:'Liste', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
+    btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnSidebar:'Liste', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
     stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic ou Tab : ajouter un node · Double-clic sur un fil : reroute · Maj+glisser : sélectionner · G : grouper · Suppr : effacer · Déposer une image, une vidéo, un .obj / .stl ou un .mid ici',
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
@@ -393,7 +395,7 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Workshop',
     catTools:'Tools', n_reroute:'Reroute', n_cableClip:'Cable clip', n_frame:'Group frame', t_any:'free',
-    btnSidebar:'List', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
+    btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnSidebar:'List', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
     stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click or Tab: add a node · Double-click a wire: reroute · Shift+drag: select · G: group · Delete: remove · Drop an image, a video, an .obj / .stl or a .mid here',
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
@@ -473,6 +475,7 @@ function setLang(lang){
   document.documentElement.lang = LANG;
   document.title = t('docTitle');
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
   nodes.forEach(n => buildNodeEl(n));
   buildSidebar();
   drawWires();
@@ -1035,14 +1038,14 @@ function addNode(type, x, y, params, id){
   if(type === 'srcMidi' && n.params.file) restoreMidi(n);
   return n;
 }
-function removeNode(id){
+function removeNode(id, plain){
   const n = nodes.get(id);
   if(!n) return;
   if(isSource(n)) stopMedia(n);
   if(playingLoopId === id) stopPlayback();
   const downstream = links.filter(l=> l.from === id).map(l=> l.to);
   // deleting a wire tool closes the gap instead of cutting the wire
-  const bridges = !NODE_DEFS[n.type].lanes ? [] : links.filter(l=> l.from === id).flatMap(o=>{
+  const bridges = plain || !NODE_DEFS[n.type].lanes ? [] : links.filter(l=> l.from === id).flatMap(o=>{
     const i = links.find(l=> l.to === id && l.toPort === 'i' + o.fromPort.slice(1));
     return i ? [{from:i.from, fromPort:i.fromPort, to:o.to, toPort:o.toPort}] : [];
   });
@@ -3134,6 +3137,13 @@ document.addEventListener('pointerdown', e=>{ if(!addMenu.hidden && !addMenu.con
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape'){ hideMenu(); return; }
   if(e.target.closest('input, select, textarea')) return;
+  const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
+  if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); return; }
+  if(cmd && key === 'y'){ e.preventDefault(); redo(); return; }
+  if(cmd && key === 'c'){ const c = copySelection(); if(c){ e.preventDefault(); clipboard = c; } return; }
+  if(cmd && key === 'x'){ const c = copySelection(); if(c){ e.preventDefault(); clipboard = c; [...selection].forEach(id=> removeNode(id)); } return; }
+  if(cmd && key === 'v'){ if(clipboard){ e.preventDefault(); pasteAtPointer(); } return; }
+  if(cmd && key === 'd'){ e.preventDefault(); pasteNodes(copySelection(), 30, 30); return; }
   if((e.key === 'Delete' || e.key === 'Backspace') && selection.size){
     e.preventDefault(); [...selection].forEach(removeNode);
   } else if((e.key === 'g' || e.key === 'G') && !e.metaKey && !e.ctrlKey){
@@ -3145,6 +3155,8 @@ document.addEventListener('keydown', e=>{
   }
 });
 $('frameBtn').addEventListener('click', groupSelection);
+$('undoBtn').addEventListener('click', undo);
+$('redoBtn').addEventListener('click', redo);
 
 /* ---- sidebar: every node, in the menu's order. Click = add in the middle of the
    view, drag = add where it's dropped. Open or closed is remembered per browser. ---- */
@@ -3258,9 +3270,99 @@ let saveTimer = null;
 function saveSoon(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(()=>{
+    historyCommit();
     try{ localStorage.setItem(GRAPH_KEY, JSON.stringify(serialize())); }
     catch(e){ console.warn('graph not saved', e); }
   }, 300);
+}
+
+/* ---- undo / redo: a snapshot each time the graph settles (the same moment it's
+   saved, so one slider drag is one step). Applied as a diff, not a reload: a node
+   that's still there keeps its running video, webcam or mesh. ---- */
+const history_ = [];
+let histPos = -1;
+function snapshot(){ const g = serialize(); delete g.view; return JSON.stringify(g); }
+function historyCommit(){
+  const s = snapshot();
+  if(s === history_[histPos]) return;
+  history_.length = histPos + 1;
+  history_.push(s);
+  if(history_.length > 60) history_.shift();
+  histPos = history_.length - 1;
+  syncUndoButtons();
+}
+function syncUndoButtons(){
+  $('undoBtn').disabled = histPos <= 0;
+  $('redoBtn').disabled = histPos >= history_.length - 1;
+}
+function applySnapshot(str){
+  const g = JSON.parse(str), keep = new Set(g.nodes.map(s=> s.id));
+  [...nodes.values()].forEach(n=>{ if(!keep.has(n.id)) removeNode(n.id, true); });
+  g.nodes.forEach(s=>{
+    const n = nodes.get(s.id);
+    if(n && n.type === s.type){
+      const img = n.params.img !== s.params.img, file = n.params.file !== s.params.file;
+      n.x = s.x; n.y = s.y; n.params = s.params;
+      if(n.type === 'srcImage' && img && s.params.img) restoreSourceImage(n);
+      if(n.type === 'srcMidi' && file && s.params.file){ n.sel = null; restoreMidi(n); }
+      buildNodeEl(n);
+    } else {
+      if(n) removeNode(s.id, true);
+      addNode(s.type, s.x, s.y, s.params, s.id);
+    }
+  });
+  links = g.links;
+  frames.forEach(f=> f.el.remove()); frames = [];
+  (g.frames || []).forEach(f=>{ const m = Object.assign({}, f); frames.push(m); buildFrameEl(m); });
+  selection.forEach(id=>{ if(!nodes.has(id)) selection.delete(id); });
+  if(selectedId && !nodes.has(selectedId)) selectedId = null;
+  syncLanes(); refreshLinkedPorts();
+  nodes.forEach(n=> n.dirty = true);
+  scheduleRun(true);
+  requestAnimationFrame(drawWires);
+  history_[histPos] = snapshot();     // a restored node comes back last in the list: same graph, different text
+  syncUndoButtons();
+  clearTimeout(saveTimer);
+  try{ localStorage.setItem(GRAPH_KEY, JSON.stringify(serialize())); }catch(e){}
+}
+function undo(){
+  clearTimeout(saveTimer); historyCommit();   // a change still waiting to settle is the first thing to undo
+  if(histPos > 0) applySnapshot(history_[--histPos]);
+}
+function redo(){
+  clearTimeout(saveTimer); historyCommit();
+  if(histPos < history_.length - 1) applySnapshot(history_[++histPos]);
+}
+
+/* ---- copy / paste / duplicate: the selected nodes and the wires between them ---- */
+let clipboard = null;
+function copySelection(){
+  const ids = [...selection].filter(id=> nodes.has(id));
+  if(!ids.length) return null;
+  return {
+    nodes:ids.map(id=>{ const n = nodes.get(id); return {id, type:n.type, x:n.x, y:n.y, params:JSON.parse(JSON.stringify(n.params))}; }),
+    links:links.filter(l=> ids.includes(l.from) && ids.includes(l.to)).map(l=> Object.assign({}, l))
+  };
+}
+function pasteNodes(data, dx, dy){
+  if(!data) return;
+  const map = new Map();
+  data.nodes.forEach(s=>{
+    const params = JSON.parse(JSON.stringify(s.params));
+    if(s.type === 'midiOut') delete params.channel;     // the copy takes the next free channel
+    map.set(s.id, addNode(s.type, s.x + dx, s.y + dy, params));
+  });
+  data.links.forEach(l=> links.push({from:map.get(l.from).id, fromPort:l.fromPort, to:map.get(l.to).id, toPort:l.toPort}));
+  syncLanes();
+  selectNode(null);
+  map.forEach(n=>{ selectNode(n.id, true); markDirty(n.id); });
+  refreshLinkedPorts(); saveSoon();
+  requestAnimationFrame(drawWires);
+}
+function pasteAtPointer(){
+  if(!clipboard) return;
+  const r = stage.getBoundingClientRect(), at = lastPointer || [r.left + r.width/2, r.top + r.height/2], [wx, wy] = toWorld(at[0], at[1]);
+  pasteNodes(clipboard, wx - Math.min(...clipboard.nodes.map(n=> n.x)), wy - Math.min(...clipboard.nodes.map(n=> n.y)));
 }
 function clearGraph(){
   stopPlayback();
@@ -3340,6 +3442,7 @@ try{
 if(!restored) defaultGraph();
 applyView();
 setLang(LANG);
+historyCommit();
 </script>
 
 <!-- grain overlay, same as index.html -->
