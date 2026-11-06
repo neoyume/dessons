@@ -651,12 +651,19 @@ function lfoValue(p, f){
 // t: position in the cycle, whole numbers land on the same picture for every kind
 function generateImage(p, t){
   const S = MAXDIM, d = new Uint8ClampedArray(S*S*4), D = p.detail, TWO_PI = Math.PI*2;
-  const fr = ((t % 1) + 1) % 1, nx = 1.5*Math.cos(t*TWO_PI), ny = 1.5*Math.sin(t*TWO_PI);
+  const fr = ((t % 1) + 1) % 1;
+  // noise depth: the third axis of the lattice is a ring of NOISE_DEPTH layers,
+  // so the colours change where they stand and the last layer leads into the first
+  const NOISE_DEPTH = 4, zf = fr*NOISE_DEPTH, z0 = Math.floor(zf) % NOISE_DEPTH, z1 = (z0 + 1) % NOISE_DEPTH;
+  const zt = zf - Math.floor(zf), sz = zt*zt*(3 - 2*zt);
   // smooth value noise, one lattice per colour channel
   const lat = (x, y, c)=>{
     const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, sx = fx*fx*(3 - 2*fx), sy = fy*fy*(3 - 2*fy);
-    const g = (a, b)=> hash01(a + c*131, b, p.seed);
-    return (g(ix, iy)*(1 - sx) + g(ix + 1, iy)*sx)*(1 - sy) + (g(ix, iy + 1)*(1 - sx) + g(ix + 1, iy + 1)*sx)*sy;
+    const plane = z=>{
+      const g = (a, b)=> hash01(a + c*131, b, p.seed + z*1009);
+      return (g(ix, iy)*(1 - sx) + g(ix + 1, iy)*sx)*(1 - sy) + (g(ix, iy + 1)*(1 - sx) + g(ix + 1, iy + 1)*sx)*sy;
+    };
+    return plane(z0)*(1 - sz) + plane(z1)*sz;
   };
   for(let y=0;y<S;y++) for(let x=0;x<S;x++){
     const i = (y*S + x)*4, u = x/S, v = y/S;
@@ -669,8 +676,7 @@ function generateImage(p, t){
     else if(p.kind === 'grid'){ const on = ((u*D + fr) % 1) < 0.5 !== ((v*D + fr) % 1) < 0.5 ? 1 : 0; r = g = b = on; }
     else if(p.kind === 'rings'){ r = g = b = 0.5 + 0.5*Math.sin(Math.hypot(u - 0.5, v - 0.5)*D*TWO_PI + p.seed - fr*TWO_PI); }
     else {
-      // the noise is read along a small circle, which comes back to where it started
-      const x0 = u*D + nx, y0 = v*D + ny;
+      const x0 = u*D, y0 = v*D;
       r = lat(x0, y0, 0); g = lat(x0, y0, 1); b = lat(x0, y0, 2);
     }
     d[i] = r*255; d[i+1] = g*255; d[i+2] = b*255; d[i+3] = 255;
