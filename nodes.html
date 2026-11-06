@@ -277,6 +277,7 @@
     <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
     <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
     <button type="button" class="miniBtn" id="newBtn" data-i18n="btnNew">Nouveau</button>
+    <select class="miniBtn" id="tplSel" aria-label="Modèles"></select>
     <button type="button" class="miniBtn" id="saveBtn" data-i18n="btnSave">⬆ Sauver .json</button>
     <button type="button" class="miniBtn" id="openBtn" data-i18n="btnOpen">⬇ Ouvrir .json</button>
     <input type="file" id="graphInput" accept="application/json,.json" hidden>
@@ -329,6 +330,7 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Atelier',
     catTools:'Outils', n_reroute:'Reroute', n_cableClip:'Attache-câbles', n_frame:'Cadre de groupe', t_any:'libre',
+    tplPick:'Modèles…', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnSidebar:'Liste', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
     stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic ou Tab : ajouter un node · Double-clic sur un fil : reroute · Maj+glisser : sélectionner · G : grouper · Suppr : effacer · Déposer une image, une vidéo, un .obj / .stl ou un .mid ici',
@@ -405,6 +407,7 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Workshop',
     catTools:'Tools', n_reroute:'Reroute', n_cableClip:'Cable clip', n_frame:'Group frame', t_any:'free',
+    tplPick:'Templates…', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnSidebar:'List', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
     stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click or Tab: add a node · Double-click a wire: reroute · Shift+drag: select · G: group · Delete: remove · Drop an image, a video, an .obj / .stl or a .mid here',
@@ -498,6 +501,7 @@ function setLang(lang){
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
   nodes.forEach(n => buildNodeEl(n));
   buildSidebar();
+  buildTemplateMenu();
   drawWires();
   scheduleRun(true);
 }
@@ -645,15 +649,21 @@ const NODE_DEFS = {
   // the Loop. Tiny files, so unlike a mesh it's saved with the graph.
   srcMidi: {
     cat:'catSource', custom:'midiFile', thumb:'midiRoll', sigSource:true,
+    // a file with several tracks also gives one notes output per track
+    dynOut:n=> n.midi && n.midi.layers.length > 1 ? n.midi.layers.map(l=> ({id:'L' + l.id, type:'notes', text:midiLayerName(l)})) : [],
     outputs:[{id:'notes', type:'notes'}, {id:'env', type:'signal', label:'s_env'}, {id:'pitch', type:'signal', label:'s_pitch'}, {id:'pos', type:'signal', label:'s_pos'}],
     params:[
       {id:'file', kind:'hidden', def:null}, {id:'fileName', kind:'hidden', def:''},
-      {id:'part', label:'p_part', kind:'select', def:'all', options:n=> [['all', t('midiAll')]].concat(((n.midi && n.midi.layers) || []).map(l=> [String(l.id), l.name || (t('p_part') + ' ' + (l.id + 1))]))}
+      {id:'part', label:'p_part', kind:'select', def:'all', options:n=> [['all', t('midiAll')]].concat(((n.midi && n.midi.layers) || []).map(l=> [String(l.id), midiLayerName(l)]))}
     ],
     compute:(p, inp, n)=>{
       if(!n.midi) return {notes:null, env:null, pitch:null, pos:null};
       if(!n.sel || n.selPart !== p.part){ n.sel = midiSelection(n.midi, p.part); n.selPart = p.part; }
-      return n.sel;
+      if(!n.layerOut){
+        n.layerOut = {};
+        n.midi.layers.forEach(l=>{ n.layerOut['L' + l.id] = midiSelection(n.midi, String(l.id)).notes; });
+      }
+      return Object.assign({}, n.sel, n.layerOut);
     },
     summary:n=>{
       if(!n.midi) return '';
@@ -1270,6 +1280,7 @@ function addNode(type, x, y, params, id){
   buildNodeEl(n);
   if(type === 'srcImage' && n.params.img) restoreSourceImage(n);
   if(type === 'srcMidi' && n.params.file) restoreMidi(n);
+  if(type === 'srcMesh' && n.params.meshKey) restoreMesh(n);
   return n;
 }
 function removeNode(id, plain){
@@ -1300,7 +1311,8 @@ function portsIn(n){
 }
 function portsOut(n){
   const def = NODE_DEFS[n.type];
-  return def.lanes ? n.params.lanes.map((ty, i)=> ({id:'o' + i, type:ty || 'any', lane:true})) : (def.outputs || []);
+  if(def.lanes) return n.params.lanes.map((ty, i)=> ({id:'o' + i, type:ty || 'any', lane:true}));
+  return def.dynOut ? def.outputs.concat(def.dynOut(n)) : (def.outputs || []);
 }
 function inputDef(n, portId){ return portsIn(n).find(p=> p.id === portId); }
 function outputDef(n, portId){ return portsOut(n).find(p=> p.id === portId); }
@@ -1490,7 +1502,7 @@ function portEl(n, p, side){
   el.className = 'port ' + side + ' ty-' + p.type + (p.opt ? ' opt' : '');
   el.dataset.node = n.id; el.dataset.port = p.id; el.dataset.type = p.type; el.dataset.side = side;
   el.innerHTML = '<i class="dot"></i><span></span>';
-  el.querySelector('span').textContent = p.lane ? '' : p.label ? t(p.label) : t('t_' + p.type);
+  el.querySelector('span').textContent = p.lane ? '' : p.text || (p.label ? t(p.label) : t('t_' + p.type));
   el.title = t('t_' + p.type);
   el.querySelector('.dot').addEventListener('pointerdown', e=> startWire(e, n, p, side));
   return el;
@@ -2309,10 +2321,34 @@ function parseSTL(buf){
   for(const m of text.matchAll(/vertex\s+(\S+)\s+(\S+)\s+(\S+)/g)) pos.push(+m[1], +m[2], +m[3]);
   return packMesh(new Float32Array(pos), null);
 }
-async function loadMeshFile(n, file){
-  let mesh = null;
+const parseMesh = (name, buf)=> /\.stl$/i.test(name) ? parseSTL(buf) : parseOBJ(new TextDecoder().decode(buf));
+// 3D files stay in IndexedDB, too big for the graph: separate base from the scenes',
+// so this doesn't touch dessons-core.js's schema. No IndexedDB = "reload the file", as before
+function meshStore(mode, fn){
+  return new Promise((res, rej)=>{
+    const open = indexedDB.open('dessons-nodes', 1);
+    open.onupgradeneeded = ()=> open.result.createObjectStore('meshes');
+    open.onerror = ()=> rej(open.error);
+    open.onsuccess = ()=>{
+      const tx = open.result.transaction('meshes', mode), rq = fn(tx.objectStore('meshes'));
+      tx.oncomplete = ()=>{ open.result.close(); res(rq.result); };
+      tx.onerror = tx.onabort = ()=>{ open.result.close(); rej(tx.error); };
+    };
+  });
+}
+async function restoreMesh(n){
   try{
-    mesh = /\.stl$/i.test(file.name) ? parseSTL(await file.arrayBuffer()) : parseOBJ(await file.text());
+    const buf = await meshStore('readonly', st=> st.get(n.params.meshKey));
+    if(!buf || nodes.get(n.id) !== n || n.mesh) return;
+    n.mesh = parseMesh(n.params.meshName, buf);
+    markDirty(n.id);
+  }catch(e){ console.warn('mesh not restored', e); }
+}
+async function loadMeshFile(n, file){
+  let mesh = null, buf = null;
+  try{
+    buf = await file.arrayBuffer();
+    mesh = parseMesh(file.name, buf);
   }catch(e){ console.warn('mesh not read', e); }
   if(nodes.get(n.id) !== n) return;
   n.mediaErr = mesh ? null : 'meshErr';
@@ -2320,6 +2356,8 @@ async function loadMeshFile(n, file){
     if(n.mesh) freeMesh(n.mesh);
     n.mesh = mesh;
     n.params.shape = 'file'; n.params.meshName = file.name;
+    n.params.meshKey = file.name + ':' + file.size;
+    meshStore('readwrite', st=> st.put(buf, n.params.meshKey)).catch(e=> console.warn('mesh not stored', e));
   }
   buildNodeEl(n); drawWires();
   markDirty(n.id); saveSoon();
@@ -2439,6 +2477,7 @@ function bakeSpin(loopNode){
    so the Loop needs its length and tempo: that's the Match button.
    ============================================================ */
 const MIDI_GRID = 96;
+const midiLayerName = l=> l.name || (t('p_part') + ' ' + (l.id + 1));
 function midiShape(file){
   const last = file.notes.reduce((a, x)=> Math.max(a, x.beatEnd), 0);
   return {bars:Math.max(1, Math.ceil(last/4 - 1e-6)), tempo:Math.round(60e6/file.segs[0].us), secPerBeat:file.duration/Math.max(last, 1e-6)};
@@ -2467,18 +2506,19 @@ function midiSelection(file, part){
 function loadMidiFile(n, f){
   f.arrayBuffer().then(buf=>{
     if(nodes.get(n.id) !== n) return;
-    n.midi = parseMidi(buf); n.sel = null; n.mediaErr = null;
+    n.midi = parseMidi(buf); n.sel = n.layerOut = null; n.mediaErr = null;
     let bin = '';
     new Uint8Array(buf).forEach(b=>{ bin += String.fromCharCode(b); });
     n.params.file = btoa(bin); n.params.fileName = f.name; n.params.part = 'all';
-    buildNodeEl(n); drawWires(); markDirty(n.id); saveSoon();
+    links = links.filter(l=> l.from !== n.id || outputDef(n, l.fromPort));   // a track the new file doesn't have
+    buildNodeEl(n); refreshLinkedPorts(); drawWires(); markDirty(n.id); saveSoon();
   }).catch(e=>{ console.warn('midi not read', e); n.mediaErr = 'midiFileErr'; buildNodeEl(n); drawWires(); });
 }
 function restoreMidi(n){
   try{
     const bin = atob(n.params.file), a = new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++) a[i] = bin.charCodeAt(i);
-    n.midi = parseMidi(a.buffer);
+    n.midi = parseMidi(a.buffer); n.sel = n.layerOut = null;
     buildNodeEl(n);
   }catch(e){ console.warn('stored midi unreadable', e); }
 }
@@ -3369,7 +3409,7 @@ function menuEntries(wire){
 }
 function addFromMenu(ty, wx, wy, wire){
   hideMenu();
-  if(ty === 'frame'){ createFrame(wx, wy, 400, 280); return; }
+  if(ty === 'frame'){ createFrame(wx, wy, 400, 280); return null; }
   const n = addNode(ty, wire && wire.toNode ? wx - 216 : wx, wy - 20);
   selectNode(n.id);
   if(wire){
@@ -3378,6 +3418,21 @@ function addFromMenu(ty, wx, wy, wire){
     else connect(wire.fromNode, wire.fromPort, n.id, port.id);
   }
   markDirty(n.id); saveSoon();
+  requestAnimationFrame(drawWires);
+  return n;
+}
+// a node dropped on a wire goes in line, if it can take that wire's type in and out
+function insertOnWire(n, i){
+  const l = links[i];
+  if(!n || !l) return;
+  const type = outputDef(nodes.get(l.from), l.fromPort).type;
+  const ip = portsIn(n).find(p=> typesFit(p.type, type)), op = portsOut(n).find(p=> typesFit(p.type, type));
+  if(!ip || !op) return;
+  adoptLane(n, ip.id, type); adoptLane(n, op.id, type);
+  links[i] = {from:n.id, fromPort:op.id, to:l.to, toPort:l.toPort};
+  links.push({from:l.from, fromPort:l.fromPort, to:n.id, toPort:ip.id});
+  syncLanes();
+  markDirty(n.id); refreshLinkedPorts(); saveSoon();
   requestAnimationFrame(drawWires);
 }
 // the search field keeps the focus: type to filter, arrows to move, Enter to add, Escape to leave
@@ -3518,7 +3573,9 @@ function sidebarDrag(e, b, entry){
     const under = document.elementFromPoint(ev.clientX, ev.clientY);
     if(ev.type === 'pointerup' && under && stage.contains(under)){
       const [wx, wy] = toWorld(ev.clientX, ev.clientY);
-      addFromMenu(entry.ty, wx - 108, wy);
+      const wireAt = under.classList.contains('hit') ? +under.dataset.i : -1;
+      const n = addFromMenu(entry.ty, wx - 108, wy);
+      if(wireAt >= 0) insertOnWire(n, wireAt);
     }
   };
   b.addEventListener('pointermove', move); b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
@@ -3740,11 +3797,82 @@ function defaultGraph(){
   L(scale,'scale', scanA,'scale'); L(scale,'scale', scanB,'scale');
   L(scanA,'notes', oct,'notes'); L(oct,'notes', trA,'notes'); L(scanB,'notes', trB,'notes');
   L(trA,'track', loop,'tracks'); L(trB,'track', loop,'tracks');
-  refreshLinkedPorts();
+  finishGraph();
+}
+function finishGraph(){
+  syncLanes(); refreshLinkedPorts();
   nodes.forEach(n=> n.dirty = true);
   scheduleRun(true);
   requestAnimationFrame(()=>{ drawWires(); fitView(); });
 }
+const wired = (a, ap, b, bp)=> links.push({from:a.id, fromPort:ap, to:b.id, toPort:bp});
+// starting points that sound straight away: only the MIDI one needs a file
+const TEMPLATES = {
+  starter:defaultGraph,
+  spin(){
+    clearGraph();
+    const mesh = addNode('srcMesh', 0, 60, {shape:'knot', turns:1});
+    const edges = addNode('edges', 260, 60), scale = addNode('scale', 260, 340);
+    const scan = addNode('scan', 520, 60, {steps:16, thresh:50});
+    const tr = addNode('track', 780, 60, {program:'11'}), loop = addNode('loop', 1040, 60);
+    wired(mesh,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(scale,'scale', scan,'scale');
+    wired(scan,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
+    finishGraph();
+  },
+  breathe(){
+    clearGraph();
+    const gen = addNode('srcGen', 0, 60, {kind:'noise', detail:12}), edges = addNode('edges', 260, 60);
+    const lfo = addNode('lfo', 260, 340, {rate:1}), range = addNode('sigRange', 520, 480, {lo:0, hi:50});
+    const scan = addNode('scan', 520, 60, {steps:32, thresh:10});
+    const limit = addNode('limit', 780, 60, {perStep:2}), tr = addNode('track', 1040, 60, {program:'72'}), loop = addNode('loop', 1300, 60);
+    wired(gen,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(lfo,'sig', range,'in'); wired(range,'out', scan,'sig_thresh');
+    wired(scan,'notes', limit,'notes'); wired(limit,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
+    finishGraph();
+  },
+  rhythm(){
+    clearGraph();
+    const gen = addNode('srcGen', 0, 160, {kind:'noise', detail:9}), edges = addNode('edges', 260, 160), scale = addNode('scale', 260, 460);
+    const a = addNode('scan', 520, 0, {steps:16, thresh:45}), b = addNode('scan', 520, 360, {steps:12, thresh:45});
+    const eu = addNode('euclid', 780, 0, {pulses:5, length:16}), ch = addNode('chance', 780, 360, {keep:50});
+    const lim = addNode('limit', 780, 640, {perStep:1});
+    const mg = addNode('merge', 1040, 160), ec = addNode('echo', 1300, 160, {delay:3, repeats:2});
+    const tr = addNode('track', 1560, 160, {program:'114'}), loop = addNode('loop', 1820, 160);
+    wired(gen,'image', edges,'image'); wired(edges,'field', a,'field'); wired(edges,'field', b,'field');
+    wired(scale,'scale', a,'scale'); wired(scale,'scale', b,'scale');
+    wired(a,'notes', eu,'notes'); wired(b,'notes', lim,'notes'); wired(lim,'notes', ch,'notes');
+    wired(eu,'notes', mg,'notes'); wired(ch,'notes', mg,'notes'); wired(mg,'notes', ec,'notes');
+    wired(ec,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
+    finishGraph();
+  },
+  midi(){
+    clearGraph();
+    const file = addNode('srcMidi', 0, 60), scale = addNode('scale', 0, 400);
+    const snap = addNode('snapScale', 300, 60), tr = addNode('track', 560, 60), loop = addNode('loop', 820, 60);
+    wired(file,'notes', snap,'notes'); wired(scale,'scale', snap,'scale'); wired(snap,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
+    finishGraph();
+  },
+  logic(){
+    clearGraph();
+    const gen = addNode('srcGen', 0, 60, {kind:'noise', detail:10}), edges = addNode('edges', 260, 60);
+    const scan = addNode('scan', 520, 60, {steps:16, thresh:45}), limit = addNode('limit', 780, 60, {perStep:2});
+    const tr = addNode('track', 1040, 60), loop = addNode('loop', 1300, 60), out = addNode('midiOut', 1040, 400);
+    const lfo = addNode('lfo', 520, 480, {rate:2}), cc = addNode('ccOut', 780, 480, {cc:74});
+    wired(gen,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(scan,'notes', limit,'notes');
+    wired(limit,'notes', tr,'notes'); wired(tr,'track', loop,'tracks'); wired(limit,'notes', out,'notes'); wired(lfo,'sig', cc,'sig');
+    finishGraph();
+  }
+};
+function buildTemplateMenu(){
+  const sel = $('tplSel');
+  sel.innerHTML = '';
+  sel.appendChild(new Option(t('tplPick'), ''));
+  Object.keys(TEMPLATES).forEach(k=> sel.appendChild(new Option(t('tpl_' + k), k)));
+}
+$('tplSel').addEventListener('change', e=>{
+  const k = e.target.value;
+  e.target.value = '';
+  if(k && confirm(t('confirmNew'))){ TEMPLATES[k](); saveSoon(); }
+});
 
 $('newBtn').addEventListener('click', ()=>{ if(confirm(t('confirmNew'))){ defaultGraph(); saveSoon(); } });
 $('saveBtn').addEventListener('click', ()=>{
