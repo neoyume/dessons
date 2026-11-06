@@ -47,15 +47,16 @@ function midiTempoTrack(tempo, markers){
 // one track: name meta, then {tick, bytes} events (sorted here), then end-of-track
 function midiTrack(name, events){
   events.sort((a,b)=>a.tick-b.tick);
-  let trackBytes = [];
+  // appended in place: concat() recopied the whole track for every event
+  const trackBytes = [], add = list=>{ for(let i=0;i<list.length;i++) trackBytes.push(list[i]); };
   const nameBytes = str(name.slice(0,30));
-  trackBytes = trackBytes.concat(writeVarLen(0), [0xFF,0x03, nameBytes.length, ...nameBytes]);
+  add(writeVarLen(0)); add([0xFF,0x03, nameBytes.length]); add(nameBytes);
   let last=0;
   events.forEach(e=>{
     const delta = e.tick-last; last = e.tick;
-    trackBytes = trackBytes.concat(writeVarLen(Math.max(0,Math.round(delta))), e.bytes);
+    add(writeVarLen(Math.max(0,Math.round(delta)))); add(e.bytes);
   });
-  trackBytes = trackBytes.concat(writeVarLen(0), [0xFF,0x2F,0x00]);
+  add(writeVarLen(0)); add([0xFF,0x2F,0x00]);
   return trackBytes;
 }
 

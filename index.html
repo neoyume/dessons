@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dessons · Générateur de loops image → MIDI</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
@@ -22,10 +23,12 @@
 <meta name="twitter:description" content="Turn an image, a video or your webcam feed into a multi-track MIDI loop. Export a .mid file or stream it live into your DAW.">
 <meta name="twitter:image" content="https://neoyume.github.io/dessons/docs/social-card.jpg">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <style>
+  /* DotGothic16 (SIL OFL, fonts/OFL.txt), served from here: no request to Google */
+  @font-face{font-family:'DotGothic16'; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/DotGothic16-latin.woff2) format('woff2');
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+  @font-face{font-family:'DotGothic16'; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/DotGothic16-arrows-1.woff2) format('woff2'); unicode-range:U+23,U+3c,U+2192,U+4e45,U+4efb,U+4f50,U+4f8b,U+4fc2,U+5024,U+5150,U+5272,U+5370,U+53bb,U+542b,U+56db,U+56e3,U+57ce,U+5bc4,U+5bcc,U+5f71,U+60aa,U+6238,U+6280,U+629c,U+6539,U+66ff,U+670d,U+677e-677f,U+6839,U+69cb,U+6b4c,U+6bb5,U+6e96,U+6f14,U+72ec,U+7389,U+7814,U+79cb,U+79d1,U+79fb,U+7a0e,U+7d0d,U+85e4,U+8d64,U+9632,U+96e2,U+9805,U+99ac,U+ff1e;}
+  @font-face{font-family:'DotGothic16'; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/DotGothic16-arrows-2.woff2) format('woff2'); unicode-range:U+2105,U+2109-210a,U+210f,U+2116,U+2121,U+2126-2127,U+212b,U+212e,U+2135,U+213b,U+2194-2199,U+21b8-21b9,U+21c4-21c6,U+21cb-21cc,U+21d0,U+21e6-21e9,U+21f5,U+2202-2203,U+2205-2206,U+2208-220b,U+220f,U+2211,U+2213,U+2215,U+221a,U+221d,U+2220,U+2223,U+2225-2226,U+2228,U+222a-222e,U+2234-2237,U+223d,U+2243,U+2245,U+2248,U+224c,U+2260,U+2262,U+2264-2265,U+226e-226f,U+2272-2273,U+2276-2277,U+2283-2287,U+228a-228b,U+2295-2299,U+22a0,U+22a5,U+22bf,U+22da-22db,U+22ef,U+2305-2307,U+2318,U+2329-232a,U+23b0-23b1,U+23be-23cc,U+23ce,U+23da-23db,U+2423,U+2469-24d0;}
   :root{
     /* palette matched to dessons.neoyume.com (dessons_web): teal void, neon green accent */
     --bg:#002b2a;
@@ -4041,20 +4044,32 @@ setLang(initialLang());
   resize();
   window.addEventListener('resize', resize);
 
-  function drawNoise(){
-    var imageData = ctx.createImageData(canvas.width, canvas.height);
-    var buf = imageData.data;
-    for(var i=0; i<buf.length; i+=4){
-      var shade = (Math.random()*255) | 0;
-      buf[i]=shade; buf[i+1]=shade; buf[i+2]=shade; buf[i+3]=255;
+  // a few frames made once, then shown in turn: generating noise for every
+  // frame cost 13% of a core with the app doing nothing
+  var FRAMES = 6, FPS = 24, frames = [], shown = 0, last = 0;
+  function makeFrames(){
+    frames = [];
+    for(var f=0; f<FRAMES; f++){
+      var imageData = ctx.createImageData(canvas.width, canvas.height);
+      var buf = imageData.data;
+      for(var i=0; i<buf.length; i+=4){
+        var shade = (Math.random()*255) | 0;
+        buf[i]=shade; buf[i+1]=shade; buf[i+2]=shade; buf[i+3]=255;
+      }
+      frames.push(imageData);
     }
-    ctx.putImageData(imageData, 0, 0);
   }
-
-  if(reduceMotion){
-    drawNoise();
-  } else {
-    (function animate(){ drawNoise(); requestAnimationFrame(animate); })();
+  function drawNoise(){
+    if(!frames.length || frames[0].width !== canvas.width || frames[0].height !== canvas.height) makeFrames();
+    shown = (shown + 1 + ((Math.random()*(FRAMES - 1)) | 0)) % FRAMES;
+    ctx.putImageData(frames[shown], 0, 0);
+  }
+  if(reduceMotion){ drawNoise(); }
+  else {
+    (function animate(now){
+      if(!now || now - last >= 1000/FPS){ last = now || 0; drawNoise(); }
+      requestAnimationFrame(animate);
+    })();
   }
 })();
 </script>

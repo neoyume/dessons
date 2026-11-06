@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dessons · Tests</title>
+<style>
+  body{margin:0; padding:18px; background:#002b2a; color:#e8f2f0; font:13px/1.5 ui-monospace, Menlo, monospace;}
+  h1{font-size:16px; font-weight:400; margin:0 0 4px;}
+  #sum{margin-bottom:12px; color:#9fbcb9;}
+  .ok{color:#00ff00;} .ko{color:#ff8a8e;}
+  iframe{position:fixed; left:-3000px; top:0; width:1400px; height:800px; border:0;}
+</style>
+</head>
+<body>
+<h1>Dessons · Tests</h1>
+<div id="sum">…</div>
+<div id="out"></div>
+<script>
+/* Runs against the real page, in an iframe: serve the folder (python3 -m http.server),
+   open /tests/, read the result. No dependency, like the rest. nodes.html?test keeps
+   its graph under another key, so your work isn't touched. window.results is there
+   for a headless run. Each test runs inside the page, where it sees its globals. */
+const T = [];
+const test = (name, fn)=> T.push([name, fn]);
+
+/* ---- MIDI files ---- */
+test('midiTrack : octets exacts', ()=>{
+  eq([...midiTrack('A', [{tick:0, bytes:[0x90,60,100]}, {tick:480, bytes:[0x80,60,0]}])],
+     [0,255,3,1,65, 0,144,60,100, 131,96,128,60,0, 0,255,47,0]);
+});
+test('midiTrack : temps variable sur plusieurs octets', ()=>{
+  eq(writeVarLen(0), [0]); eq(writeVarLen(127), [127]); eq(writeVarLen(128), [129,0]); eq(writeVarLen(16384), [129,128,0]);
+});
+test('Export de 20 000 notes en moins de 500 ms', ()=>{
+  const ev = []; for(let i=0;i<20000;i++){ ev.push({tick:i*30, bytes:[0x90,60,90]}); ev.push({tick:i*30+25, bytes:[0x80,60,0]}); }
+  const t0 = performance.now(); midiTrack('x', ev); ok(performance.now() - t0 < 500);
+});
+test('parseMidi relit ce que midiFile écrit', ()=>{
+  const m = parseMidi(midiFile([midiTempoTrack(120), midiTrack('A', [{tick:0, bytes:[0xC0,38]}, {tick:0, bytes:[0x90,60,100]}, {tick:480, bytes:[0x80,60,0]}])], 480).buffer);
+  eq([m.notes.length, m.notes[0].midi, m.notes[0].dur, m.layers[0].name, m.layers[0].program], [1, 60, 0.5, 'A', 38]);
+});
+test('parseMidi refuse ce qui n’est pas un MIDI', ()=>{ throws(()=> parseMidi(new ArrayBuffer(40))); throws(()=> parseMidi(new ArrayBuffer(3))); });
+
+/* ---- notes: nothing leaves the scale ---- */
+test('Caler sur la gamme : aucune note hors gamme', ()=>{
+  const scale = {pitches:[60,62,64,65,67,69,71]}, cls = new Set(scale.pitches.map(m=> m % 12));
+  const notes = {steps:128, curve:'linear', notes:Array.from({length:128}, (_, i)=> ({step:i, midi:i, vel:100, row:0}))};
+  NODE_DEFS.snapScale.compute({}, {notes, scale}).notes.notes.forEach(n=> ok(cls.has(n.midi % 12)));
+});
+test('Transposer en degrés reste dans la gamme', ()=>{
+  const scale = {pitches:[60,62,64,65,67,69,71]};
+  eq(NODE_DEFS.degree.compute({shift:2}, {notes:{steps:4, notes:[{step:0, midi:60, vel:90}, {step:1, midi:71, vel:90}]}, scale}).notes.notes.map(n=> n.midi), [64, 74]);
+});
+test('Euclidien répartit les coups', ()=>{
+  const notes = {steps:16, curve:'linear', notes:Array.from({length:16}, (_, i)=> ({step:i, midi:60, vel:90}))};
+  eq(NODE_DEFS.euclid.compute({pulses:5, length:16, rotate:0}, {notes}).notes.notes.map(n=> n.step), [0,4,7,10,13]);
+});
+test('Écho repasse par le début de la boucle', ()=>{
+  eq(NODE_DEFS.echo.compute({delay:4, repeats:1, decay:50}, {notes:{steps:16, notes:[{step:14, midi:60, vel:100}]}}).notes.notes.map(n=> [n.step, n.vel]), [[0,50],[14,100]]);
+});
+test('Probabilité : même résultat à chaque passage', ()=>{
+  const notes = {steps:16, notes:Array.from({length:64}, (_, i)=> ({step:i % 16, midi:40 + i, vel:90}))}, f = ()=> JSON.stringify(NODE_DEFS.chance.compute({keep:50, seed:3}, {notes}));
+  eq(f(), f());
+});
+test('Fusionner réunit des grilles différentes', ()=>{
+  const m = mergeNotes([{steps:8, curve:'linear', notes:[{step:1, midi:60, vel:90}]}, {steps:12, curve:'linear', notes:[{step:3, midi:62, vel:90}]}]);
+  eq([m.steps, m.notes.map(n=> n.step)], [24, [3, 6]]);
+});
+
+/* ---- signals ---- */
+test('Maths : opérations et division par zéro', ()=>{
+  const v = (op, a, b)=> NODE_DEFS.math.compute({op, a, b}, {}).sig.at(0);
+  eq([v('add',2,3), v('sub',2,3), v('mult',2,3), v('div',6,3), v('div',1,0), v('pow',2,10), v('mod',-1,3), v('mod',5,0), v('frac',2.75,0)], [5,-1,6,2,0,1024,2,0,0.75]);
+});
+test('Échelle : remap et limite', ()=>{
+  const k = a=> ({in:{at:()=> a}}), P = {inMin:0, inMax:1, outMin:50, outMax:150, clamp:true};
+  eq([NODE_DEFS.sigScale.compute(P, k(.5)).sig.at(0), NODE_DEFS.sigScale.compute(P, k(2)).sig.at(0)], [100, 150]);
+});
+test('LFO : revient au départ', ()=>{ ok(Math.abs(lfoValue({shape:'sine', rate:3, phase:0, seed:1}, 0) - lfoValue({shape:'sine', rate:3, phase:0, seed:1}, 0.999999)) < 0.001); });
+test('Générateur : boucle sans raccord, tous les types', ()=>{
+  ['noise','gradient','grid','rings'].forEach(kind=>{
+    const a = generateImage({kind, detail:8, seed:3}, 0), b = generateImage({kind, detail:8, seed:3}, 1);
+    ok(a.data.every((v, i)=> v === b.data[i]), kind);
+  });
+});
+
+/* ---- images ---- */
+test('Séparer puis Combiner RVBA rend l’image', ()=>{
+  const data = new Uint8ClampedArray(16); data.set([10,20,30,255, 40,50,60,128, 70,80,90,0, 200,100,0,255]);
+  const s = NODE_DEFS.rgbaSplit.compute({}, {image:{w:2, h:2, data}});
+  eq([...NODE_DEFS.rgbaCombine.compute({}, s).image.data], [...data]);
+});
+test('Rotation à 90° dans le bon sens', ()=>{
+  const data = new Uint8ClampedArray(3*2*4); for(let i=0;i<6;i++){ data[i*4] = i; data[i*4+3] = 255; }
+  const r = NODE_DEFS.flip.compute({mirror:'none', rot:'90'}, {image:{w:3, h:2, data}}).image;
+  eq([r.w, r.h, r.data[0], r.data[4]], [2, 3, 3, 0]);
+});
+
+/* ---- graph files: everything in them is hostile until checked ---- */
+const G = (n, l = [], x = {})=> Object.assign({app:'dessons-nodes', v:1, nodes:n, links:l}, x);
+test('Un fichier refusé ne touche pas au graphe', ()=>{
+  TEMPLATES.spin();
+  const before = nodes.size;
+  [null, 5, {}, {app:'dessons-nodes'}, {app:'dessons-nodes', nodes:[], links:'non'}, {app:'dessons-nodes', nodes:[], frames:'non'}].forEach(g=> throws(()=> loadGraph(g)));
+  eq(nodes.size, before);
+});
+test('Des voies invalides ne bloquent plus la page', ()=>{
+  loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'cableClip', x:0, y:0, params:{lanes:'non'}}], links:[]});
+  eq(nodes.get('n1').params.lanes, [null]);
+  TEMPLATES.spin(); ok(nodes.size > 1);
+});
+test('Types inconnus ou piégés écartés', ()=>{
+  loadGraph({app:'dessons-nodes', nodes:['constructor','__proto__','toString','inconnu','edges'].map((type, i)=> ({id:'n' + i, type, x:0, y:0, params:{}})), links:[]});
+  eq([...nodes.values()].map(n=> n.type), ['edges']);
+});
+test('Pas de pollution de prototype', ()=>{
+  loadGraph(JSON.parse('{"app":"dessons-nodes","nodes":[{"id":"n1","type":"srcGen","x":0,"y":0,"params":{"__proto__":{"polluted":1}}}],"links":[]}'));
+  eq(({}).polluted, undefined); eq(nodes.get('n1').params.polluted, undefined);
+});
+test('Aucune image distante acceptée', ()=>{
+  loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcImage', x:0, y:0, params:{img:'http://exemple.invalid/x.png'}}], links:[]});
+  eq(nodes.get('n1').params.img, undefined);
+});
+test('Valeurs absurdes remises dans les bornes', ()=>{
+  loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'scan', x:'a', y:{}, params:{steps:1e9, thresh:'x'}}], links:[]});
+  const n = nodes.get('n1');
+  eq([n.x, n.y, n.params.steps, n.params.thresh], [0, 0, 64, 55]);
+});
+test('Une boucle dans un fichier ne fige pas', ()=>{
+  loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'octave', x:0, y:0, params:{}}, {id:'n2', type:'limit', x:0, y:0, params:{}}],
+    links:[{from:'n1', fromPort:'notes', to:'n2', toPort:'notes'}, {from:'n2', fromPort:'notes', to:'n1', toPort:'notes'}]});
+  nodes.forEach(n=> evalNode(n)); ok(true);
+});
+test('Sauvegarde impossible : l’interface le dit', async ()=>{
+  const real = Storage.prototype.setItem;
+  Storage.prototype.setItem = ()=>{ throw new DOMException('full', 'QuotaExceededError'); };
+  saveSoon();
+  await new Promise(r=> setTimeout(r, 420));
+  Storage.prototype.setItem = real;
+  const shown = !$('saveWarn').hidden;
+  saveSoon();
+  await new Promise(r=> setTimeout(r, 420));
+  eq([shown, $('saveWarn').hidden], [true, true]);
+});
+
+/* ---- wires ---- */
+test('Un attache-câbles porte deux fils de la même chaîne', ()=>{
+  clearGraph();
+  const a = addNode('octave', 0, 0), b = addNode('octave', 300, 0), c = addNode('cableClip', 150, 0), d = addNode('track', 600, 0);
+  ok(connect(a.id, 'notes', c.id, 'i0')); ok(connect(c.id, 'o0', b.id, 'notes'));
+  ok(connect(b.id, 'notes', c.id, 'i1')); ok(connect(c.id, 'o1', d.id, 'notes'));
+  eq(c.params.lanes, ['notes', 'notes', null]);
+});
+test('Une vraie boucle reste refusée', ()=>{
+  clearGraph();
+  const a = addNode('octave', 0, 0), b = addNode('octave', 300, 0), real = window.alert; window.alert = ()=>{};
+  connect(a.id, 'notes', b.id, 'notes'); const r = connect(b.id, 'notes', a.id, 'notes'); window.alert = real;
+  eq(r, false);
+});
+test('Supprimer un reroute recoud le fil', ()=>{
+  clearGraph();
+  const a = addNode('octave', 0, 0), r = addNode('reroute', 200, 0), b = addNode('track', 400, 0);
+  connect(a.id, 'notes', r.id, 'i0'); connect(r.id, 'o0', b.id, 'notes');
+  removeNode(r.id);
+  eq(links.map(l=> [l.from, l.to]), [[a.id, b.id]]);
+});
+
+/* ---- undo, copy ---- */
+test('Annuler et rétablir', ()=>{
+  TEMPLATES.spin(); historyCommit();
+  const count = nodes.size, id = [...nodes.keys()][1];
+  removeNode(id); historyCommit(); eq(nodes.size, count - 1);
+  undo(); eq(nodes.size, count); ok(nodes.has(id));
+  redo(); eq(nodes.size, count - 1);
+});
+test('Dupliquer garde les fils internes', ()=>{
+  clearGraph();
+  const a = addNode('octave', 0, 0), b = addNode('track', 300, 0);
+  connect(a.id, 'notes', b.id, 'notes');
+  selectNode(a.id); selectNode(b.id, true);
+  pasteNodes(copySelection(), 30, 30);
+  eq([nodes.size, links.length], [4, 2]);
+});
+
+/* ---- the .mid follows what's heard ---- */
+test('L’export suit un signal sur la sensibilité', async ()=>{
+  clearGraph();
+  const g = addNode('srcGen', 0, 0, {kind:'noise', detail:12}), e = addNode('edges', 260, 0), s = addNode('scan', 520, 0, {thresh:5, steps:32});
+  const l = addNode('lfo', 260, 300), r = addNode('sigRange', 520, 400, {lo:0, hi:60}), t = addNode('track', 780, 0), lo = addNode('loop', 1040, 0);
+  [[g,'image',e,'image'], [e,'field',s,'field'], [s,'notes',t,'notes'], [t,'track',lo,'tracks'], [l,'sig',r,'in'], [r,'out',s,'sig_thresh']].forEach(([a,p,b,q])=> connect(a.id, p, b.id, q));
+  ok(bakeSpin(lo).tracks[0].notes.length > evalNode(lo)._loop.tracks[0].notes.length);
+});
+test('Export d’un .mid importé : durées gardées', ()=>{
+  clearGraph();
+  const f = midiFile([midiTempoTrack(120), midiTrack('A', [{tick:0, bytes:[0x90,60,100]}, {tick:1920, bytes:[0x80,60,0]}])], 480);
+  const n = addNode('srcMidi', 0, 0); n.midi = parseMidi(f.buffer);
+  const tr = addNode('track', 300, 0), lo = addNode('loop', 600, 0, {gate:100, tempo:120, bars:1});
+  connect(n.id, 'notes', tr.id, 'notes'); connect(tr.id, 'track', lo.id, 'tracks');
+  eq(parseMidi(buildLoopMidi(evalNode(lo)._loop).buffer).notes[0].beatEnd, 4);
+});
+
+/* ---- every visible string exists in both languages ---- */
+test('Parité FR / EN', ()=>{
+  eq(Object.keys(I18N.fr).filter(k=> !(k in I18N.en)), []); eq(Object.keys(I18N.en).filter(k=> !(k in I18N.fr)), []);
+  Object.keys(NODE_DEFS).forEach(k=> ok(I18N.fr['n_' + k], k));
+});
+
+const frame = document.createElement('iframe');
+frame.src = '../nodes.html?test';
+frame.onload = async ()=>{
+  const w = frame.contentWindow, results = [];
+  w.eq = (a, b)=>{ const x = JSON.stringify(a), y = JSON.stringify(b); if(x !== y) throw new Error(x + ' au lieu de ' + y); };
+  w.ok = (v, msg)=>{ if(!v) throw new Error('faux' + (msg ? ' : ' + msg : '')); };
+  w.throws = f=>{ try{ f(); }catch(e){ return; } throw new Error('aurait dû échouer'); };
+  await new Promise(r=> setTimeout(r, 300));
+  for(const [name, fn] of T){
+    let error = null;
+    try{
+      // a script element, not eval(): the page's CSP refuses eval, and rightly
+      const tag = w.document.createElement('script');
+      tag.textContent = 'window.__test = ' + fn;
+      w.document.body.appendChild(tag); tag.remove();
+      await w.__test();
+    }catch(e){ error = e.message; }
+    results.push({name, error});
+    const row = document.createElement('div');
+    row.className = error ? 'ko' : 'ok';
+    row.textContent = (error ? '✗ ' : '✓ ') + name + (error ? ' — ' + error : '');
+    document.getElementById('out').appendChild(row);
+  }
+  const bad = results.filter(r=> r.error).length;
+  document.getElementById('sum').textContent = (results.length - bad) + ' / ' + results.length + ' réussis';
+  window.results = results;
+};
+document.body.appendChild(frame);
+</script>
+</body>
+</html>

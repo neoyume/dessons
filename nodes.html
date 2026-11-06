@@ -2,13 +2,16 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dessons · Nodes</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <style>
+  /* DotGothic16 (SIL OFL, fonts/OFL.txt), served from here: no request to Google */
+  @font-face{font-family:'DotGothic16'; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/DotGothic16-latin.woff2) format('woff2');
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+  @font-face{font-family:'DotGothic16'; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/DotGothic16-arrows-1.woff2) format('woff2'); unicode-range:U+23,U+3c,U+2192,U+4e45,U+4efb,U+4f50,U+4f8b,U+4fc2,U+5024,U+5150,U+5272,U+5370,U+53bb,U+542b,U+56db,U+56e3,U+57ce,U+5bc4,U+5bcc,U+5f71,U+60aa,U+6238,U+6280,U+629c,U+6539,U+66ff,U+670d,U+677e-677f,U+6839,U+69cb,U+6b4c,U+6bb5,U+6e96,U+6f14,U+72ec,U+7389,U+7814,U+79cb,U+79d1,U+79fb,U+7a0e,U+7d0d,U+85e4,U+8d64,U+9632,U+96e2,U+9805,U+99ac,U+ff1e;}
+  @font-face{font-family:'DotGothic16'; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/DotGothic16-arrows-2.woff2) format('woff2'); unicode-range:U+2105,U+2109-210a,U+210f,U+2116,U+2121,U+2126-2127,U+212b,U+212e,U+2135,U+213b,U+2194-2199,U+21b8-21b9,U+21c4-21c6,U+21cb-21cc,U+21d0,U+21e6-21e9,U+21f5,U+2202-2203,U+2205-2206,U+2208-220b,U+220f,U+2211,U+2213,U+2215,U+221a,U+221d,U+2220,U+2223,U+2225-2226,U+2228,U+222a-222e,U+2234-2237,U+223d,U+2243,U+2245,U+2248,U+224c,U+2260,U+2262,U+2264-2265,U+226e-226f,U+2272-2273,U+2276-2277,U+2283-2287,U+228a-228b,U+2295-2299,U+22a0,U+22a5,U+22bf,U+22da-22db,U+22ef,U+2305-2307,U+2318,U+2329-232a,U+23b0-23b1,U+23be-23cc,U+23ce,U+23da-23db,U+2423,U+2469-24d0;}
   /* same tokens as index.html — keep all three pages in sync if the palette changes */
   :root{
     --bg:#002b2a;
@@ -90,6 +93,8 @@
     border-top:1px solid var(--line); background:var(--panel);
   }
   #tpPlay{min-width:96px;}
+  #saveWarn{font-size:11px; color:#ffb4b6;}
+  #saveWarn[hidden]{display:none;}
   .tpField{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
   .tpField input{width:54px; font-family:var(--mono); font-size:11px; color:var(--accent); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:3px 5px;}
   .tpField input:disabled{opacity:.4;}
@@ -367,6 +372,7 @@
   <label class="tpField"><span data-i18n="p_tempo">Tempo</span><input type="number" id="tpTempo" min="40" max="200" step="1"></label>
   <label class="tpField"><span data-i18n="p_bars">Mesures</span><input type="number" id="tpBars" min="1" max="64" step="1"></label>
   <div id="tpPos" aria-hidden="true"><i></i></div>
+  <span id="saveWarn" data-i18n="saveFull" role="status" hidden></span>
   <button type="button" class="miniBtn" id="tpExport" data-i18n="btnExport">Exporter</button>
   <button type="button" class="miniBtn" id="tpLogic"></button>
 </div>
@@ -412,6 +418,7 @@ const I18N = {
     tplPick:'Modèles', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
+    saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
     helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
@@ -495,6 +502,7 @@ const I18N = {
     tplPick:'Templates', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
+    saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
     helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
@@ -3910,7 +3918,7 @@ $('fitBtn').addEventListener('click', fitView);
 /* ============================================================
    Persistence: localStorage + .json files
    ============================================================ */
-const GRAPH_KEY = 'dessons.graph';
+const GRAPH_KEY = location.search === '?test' ? 'dessons.graph.test' : 'dessons.graph';    // tests/ leaves your graph alone
 function serialize(){
   return {
     app:'dessons-nodes', v:1,
@@ -3924,8 +3932,10 @@ function saveSoon(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(()=>{
     historyCommit();
+    let saved = true;
     try{ localStorage.setItem(GRAPH_KEY, JSON.stringify(serialize())); }
-    catch(e){ console.warn('graph not saved', e); }
+    catch(e){ saved = false; console.warn('graph not saved', e); }
+    $('saveWarn').hidden = saved;       // a graph that isn't saved must say so
   }, 300);
 }
 
@@ -4020,28 +4030,79 @@ function pasteAtPointer(){
 }
 function clearGraph(){
   stopPlayback();
-  nodes.forEach(n=>{ if(isSource(n)) stopMedia(n); if(n.type === 'srcMic') stopMic(n); n.el.remove(); });
+  nodes.forEach(n=>{ if(isSource(n)) stopMedia(n); if(n.type === 'srcMic') stopMic(n); if(n.el) n.el.remove(); });
   nodes.clear(); links = []; selectedId = null; selection.clear();
   frames.forEach(f=> f.el.remove()); frames = [];
 }
-function loadGraph(g){
-  if(!g || g.app !== 'dessons-nodes' || !Array.isArray(g.nodes)) throw new Error('bad graph');
-  clearGraph();
-  g.nodes.forEach(s=>{
-    const type = s.type === 'source' ? 'srcImage' : s.type;   // graphs from before the split: only images were ever saved
-    if(NODE_DEFS[type]) addNode(type, s.x, s.y, s.params, s.id);
+/* ---- reading a graph: a .json can come from anyone, so everything in it is checked
+   before the current graph is touched. What can't be a graph is refused whole; a
+   node of an unknown type or a value out of range is dropped or put back in range. ---- */
+const own = (o, k)=> Object.prototype.hasOwnProperty.call(o, k);
+const isNum = v=> typeof v === 'number' && isFinite(v);
+const isPlain = v=> !!v && typeof v === 'object' && !Array.isArray(v);
+function cleanParams(type, raw){
+  const def = NODE_DEFS[type], out = {};
+  if(!isPlain(raw)) return out;
+  Object.keys(raw).forEach(k=>{ if(k !== '__proto__') out[k] = raw[k]; });
+  (def.params || []).forEach(d=>{
+    if(!own(out, d.id)) return;
+    if(d.kind === 'range' || d.kind === 'number'){
+      if(!isNum(out[d.id])) delete out[d.id];
+      else if(d.kind === 'range') out[d.id] = clamp(out[d.id], d.min, d.max);
+    } else if(d.kind === 'select' || d.kind === 'text' || d.kind === 'instr' || d.kind === 'color'){
+      if(typeof out[d.id] !== 'string') delete out[d.id];
+    }
   });
+  if(typeof out.img !== 'string' || !out.img.startsWith('data:image/')) delete out.img;    // never a remote URL
+  if(def.lanes && !(Array.isArray(out.lanes) && out.lanes.length && out.lanes.length <= 64
+      && out.lanes.every(ty=> ty === null || (typeof ty === 'string' && own(TYPE_VAR, ty) && ty !== 'any')))) delete out.lanes;
+  return out;
+}
+function validateGraph(g){
+  if(!isPlain(g) || g.app !== 'dessons-nodes' || !Array.isArray(g.nodes)) throw new Error('bad graph');
+  if(g.links !== undefined && !Array.isArray(g.links)) throw new Error('bad links');
+  if(g.frames !== undefined && !Array.isArray(g.frames)) throw new Error('bad frames');
+  const seen = new Set(), list = [];
+  g.nodes.forEach(s=>{
+    if(!isPlain(s) || typeof s.id !== 'string' || !s.id || s.id.length > 64 || seen.has(s.id)) return;
+    // graphs from before the split: only images were ever saved
+    const type = s.type === 'source' ? 'srcImage' : s.type;
+    if(typeof type !== 'string' || !own(NODE_DEFS, type)) return;
+    seen.add(s.id);
+    list.push({id:s.id, type, x:isNum(s.x) ? s.x : 0, y:isNum(s.y) ? s.y : 0, params:cleanParams(type, s.params)});
+  });
+  const str = v=> typeof v === 'string';
+  const v = g.view;
+  return {
+    nodes:list,
+    links:(g.links || []).filter(l=> isPlain(l) && str(l.from) && str(l.to) && str(l.fromPort) && str(l.toPort)).map(l=> ({from:l.from, fromPort:l.fromPort, to:l.to, toPort:l.toPort})),
+    frames:(g.frames || []).filter(f=> isPlain(f) && [f.x, f.y, f.w, f.h].every(isNum)).map((f, i)=> ({id:str(f.id) ? f.id : 'f' + (i + 1), x:f.x, y:f.y, w:Math.max(120, f.w), h:Math.max(80, f.h), title:str(f.title) ? f.title : ''})),
+    view:isPlain(v) && [v.x, v.y, v.z].every(isNum) ? {x:v.x, y:v.y, z:clamp(v.z, 0.25, 2)} : null
+  };
+}
+function applyGraph(g){
+  clearGraph();
+  g.nodes.forEach(s=> addNode(s.type, s.x, s.y, s.params, s.id));
   nextId = 1 + Math.max(0, ...[...nodes.keys()].map(id=> parseInt(id.slice(1)) || 0));
-  links = (g.links || []).filter(l=> nodes.has(l.from) && nodes.has(l.to)
+  links = g.links.filter(l=> nodes.has(l.from) && nodes.has(l.to)
     && outputDef(nodes.get(l.from), l.fromPort) && inputDef(nodes.get(l.to), l.toPort));
   if(g.view) view = g.view;
-  (g.frames || []).forEach(f=>{ const m = Object.assign({}, f); frames.push(m); buildFrameEl(m); });
+  g.frames.forEach(f=>{ const m = Object.assign({}, f); frames.push(m); buildFrameEl(m); });
   nextId = Math.max(nextId, 1 + Math.max(0, ...frames.map(f=> parseInt(f.id.slice(1)) || 0)));
   syncLanes();
   applyView(); refreshLinkedPorts();
   requestAnimationFrame(drawWires);     // ports have their layout one frame later
   nodes.forEach(n=> n.dirty = true);
   scheduleRun(true);
+}
+function loadGraph(g){
+  const clean = validateGraph(g);       // throws before anything changes
+  const before = nodes.size ? validateGraph(JSON.parse(JSON.stringify(serialize()))) : null;
+  try{ applyGraph(clean); }
+  catch(e){
+    if(before) applyGraph(before);      // whatever went wrong, the graph on screen comes back
+    throw e;
+  }
 }
 
 // the starter graph: the workshop's default chain, split in two layers by
@@ -4245,17 +4306,33 @@ historyCommit();
   }
   resize();
   window.addEventListener('resize', resize);
-  function drawNoise(){
-    var imageData = ctx.createImageData(canvas.width, canvas.height);
-    var buf = imageData.data;
-    for(var i=0; i<buf.length; i+=4){
-      var shade = (Math.random()*255) | 0;
-      buf[i]=shade; buf[i+1]=shade; buf[i+2]=shade; buf[i+3]=255;
+  // a few frames made once, then shown in turn: generating noise for every
+  // frame cost 13% of a core with the app doing nothing
+  var FRAMES = 6, FPS = 24, frames = [], shown = 0, last = 0;
+  function makeFrames(){
+    frames = [];
+    for(var f=0; f<FRAMES; f++){
+      var imageData = ctx.createImageData(canvas.width, canvas.height);
+      var buf = imageData.data;
+      for(var i=0; i<buf.length; i+=4){
+        var shade = (Math.random()*255) | 0;
+        buf[i]=shade; buf[i+1]=shade; buf[i+2]=shade; buf[i+3]=255;
+      }
+      frames.push(imageData);
     }
-    ctx.putImageData(imageData, 0, 0);
+  }
+  function drawNoise(){
+    if(!frames.length || frames[0].width !== canvas.width || frames[0].height !== canvas.height) makeFrames();
+    shown = (shown + 1 + ((Math.random()*(FRAMES - 1)) | 0)) % FRAMES;
+    ctx.putImageData(frames[shown], 0, 0);
   }
   if(reduceMotion){ drawNoise(); }
-  else { (function animate(){ drawNoise(); requestAnimationFrame(animate); })(); }
+  else {
+    (function animate(now){
+      if(!now || now - last >= 1000/FPS){ last = now || 0; drawNoise(); }
+      requestAnimationFrame(animate);
+    })();
+  }
 })();
 </script>
 </body>
