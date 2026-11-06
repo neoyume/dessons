@@ -106,22 +106,24 @@
   #helpList dt{font-family:var(--mono); font-size:11px; color:var(--text); white-space:nowrap;}
   #helpList dd{margin:0; color:var(--text-dim);}
   #workspace{flex:1; display:flex; min-height:0; min-width:0; position:relative;}
-  #nodeSidebar, #propsPanel{flex:none; display:flex; flex-direction:column; min-height:0; background:var(--panel);}
-  #nodeSidebar{width:196px; border-right:1px solid var(--line);}
-  #propsPanel{width:270px; border-left:1px solid var(--line);}
-  #nodeSidebar[hidden], #propsPanel[hidden]{display:none;}
-  .sidePane{flex:1; min-height:0; overflow:auto; padding:8px 10px;}
-  #sideSearch{width:100%; font-size:12px; color:var(--text); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:5px 8px; outline:none; margin-bottom:4px;}
-  #sideSearch:focus{border-color:var(--accent);}
-  #sideList h3{margin:6px 0 2px;}
-  #sideList h3 button{
-    width:100%; text-align:left; display:flex; justify-content:space-between; padding:4px 2px; background:none; border:none; cursor:pointer;
-    font-size:10px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-dim); font-weight:600;
+  #propsPanel{flex:none; display:flex; flex-direction:column; min-height:0; width:270px; background:var(--panel); border-left:1px solid var(--line);}
+  #propsPanel[hidden]{display:none;}
+  #nodeBar{display:flex; flex-wrap:wrap; gap:2px;}
+  .catWrap{position:relative;}
+  .catBtn{
+    display:flex; align-items:center; gap:6px; font-size:11.5px; padding:5px 8px; color:var(--text-dim); background:none;
+    border:1px solid transparent; border-radius:5px; cursor:pointer; white-space:nowrap;
   }
-  #sideList h3 button:hover{color:var(--text);}
-  #sideList h3 button::after{content:'▾';}
-  #sideList section.shut h3 button::after{content:'▸';}
-  #sideList section.shut .sideItem{display:none;}
+  .catBtn i{width:7px; height:7px; border-radius:2px; flex:none;}
+  .catBtn:hover, .catBtn:focus-visible, .catBtn[aria-expanded=true]{color:var(--text); background:var(--panel-2); outline:none;}
+  .catMenu{
+    position:absolute; left:0; top:calc(100% + 6px); z-index:25; min-width:190px; max-height:70vh; overflow:auto; padding:6px;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .catMenu[hidden]{display:none;}
+  /* while an item is dragged out, the menu gets out of the way but stays in the DOM: it holds the pointer capture */
+  .catMenu.dragging{opacity:0; pointer-events:none;}
+  .sidePane{flex:1; min-height:0; overflow:auto; padding:8px 10px;}
   .sideItem{
     display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:none; border:none;
     color:var(--text); font-size:12px; padding:5px 6px; border-radius:5px; cursor:grab; touch-action:pan-y;
@@ -313,8 +315,7 @@
   @media (prefers-reduced-motion: reduce){ #ny-noise{opacity:0.075;} }
   @media (max-width:700px){
     header{padding:10px 12px;} .toolbar{margin-left:0;}
-    #nodeSidebar, #propsPanel{position:absolute; top:0; bottom:0; z-index:10;}
-    #nodeSidebar{left:0;} #propsPanel{right:0;}
+    #propsPanel{position:absolute; right:0; top:0; bottom:0; z-index:10;}
   }
 </style>
 </head>
@@ -332,11 +333,11 @@
       <div id="tplList"></div>
     </div>
   </div>
+  <nav id="nodeBar"></nav>
   <div class="toolbar">
     <button type="button" class="miniBtn primary" id="addBtn" data-i18n="btnAdd">+ Node</button>
     <button type="button" class="miniBtn" id="undoBtn" data-i18n-title="btnUndo" disabled>↶</button>
     <button type="button" class="miniBtn" id="redoBtn" data-i18n-title="btnRedo" disabled>↷</button>
-    <button type="button" class="miniBtn" id="sideBtn" data-i18n="btnSidebar" aria-controls="nodeSidebar">Liste</button>
     <button type="button" class="miniBtn" id="propsBtn" data-i18n="tabProps" aria-controls="propsPanel">Réglages</button>
     <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
     <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
@@ -350,12 +351,6 @@
 </header>
 
 <div id="workspace">
-  <aside id="nodeSidebar">
-    <div class="sidePane">
-      <input type="text" id="sideSearch" autocomplete="off" spellcheck="false">
-      <div id="sideList"></div>
-    </div>
-  </aside>
   <div id="stage">
     <div id="world"><div id="frames"></div><svg id="wires"></svg></div>
   </div>
@@ -415,9 +410,9 @@ const I18N = {
     backToWorkshop:'← Atelier',
     catTools:'Outils', n_reroute:'Reroute', n_cableClip:'Attache-câbles', n_frame:'Cadre de groupe', t_any:'libre',
     tplPick:'Modèles', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
-    btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnSidebar:'Liste', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
+    btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
-    btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', sideSearchPh:'Rechercher…', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
+    btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
     helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
@@ -498,9 +493,9 @@ const I18N = {
     backToWorkshop:'← Workshop',
     catTools:'Tools', n_reroute:'Reroute', n_cableClip:'Cable clip', n_frame:'Group frame', t_any:'free',
     tplPick:'Templates', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
-    btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnSidebar:'List', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
+    btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
-    btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', sideSearchPh:'Search…', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
+    btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
     helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
@@ -596,7 +591,7 @@ function setLang(lang){
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
   nodes.forEach(n => buildNodeEl(n));
-  buildSidebar();
+  buildNodeBar();
   buildTemplateMenu();
   buildHelp();
   syncTransport();
@@ -3742,7 +3737,7 @@ function hideMenu(){
 }
 document.addEventListener('pointerdown', e=>{ if(!addMenu.hidden && !addMenu.contains(e.target) && e.target.id !== 'addBtn') hideMenu(); });
 document.addEventListener('keydown', e=>{
-  if(e.key === 'Escape'){ hideMenu(); closeFileMenu(); toggleHelp(false); return; }
+  if(e.key === 'Escape'){ hideMenu(); closeFileMenu(); closeCatMenus(); toggleHelp(false); return; }
   if(e.target.closest('input, select, textarea')) return;
   if(e.key === '?'){ e.preventDefault(); toggleHelp($('helpPanel').hidden); return; }
   if(e.key === ' ' && !e.target.closest('button')){
@@ -3772,16 +3767,15 @@ $('frameBtn').addEventListener('click', groupSelection);
 $('undoBtn').addEventListener('click', undo);
 $('redoBtn').addEventListener('click', redo);
 
-/* ---- sidebar: every node, in the menu's order. Click = add in the middle of the
-   view, drag = add where it's dropped. Open or closed is remembered per browser. ---- */
-const sidebar = $('nodeSidebar');
+/* ---- node bar: one menu per category, in the header. Click = add in the middle of
+   the view, drag = add where it's dropped, on a wire to put it in line. ---- */
 let sideCascade = 0;
 function addAtCentre(ty){
   const r = stage.getBoundingClientRect(), [wx, wy] = toWorld(r.left + r.width/2, r.top + r.height/2);
   const shift = (sideCascade++ % 6)*26;     // several clicks in a row don't stack exactly
   addFromMenu(ty, wx - 108 + shift, wy - 100 + shift);
 }
-function sidebarDrag(e, b, entry){
+function itemDrag(e, b, entry){
   if(e.button) return;
   const sx = e.clientX, sy = e.clientY;
   let ghost = null;
@@ -3796,6 +3790,7 @@ function sidebarDrag(e, b, entry){
       ghost.className = 'dragGhost'; ghost.textContent = entry.label;
       document.body.appendChild(ghost);
       b.dragged = true;
+      b.closest('.catMenu').classList.add('dragging');
     }
     ghost.style.left = ev.clientX + 10 + 'px'; ghost.style.top = ev.clientY + 6 + 'px';
   };
@@ -3804,6 +3799,7 @@ function sidebarDrag(e, b, entry){
     if(!ghost) return;
     ghost.remove();
     const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    closeCatMenus();
     if(ev.type === 'pointerup' && under && stage.contains(under)){
       const [wx, wy] = toWorld(ev.clientX, ev.clientY);
       const wireAt = under.classList.contains('hit') ? +under.dataset.i : -1;
@@ -3813,45 +3809,46 @@ function sidebarDrag(e, b, entry){
   };
   b.addEventListener('pointermove', move); b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
 }
-let sideShut = new Set();
-try{ sideShut = new Set(JSON.parse(localStorage.getItem('dessons.sideShut') || '[]')); }catch(e){}
-function buildSidebar(){
-  sidebar.setAttribute('aria-label', t('btnSidebar'));
-  $('sideSearch').placeholder = t('sideSearchPh');
-  $('sideSearch').setAttribute('aria-label', t('sideSearchPh'));
-  const list = $('sideList'), q = plain($('sideSearch').value).split(/\s+/).filter(Boolean);
-  list.innerHTML = '';
-  const entries = menuEntries().filter(e=> q.every(w=> e.words.includes(w)));
+function closeCatMenus(){
+  document.querySelectorAll('.catMenu').forEach(m=>{ m.hidden = true; m.classList.remove('dragging'); });
+  document.querySelectorAll('.catBtn').forEach(b=> b.setAttribute('aria-expanded', 'false'));
+}
+function openCatMenu(btn, menu){
+  closeCatMenus();
+  menu.hidden = false;
+  btn.setAttribute('aria-expanded', 'true');
+}
+function buildNodeBar(){
+  const bar = $('nodeBar'), entries = menuEntries();
+  bar.setAttribute('aria-label', t('btnAdd'));
+  bar.innerHTML = '';
   ADD_MENU.forEach(([cat])=>{
-    const mine = entries.filter(e=> e.cat === cat);
-    if(!mine.length) return;
-    const sec = document.createElement('section'), h = document.createElement('h3'), hb = document.createElement('button');
-    hb.type = 'button'; hb.textContent = t(cat);
-    const shut = !q.length && sideShut.has(cat);      // a search looks everywhere
-    sec.classList.toggle('shut', shut);
-    hb.setAttribute('aria-expanded', !shut);
-    hb.addEventListener('click', ()=>{
-      if(sideShut.has(cat)) sideShut.delete(cat); else sideShut.add(cat);
-      try{ localStorage.setItem('dessons.sideShut', JSON.stringify([...sideShut])); }catch(e){}
-      buildSidebar();
-    });
-    h.appendChild(hb);
-    sec.appendChild(h);
-    mine.forEach(entry=>{
+    const wrap = document.createElement('div'), btn = document.createElement('button'), menu = document.createElement('div');
+    wrap.className = 'catWrap';
+    btn.type = 'button'; btn.className = 'catBtn'; btn.setAttribute('aria-haspopup', 'true'); btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<i></i><span></span>';
+    btn.querySelector('i').style.background = CAT_COLOR[cat];
+    btn.querySelector('span').textContent = t(cat);
+    menu.className = 'catMenu'; menu.hidden = true;
+    btn.addEventListener('click', ()=>{ if(menu.hidden) openCatMenu(btn, menu); else closeCatMenus(); });
+    // like a menu bar: once one is open, moving along the bar switches
+    btn.addEventListener('pointerenter', ()=>{ if(menu.hidden && document.querySelector('.catMenu:not([hidden])')) openCatMenu(btn, menu); });
+    entries.filter(e=> e.cat === cat).forEach(entry=>{
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'sideItem';
       b.innerHTML = '<i></i><span></span>';
       b.querySelector('i').style.background = entry.color;
       b.querySelector('span').textContent = entry.label;
-      b.addEventListener('pointerdown', e=> sidebarDrag(e, b, entry));
-      b.addEventListener('click', ()=>{ if(b.dragged) b.dragged = false; else addAtCentre(entry.ty); });
-      sec.appendChild(b);
+      b.addEventListener('pointerdown', e=> itemDrag(e, b, entry));
+      b.addEventListener('click', ()=>{ if(b.dragged) b.dragged = false; else { closeCatMenus(); addAtCentre(entry.ty); } });
+      menu.appendChild(b);
     });
-    list.appendChild(sec);
+    wrap.append(btn, menu);
+    bar.appendChild(wrap);
   });
   renderProps();
 }
-$('sideSearch').addEventListener('input', buildSidebar);
+document.addEventListener('pointerdown', e=>{ if(!e.target.closest('.catWrap')) closeCatMenus(); });
 // the Settings panel: the selected node's sliders, through the same paramEl() as on the node
 function renderProps(){
   const n = nodes.get(selectedId), body = $('propBody');
@@ -3888,7 +3885,6 @@ function panelToggle(panel, btn, key){
     drawWires();
   });
 }
-panelToggle(sidebar, $('sideBtn'), 'dessons.sidebar');
 panelToggle($('propsPanel'), $('propsBtn'), 'dessons.props');
 $('addBtn').addEventListener('click', ()=>{
   if(!addMenu.hidden){ hideMenu(); return; }
