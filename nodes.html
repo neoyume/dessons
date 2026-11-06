@@ -1278,7 +1278,7 @@ const NODE_DEFS = {
     }
   },
   track: {
-    cat:'catOut', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'track', type:'track'}], thumb:'roll',
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'track', type:'track'}], thumb:'roll',
     params:[
       {id:'name', label:'p_name', kind:'text', def:''},
       {id:'program', label:'p_instr', kind:'instr', def:'0'},
@@ -1344,8 +1344,8 @@ const ADD_MENU = [
   ['catSource', ['srcImage', 'srcVideo', 'srcWebcam', 'srcMesh', 'srcGen', 'srcMidi', 'srcMic']],
   ['catImage', ['crop', 'tone', 'blur', 'invert', 'flip', 'blend', 'rgbaSplit', 'rgbaCombine']],
   ['catAnalysis', ['edges', 'sens', 'hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
-  ['catMusic', ['scale', 'scan', 'octave', 'degree', 'snapScale', 'merge', 'limit', 'chance', 'echo', 'euclid']],
-  ['catOut', ['track', 'loop', 'midiOut', 'ccOut']],
+  ['catMusic', ['scale', 'scan', 'octave', 'degree', 'snapScale', 'merge', 'limit', 'chance', 'echo', 'euclid', 'track']],
+  ['catOut', ['loop', 'midiOut', 'ccOut']],
   ['catTools', ['curve', 'path', 'lfo', 'sigRange', 'reroute', 'cableClip', 'frame']]
 ];
 
