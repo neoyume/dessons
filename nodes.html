@@ -113,7 +113,14 @@
   #drawEditor{position:absolute; inset:0; z-index:15; display:flex; background:var(--bg); min-height:0;}
   #drawEditor[hidden]{display:none;}
   .drawArea{flex:1; min-width:0; display:flex; align-items:center; justify-content:center; padding:14px; position:relative; overflow:hidden;}
-  #drawCanvas{height:100%; max-width:100%; aspect-ratio:1; touch-action:none; cursor:none; border-radius:4px; box-shadow:0 6px 24px rgba(0,0,0,.45);}
+  .drawFrame{position:relative; height:100%; max-width:100%; aspect-ratio:1;}
+  #drawCanvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:none; border-radius:4px; box-shadow:0 6px 24px rgba(0,0,0,.45);}
+  #drawEditor.watch #drawCanvas{cursor:default;}
+  /* difference: the playhead shows on any colour of the painting */
+  #drawScan{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; mix-blend-mode:difference;}
+  .replayTime{font-family:var(--mono); font-size:22px; color:var(--accent); text-align:center;}
+  .replayBar{height:10px; border-radius:5px; background:var(--panel-2); overflow:hidden; cursor:pointer;}
+  .replayBar i{display:block; height:100%; width:0; background:var(--accent);}
   .brushRing{position:fixed; z-index:16; pointer-events:none; border:1px solid #fff; outline:1px solid #000; border-radius:50%; transform:translate(-50%,-50%);}
   .drawTools{flex:none; width:270px; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; background:var(--panel); border-left:1px solid var(--line);}
   .drawTools .prm{grid-template-columns:96px 1fr auto;}
@@ -430,7 +437,7 @@ const I18N = {
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
     btnMidiOn:'Activer le MIDI',
-    n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Partir d’un dessin',
+    n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer le dessin', replayStop:'Arrêter', replayEnd:'Terminé',
     toolBrush:'Pinceau', toolSmudge:'Estompe', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
@@ -519,7 +526,7 @@ const I18N = {
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
     btnMidiOn:'Enable MIDI',
-    n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Start from a drawing',
+    n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay the drawing', replayStop:'Stop', replayEnd:'Finished',
     toolBrush:'Brush', toolSmudge:'Smudge', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
@@ -901,7 +908,8 @@ const NODE_DEFS = {
       {id:'strokes', kind:'hidden', def:[]},
       {id:'bg', kind:'hidden', def:'#FFFFFF'},
       {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
-      {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1}
+      {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1},
+      {id:'replayMin', label:'p_replayMin', kind:'range', min:0.5, max:20, step:0.5, def:3, fmt:v=> v + ' min'}
     ],
     clean:o=>{
       const hex = v=> typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
@@ -911,10 +919,13 @@ const NODE_DEFS = {
     },
     compute:(p, inp, n)=>{
       n.lastPhase = meshPhase();
-      const live = p.turns && (playing || meshPhaseOverride !== null);
-      const prog = live ? (p.turns*n.lastPhase) % 1 : clamp(p.reveal/100, 0, 1);
+      const baking = meshPhaseOverride !== null, replay = !baking && drawReplay && drawReplay.n === n;
+      const live = p.turns && (playing || baking);
+      const prog = replay ? replayPos() : live ? (p.turns*n.lastPhase) % 1 : clamp(p.reveal/100, 0, 1);
       n.drawCache = n.drawCache || {};
       const cv = drawAt(n.drawCache, MAXDIM, p.strokes, p.bg, prog);
+      // the stroke being painted counts already: it's read while the hand is still moving
+      if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive);
       return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data}};
     },
     summary:n=> t('drawSum').replace('{n}', n.params.strokes.length)
@@ -2500,6 +2511,7 @@ setInterval(()=>{
   if(document.hidden) return;
   nodes.forEach(n=>{
     if((n.type === 'srcVideo' || n.type === 'srcWebcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
+    else if(drawReplay && drawReplay.n === n) markDirty(n.id);
     else if((n.type === 'srcMesh' || n.type === 'srcGen' || n.type === 'srcDraw') && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
     else if(n.type === 'srcMic') readMic(n);
     else if(NODE_DEFS[n.type].sigSource && (playing || n.sigLive) && drivesSignal(n)){
@@ -3029,7 +3041,52 @@ function buildDrawControls(n, body){
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'miniBtn primary'; b.textContent = t('btnDraw');
   b.addEventListener('click', ()=> openDrawEditor(n));
-  row.appendChild(b); body.appendChild(row);
+  const r = document.createElement('button');
+  r.type = 'button'; r.className = 'miniBtn'; r.textContent = t('btnReplayLive');
+  r.addEventListener('click', ()=> startDrawReplay(n));
+  row.append(b, r); body.appendChild(row);
+}
+
+/* ---- replay: the painting rebuilt over a chosen length, Loop running, so the loops
+   evolve with it. Its own clock: the Loop keeps turning at its tempo meanwhile. ---- */
+let drawReplay = null;      // {n, t0, ms}
+const replayPos = ()=> drawReplay ? clamp((performance.now() - drawReplay.t0)/drawReplay.ms, 0, 1) : 1;
+const clock = sec=> Math.floor(sec/60) + ':' + String(Math.floor(sec % 60)).padStart(2, '0');
+function loopOfDrawing(n){
+  const seen = new Set(), queue = [n.id];
+  while(queue.length){
+    const id = queue.shift();
+    if(seen.has(id)) continue;
+    seen.add(id);
+    if(nodes.get(id).type === 'loop') return nodes.get(id);
+    links.forEach(l=>{ if(l.from === id) queue.push(l.to); });
+  }
+  return transportLoop();
+}
+// synchronous up to togglePlay(), like every first sound (iOS)
+function startDrawReplay(n){
+  if(!n.params.strokes.length) return;
+  const loop = loopOfDrawing(n);
+  if(loop && !playing) togglePlay(loop);
+  openDrawEditor(n, true);
+  drawReplay = {n, t0:performance.now(), ms:n.params.replayMin*60000};
+  drawEd.replay = requestAnimationFrame(replayFrame);
+}
+function replayFrame(){
+  const d = drawEd, r = drawReplay;
+  if(!d || !r) return;
+  const u = replayPos();
+  d.ctx.drawImage(drawAt(d.cache, DRAW_RES, r.n.params.strokes, r.n.params.bg, u), 0, 0);
+  d.time.textContent = clock(u*r.ms/1000) + ' / ' + clock(r.ms/1000);
+  d.bar.firstElementChild.style.width = u*100 + '%';
+  if(u >= 1){
+    // the Loop keeps playing, and the node goes back to its own settings
+    d.time.textContent = t('replayEnd');
+    drawReplay = null; d.replay = 0;
+    markDirty(r.n.id);
+    return;
+  }
+  d.replay = requestAnimationFrame(replayFrame);
 }
 
 let drawEd = null;      // {n, cv, ctx, cache, cur, state, redo, ring, replay}
@@ -3077,6 +3134,12 @@ function drawPaintView(){
 function drawAdd(e){
   const d = drawEd, [x, y, p] = drawPoint(e);
   d.cur.pts.push(Math.round(x*10000), Math.round(y*10000), Math.round(p*100));
+  const now = performance.now();
+  if(now - (d.liveAt || 0) > 66){
+    d.liveAt = now;
+    d.n.drawLive = Object.assign({}, d.cur.st, {pts:d.cur.pts.join(',')});
+    markDirty(d.n.id);
+  }
   if(d.cur.st.t === 's'){ stampTo(d.ctx, DRAW_RES, d.cur.st, d.cur.state, x, y, p); return; }
   const lc = strokeLayer(DRAW_RES).getContext('2d');
   stampTo(lc, DRAW_RES, d.cur.st, d.cur.state, x, y, p);
@@ -3112,7 +3175,8 @@ function drawRedo(){
 }
 function drawKey(e){
   const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
-  if(e.key === 'Escape'){ closeDrawEditor(); return true; }
+  if(e.key === 'Escape'){ if(drawEd.watch) stopPlayback(); closeDrawEditor(); return true; }
+  if(drawEd.watch) return e.key !== ' ';
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
   if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's')){ setDrawTool(key === 's' ? 'smudge' : 'brush'); return true; }
   if(!e.target.closest('input') && (e.key === '[' || e.key === ']')){
@@ -3140,12 +3204,54 @@ function brushSlider(id, label, min, max, key, fmt){
   row.append(lab, input, val);
   return row;
 }
-function openDrawEditor(n){
+// where the music is reading the painting: the Scan's playhead, and its notes as they sound
+function scansOf(n){
+  const seen = new Set(), queue = [n.id], out = [];
+  while(queue.length){
+    const id = queue.shift();
+    if(seen.has(id)) continue;
+    seen.add(id);
+    if(nodes.get(id).type === 'scan') out.push(nodes.get(id));
+    links.forEach(l=>{ if(l.from === id) queue.push(l.to); });
+  }
+  return out;
+}
+function drawOverlay(){
+  const d = drawEd;
+  if(!d) return;
+  d.scanRaf = requestAnimationFrame(drawOverlay);
+  const c = d.scan, x = d.sctx, W = c.width;
+  x.clearRect(0, 0, W, W);
+  if(!playing) return;
+  const pos = loopPosNow() % 1;
+  scansOf(d.n).forEach(s=>{
+    const o = s.out && s.out.notes;
+    if(!o) return;
+    const dir = DIR_DEFS[o.dir] || DIR_DEFS.lr;
+    let k = 0;
+    while(k < o.steps - 1 && stepFrac(o, k + 1) <= pos) k++;
+    x.strokeStyle = x.fillStyle = '#fff';
+    if(!o.pathModel){
+      const [ax, ay] = dir.inv(pos, 0), [bx, by] = dir.inv(pos, 1);
+      x.lineWidth = 2;
+      x.beginPath(); x.moveTo(ax*W, ay*W); x.lineTo(bx*W, by*W); x.stroke();
+    }
+    o.notes.forEach(nt=>{
+      if(nt.step !== k) return;
+      const [nx, ny] = nt.px != null ? [nt.px, nt.py] : dir.inv((nt.step + 0.5)/o.steps, (nt.row + 0.5)/o.rows);
+      x.beginPath(); x.arc(nx*W, ny*W, 3 + 6*nt.vel/127, 0, Math.PI*2); x.fill();
+    });
+  });
+}
+function openDrawEditor(n, watch){
   closeDrawEditor();
   const box = document.createElement('div'); box.id = 'drawEditor';
   const area = document.createElement('div'); area.className = 'drawArea';
   const cv = document.createElement('canvas'); cv.id = 'drawCanvas'; cv.width = cv.height = DRAW_RES;
-  area.appendChild(cv);
+  const scan = document.createElement('canvas'); scan.id = 'drawScan'; scan.width = scan.height = 700;
+  const frame = document.createElement('div'); frame.className = 'drawFrame';
+  frame.append(cv, scan);
+  area.appendChild(frame);
   const tools = document.createElement('div'); tools.className = 'drawTools';
   const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
   const pct = v=> v + '%';
@@ -3193,13 +3299,26 @@ function openDrawEditor(n){
   row1.className = row2.className = 'btnRow';
   row1.append(undo, redoBtn); row2.append(bgBtn, clear);
   tools.append(row1, row2, replayBtn, btn('drDone', closeDrawEditor, true));
+  const time = document.createElement('div'), bar = document.createElement('div');
+  if(watch){
+    // the replay: only its clock. Clicking the bar jumps through the painting
+    box.classList.add('watch');
+    tools.innerHTML = '';
+    time.className = 'replayTime'; bar.className = 'replayBar'; bar.innerHTML = '<i></i>';
+    bar.addEventListener('click', e=>{
+      const r = bar.getBoundingClientRect();
+      if(drawReplay) drawReplay.t0 = performance.now() - clamp((e.clientX - r.left)/r.width, 0, 1)*drawReplay.ms;
+    });
+    tools.append(time, bar, btn('replayStop', ()=>{ stopPlayback(); closeDrawEditor(); }, true));
+  }
   box.append(area, tools);
   $('workspace').appendChild(box);
-  document.body.appendChild(ring);
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0};
+  if(!watch) document.body.appendChild(ring);
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d')};
+  drawEd.scanRaf = requestAnimationFrame(drawOverlay);
   refreshDrawEditor();
-  ringSize();
-  setDrawTool(brush.tool);
+  if(!watch){ ringSize(); setDrawTool(brush.tool); }
+  else return;
   cv.addEventListener('pointerenter', ()=>{ ring.hidden = false; ringSize(); });
   cv.addEventListener('pointerleave', ()=>{ if(!drawEd.cur) ring.hidden = true; });
   cv.addEventListener('pointerdown', e=>{
@@ -3225,6 +3344,7 @@ function openDrawEditor(n){
     if(!d || !d.cur) return;
     d.cur.st.pts = d.cur.pts.join(',');
     n.params.strokes = n.params.strokes.concat([d.cur.st]);
+    n.drawLive = null;
     d.cur = null; d.redo = [];
     drawChanged(); refreshDrawEditor();
   };
@@ -3234,6 +3354,9 @@ function openDrawEditor(n){
 function closeDrawEditor(){
   if(!drawEd) return;
   if(drawEd.replay) cancelAnimationFrame(drawEd.replay);
+  cancelAnimationFrame(drawEd.scanRaf);
+  if(drawEd.cur){ drawEd.n.drawLive = null; markDirty(drawEd.n.id); }
+  if(drawReplay){ const n = drawReplay.n; drawReplay = null; markDirty(n.id); }
   drawEd.box.remove(); drawEd.ring.remove();
   drawEd = null;
 }
@@ -3804,7 +3927,7 @@ function playheadFrame(){
   rafId = requestAnimationFrame(playheadFrame);
 }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){ stopPlayback(); releaseCapture(); }
+  if(document.hidden){ stopPlayback(); releaseCapture(); if(drawReplay) closeDrawEditor(); }
   else resumeCapture();
 });
 // reload / close / navigate away while playing: send the note-offs now
@@ -4652,12 +4775,14 @@ const TEMPLATES = {
     wired(file,'notes', snap,'notes'); wired(scale,'scale', snap,'scale'); wired(snap,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
     finishGraph();
   },
+  // live painting: the whole canvas is read, so each stroke is heard as it's made
   draw(){
     clearGraph();
-    const draw = addNode('srcDraw', 0, 60), edges = addNode('edges', 260, 60), scale = addNode('scale', 260, 340);
-    const scan = addNode('scan', 520, 60, {steps:16, thresh:40}), tr = addNode('track', 780, 60, {program:'11'}), loop = addNode('loop', 1040, 60);
+    const draw = addNode('srcDraw', 0, 60, {turns:0, reveal:100}), edges = addNode('edges', 260, 60), scale = addNode('scale', 260, 340);
+    const scan = addNode('scan', 520, 60, {steps:16, thresh:40}), limit = addNode('limit', 780, 60, {perStep:3});
+    const tr = addNode('track', 1040, 60, {program:'11'}), loop = addNode('loop', 1300, 60), out = addNode('midiOut', 1040, 420);
     wired(draw,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(scale,'scale', scan,'scale');
-    wired(scan,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
+    wired(scan,'notes', limit,'notes'); wired(limit,'notes', tr,'notes'); wired(tr,'track', loop,'tracks'); wired(limit,'notes', out,'notes');
     finishGraph();
   },
   logic(){

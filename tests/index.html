@@ -228,6 +228,27 @@ test('Estompe : un trait ajouté garde le reste en cache', ()=>{
   drawAt(c, 100, [st, {...st, pts:'8000,8000,100'}], '#FFFFFF', 1);
   eq([base, c.done, c.base === kept], [1, 2, true]);
 });
+test('Live painting : le trait en cours compte déjà', ()=>{
+  clearGraph();
+  const n = addNode('srcDraw', 0, 0, {turns:0, reveal:100}), px = ()=>{ markDirty(n.id); return evalNode(n).image.data[(130*260 + 130)*4]; };
+  eq(px(), 255);
+  n.drawLive = {c:'#000000', s:100, o:1, h:1, r:0, pts:'5000,5000,100'};
+  ok(px() < 40);
+  n.drawLive = null;
+  eq(px(), 255);
+});
+test('Replay : l’avancement suit sa propre horloge', ()=>{
+  clearGraph();
+  const pts = Array.from({length:100}, (_, i)=> [500 + i*90, 5000, 100]).flat().join(',');
+  const n = addNode('srcDraw', 0, 0, {turns:0, reveal:100, strokes:[{c:'#000000', s:80, o:1, h:1, r:0, pts}]});
+  const dark = ()=>{ markDirty(n.id); const d = evalNode(n).image; let c = 0; for(let x=0;x<260;x++) if(d.data[(130*260 + x)*4] < 128) c++; return c; };
+  const full = dark();
+  drawReplay = {n, t0:performance.now() - 30000, ms:60000};
+  const half = dark();
+  drawReplay = null;
+  ok(half > full*0.4 && half < full*0.6, half + ' sur ' + full);
+  eq(dark(), full);
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;
