@@ -107,20 +107,43 @@
   #helpList dd{margin:0; color:var(--text-dim);}
   #workspace{flex:1; display:flex; min-height:0; min-width:0; position:relative;}
   #nodeSidebar{
-    flex:none; width:196px; overflow:auto; padding:8px; border-left:1px solid var(--line); background:var(--panel);
+    flex:none; width:280px; display:flex; flex-direction:column; min-height:0;
+    border-left:1px solid var(--line); background:var(--panel);
   }
   #nodeSidebar[hidden]{display:none;}
-  #nodeSidebar h3{
-    position:sticky; top:-8px; margin:0 -8px 2px; padding:8px 12px 4px; background:var(--panel);
+  .sideTabs{flex:none; display:flex; border-bottom:1px solid var(--line);}
+  .sideTabs button{
+    flex:1; padding:8px 6px; font-size:12px; color:var(--text-dim); background:none; border:none;
+    border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer;
+  }
+  .sideTabs button:hover{color:var(--text);}
+  .sideTabs button.on{color:var(--text); border-bottom-color:var(--accent);}
+  .sidePane{flex:1; min-height:0; overflow:auto; padding:8px 10px;}
+  .sidePane[hidden]{display:none;}
+  #sideSearch{width:100%; font-size:12px; color:var(--text); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:5px 8px; outline:none; margin-bottom:4px;}
+  #sideSearch:focus{border-color:var(--accent);}
+  #sideList h3{margin:6px 0 2px;}
+  #sideList h3 button{
+    width:100%; text-align:left; display:flex; justify-content:space-between; padding:4px 2px; background:none; border:none; cursor:pointer;
     font-size:10px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-dim); font-weight:600;
   }
-  #nodeSidebar section + section{margin-top:6px;}
-  #nodeSidebar button{
+  #sideList h3 button:hover{color:var(--text);}
+  #sideList h3 button::after{content:'▾';}
+  #sideList section.shut h3 button::after{content:'▸';}
+  #sideList section.shut .sideItem{display:none;}
+  .sideItem{
     display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:none; border:none;
     color:var(--text); font-size:12px; padding:5px 6px; border-radius:5px; cursor:grab; touch-action:pan-y;
   }
-  #nodeSidebar button:hover, #nodeSidebar button:focus-visible{background:var(--panel-2); outline:none;}
-  #nodeSidebar button i{width:8px; height:8px; border-radius:2px; flex:none;}
+  .sideItem:hover, .sideItem:focus-visible{background:var(--panel-2); outline:none;}
+  .sideItem i{width:8px; height:8px; border-radius:2px; flex:none;}
+  .propTitle{font-size:13px; color:var(--accent); margin-bottom:8px;}
+  #propBody{display:flex; flex-direction:column; gap:8px;}
+  #propBody .prm{grid-template-columns:96px 1fr auto;}
+  #propBody .prm.full{grid-template-columns:96px 1fr;}
+  #sidePreview{flex:none; padding:8px 10px; border-top:1px solid var(--line);}
+  #sidePreview[hidden]{display:none;}
+  #previewCanvas{display:block; width:100%; max-height:240px; object-fit:contain; border-radius:5px; background:#06100f;}
   .dragGhost{
     position:fixed; z-index:30; pointer-events:none; padding:5px 9px; font-size:12px; color:var(--text);
     background:var(--panel-2); border:1px solid var(--accent); border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.45);
@@ -168,6 +191,12 @@
   .nodeHead .title{flex:1; font-size:12.5px; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .nodeDel{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; line-height:1; padding:0 2px;}
   .nodeDel:hover{color:#ff8a8e;}
+  .nodeFold{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:11px; line-height:1; padding:0 2px;}
+  .nodeFold:hover{color:var(--text);}
+  .node.source .nodeFold{color:#fff;}
+  /* folded: only what's still wired stays, or its wire would have nowhere to land */
+  .node.folded .nodeBody{padding-bottom:4px;}
+  .node.folded .nodeBody > :not(:has(.port.linked)){display:none;}
   /* wire tools: no title, no body, the whole thing is the handle */
   .node.lanes{width:20px; border-radius:7px; cursor:grab; background:var(--panel-2);}
   .node.lanes.reroute{width:12px; border-radius:6px;}
@@ -197,7 +226,8 @@
   .port span{color:var(--text-dim);}
 
   .nodeBody{padding:4px 10px 10px; display:flex; flex-direction:column; gap:7px;}
-  .prm{display:grid; grid-template-columns:70px 1fr auto; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
+  .prm > .port{position:absolute; left:-10px; top:50%; margin-top:-8px; padding:0; width:0;}
+  .prm{position:relative; display:grid; grid-template-columns:70px 1fr auto; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
   .prm.full{grid-template-columns:70px 1fr;}
   .prm .v{font-family:var(--mono); font-size:10.5px; color:var(--accent); min-width:30px; text-align:right;}
   .prm select, .prm input[type=text]{
@@ -330,7 +360,21 @@
   <div id="stage">
     <div id="world"><div id="frames"></div><svg id="wires"></svg></div>
   </div>
-  <aside id="nodeSidebar"></aside>
+  <aside id="nodeSidebar">
+    <div class="sideTabs" role="tablist">
+      <button type="button" role="tab" id="tabNodes" data-i18n="tabNodes">Nodes</button>
+      <button type="button" role="tab" id="tabProps" data-i18n="tabProps">Réglages</button>
+    </div>
+    <div class="sidePane" id="paneNodes">
+      <input type="text" id="sideSearch" autocomplete="off" spellcheck="false">
+      <div id="sideList"></div>
+    </div>
+    <div class="sidePane" id="paneProps" hidden>
+      <div class="propTitle" id="propTitle"></div>
+      <div id="propBody"></div>
+    </div>
+    <div id="sidePreview" hidden><canvas id="previewCanvas"></canvas></div>
+  </aside>
 </div>
 <div id="transport">
   <button type="button" class="miniBtn primary" id="tpPlay"></button>
@@ -382,7 +426,7 @@ const I18N = {
     tplPick:'Modèles', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnSidebar:'Liste', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
-    btnFile:'Fichier ▾', helpTitle:'Raccourcis',
+    btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabNodes:'Nodes', tabProps:'Réglages', sideSearchPh:'Rechercher…', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
     helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
@@ -460,7 +504,7 @@ const I18N = {
     tplPick:'Templates', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnSidebar:'List', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
-    btnFile:'File ▾', helpTitle:'Shortcuts',
+    btnFile:'File ▾', helpTitle:'Shortcuts', tabNodes:'Nodes', tabProps:'Settings', sideSearchPh:'Search…', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
     helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
@@ -1483,7 +1527,13 @@ function scheduleRun(all){
   requestAnimationFrame(()=>{
     runQueued = false;
     nodes.forEach(n=> evalNode(n));
-    nodes.forEach(n=>{ if(n.thumbDirty){ drawThumb(n); updateSummary(n); n.thumbDirty = false; } });
+    let again = false;
+    nodes.forEach(n=>{
+      if(!n.thumbDirty) return;
+      drawThumb(n); updateSummary(n); n.thumbDirty = false;
+      if(n.id === selectedId) again = true;
+    });
+    if(again) paintPreview();
     syncTransport();
   });
 }
@@ -1495,17 +1545,26 @@ function buildNodeEl(n){
   const def = NODE_DEFS[n.type];
   const old = n.el;
   const el = document.createElement('div');
-  el.className = 'node' + (def.wide ? ' wide' : '') + (def.cat === 'catSource' ? ' source' : '') + (def.lanes ? ' lanes' + (def.lanes === 'one' ? ' reroute' : '') : '') + (selection.has(n.id) ? ' selected' : '');
+  el.className = 'node' + (def.wide ? ' wide' : '') + (def.cat === 'catSource' ? ' source' : '') + (def.lanes ? ' lanes' + (def.lanes === 'one' ? ' reroute' : '') : '') + (selection.has(n.id) ? ' selected' : '') + (n.params.folded ? ' folded' : '');
   if(def.lanes){ el.title = t('n_' + n.type); n.laneKey = JSON.stringify(n.params.lanes); }
   el.dataset.id = n.id;
   el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
 
   const head = document.createElement('div');
   head.className = 'nodeHead';
-  head.innerHTML = '<span class="cat"></span><span class="title"></span><button type="button" class="nodeDel" aria-label="×">×</button>';
+  head.innerHTML = '<span class="cat"></span><span class="title"></span><button type="button" class="nodeFold"></button><button type="button" class="nodeDel" aria-label="×">×</button>';
   head.querySelector('.cat').style.background = def.color || CAT_COLOR[def.cat];
   head.querySelector('.title').textContent = t('n_' + n.type);
   head.querySelector('.nodeDel').addEventListener('click', e=>{ e.stopPropagation(); removeNode(n.id); });
+  const fold = head.querySelector('.nodeFold');
+  fold.textContent = n.params.folded ? '▸' : '▾';
+  fold.title = t('foldTitle'); fold.setAttribute('aria-label', fold.title); fold.setAttribute('aria-expanded', !n.params.folded);
+  fold.addEventListener('click', e=>{
+    e.stopPropagation();
+    n.params.folded = !n.params.folded;
+    buildNodeEl(n); saveSoon();
+    requestAnimationFrame(drawWires);
+  });
   head.addEventListener('pointerdown', e=> startNodeDrag(e, n));
   el.appendChild(head);
 
@@ -1513,7 +1572,7 @@ function buildNodeEl(n){
   ports.className = 'ports';
   const colIn = document.createElement('div'), colOut = document.createElement('div');
   colIn.className = 'col in'; colOut.className = 'col out';
-  portsIn(n).forEach(p=> colIn.appendChild(portEl(n, p, 'in')));
+  portsIn(n).filter(p=> !p.id.startsWith('sig_')).forEach(p=> colIn.appendChild(portEl(n, p, 'in')));
   portsOut(n).forEach(p=> colOut.appendChild(portEl(n, p, 'out')));
   ports.append(colIn, colOut);
   el.appendChild(ports);
@@ -1543,7 +1602,10 @@ function buildNodeEl(n){
   const err = document.createElement('div'); err.className = 'nodeErr'; err.hidden = true; body.appendChild(err);
   el.appendChild(body);
 
-  el.addEventListener('pointerdown', e=> selectNode(n.id, e.shiftKey));
+  el.addEventListener('pointerdown', e=>{
+    selectNode(n.id, e.shiftKey);
+    if(!e.shiftKey && !def.lanes) setSideTab('props');
+  });
   if(def.lanes) el.addEventListener('pointerdown', e=> startNodeDrag(e, n));
   if(old) old.replaceWith(el); else world.appendChild(el);
   n.el = el;
@@ -1562,7 +1624,15 @@ function portEl(n, p, side){
   return el;
 }
 
-function paramEl(n, d){
+// the same parameter can be on screen twice, on the node and in the Settings tab
+function syncTwins(n, d, from){
+  document.querySelectorAll('[data-param="' + n.id + ':' + d.id + '"]').forEach(el=>{
+    if(el === from) return;
+    if(el.type === 'checkbox') el.checked = !!n.params[d.id]; else el.value = n.params[d.id];
+    if(el.refresh) el.refresh();
+  });
+}
+function paramEl(n, d, side){
   if(d.kind === 'instr') return instrEl(n, d);
   const row = document.createElement('label');
   row.className = 'prm' + (d.kind === 'range' ? '' : ' full');
@@ -1583,6 +1653,9 @@ function paramEl(n, d){
   }
   if(d.hue) input.style.background = 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)';
   row.appendChild(input);
+  input.dataset.param = n.id + ':' + d.id;
+  // a signal input sits by the slider it drives, on the node's edge
+  if(d.sig && !side) row.appendChild(portEl(n, {id:'sig_' + d.id, type:'signal', opt:true, lane:true}, 'in'));
   let val = null;
   if(d.kind === 'range'){
     val = document.createElement('span'); val.className = 'v';
@@ -1590,9 +1663,11 @@ function paramEl(n, d){
   }
   const show = ()=>{ if(val) val.textContent = d.fmt ? d.fmt(n.params[d.id]) : n.params[d.id]; };
   show();
+  input.refresh = show;
   input.addEventListener(d.kind === 'text' ? 'change' : 'input', ()=>{
     n.params[d.id] = d.kind === 'check' ? input.checked : d.kind === 'range' ? parseFloat(input.value) : input.value;
     show();
+    syncTwins(n, d, input);
     if(n.type === 'midiOut' && d.id === 'sustain') sendSustain(n);
     if(d.onChange){ d.onChange(n); buildNodeEl(n); drawWires(); }
     if(n.onParam) n.onParam(d.id);
@@ -1620,8 +1695,10 @@ function instrEl(n, d){
     name.textContent = g[LANG] || g.en;
     picker.title = name.textContent;
   };
-  sel.addEventListener('change', ()=>{ n.params[d.id] = sel.value; sync(); markDirty(n.id); saveSoon(); });
+  sel.addEventListener('change', ()=>{ n.params[d.id] = sel.value; sync(); syncTwins(n, d, sel); markDirty(n.id); saveSoon(); });
   sel.addEventListener('pointerdown', e=> e.stopPropagation());
+  sel.dataset.param = n.id + ':' + d.id;
+  sel.refresh = sync;
   sync();
   picker.append(icon, sel);
   row.append(picker, name);
@@ -1731,6 +1808,8 @@ function selectNode(id, add){
   }
   nodes.forEach(m=> m.el && m.el.classList.toggle('selected', selection.has(m.id)));
   syncTransport();
+  if(id === null) setSideTab('nodes');
+  renderProps(); paintPreview();
 }
 
 /* ============================================================
@@ -3178,6 +3257,7 @@ function playheadFrame(){
   if(!playing) return;
   const n = nodes.get(playingLoopId);
   if(n) drawLoopThumb(n);
+  if(n && n.id === selectedId) paintPreview();
   $('tpPos').firstElementChild.style.width = (loopPosNow() % 1)*100 + '%';
   rafId = requestAnimationFrame(playheadFrame);
 }
@@ -3645,17 +3725,33 @@ function sidebarDrag(e, b, entry){
   };
   b.addEventListener('pointermove', move); b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
 }
+let sideShut = new Set();
+try{ sideShut = new Set(JSON.parse(localStorage.getItem('dessons.sideShut') || '[]')); }catch(e){}
 function buildSidebar(){
   sidebar.setAttribute('aria-label', t('btnSidebar'));
-  sidebar.innerHTML = '';
-  const entries = menuEntries();
+  $('sideSearch').placeholder = t('sideSearchPh');
+  $('sideSearch').setAttribute('aria-label', t('sideSearchPh'));
+  const list = $('sideList'), q = plain($('sideSearch').value).split(/\s+/).filter(Boolean);
+  list.innerHTML = '';
+  const entries = menuEntries().filter(e=> q.every(w=> e.words.includes(w)));
   ADD_MENU.forEach(([cat])=>{
-    const sec = document.createElement('section'), h = document.createElement('h3');
-    h.textContent = t(cat);
+    const mine = entries.filter(e=> e.cat === cat);
+    if(!mine.length) return;
+    const sec = document.createElement('section'), h = document.createElement('h3'), hb = document.createElement('button');
+    hb.type = 'button'; hb.textContent = t(cat);
+    const shut = !q.length && sideShut.has(cat);      // a search looks everywhere
+    sec.classList.toggle('shut', shut);
+    hb.setAttribute('aria-expanded', !shut);
+    hb.addEventListener('click', ()=>{
+      if(sideShut.has(cat)) sideShut.delete(cat); else sideShut.add(cat);
+      try{ localStorage.setItem('dessons.sideShut', JSON.stringify([...sideShut])); }catch(e){}
+      buildSidebar();
+    });
+    h.appendChild(hb);
     sec.appendChild(h);
-    entries.filter(e=> e.cat === cat).forEach(entry=>{
+    mine.forEach(entry=>{
       const b = document.createElement('button');
-      b.type = 'button';
+      b.type = 'button'; b.className = 'sideItem';
       b.innerHTML = '<i></i><span></span>';
       b.querySelector('i').style.background = entry.color;
       b.querySelector('span').textContent = entry.label;
@@ -3663,14 +3759,45 @@ function buildSidebar(){
       b.addEventListener('click', ()=>{ if(b.dragged) b.dragged = false; else addAtCentre(entry.ty); });
       sec.appendChild(b);
     });
-    sidebar.appendChild(sec);
+    list.appendChild(sec);
   });
+  renderProps();
+}
+$('sideSearch').addEventListener('input', buildSidebar);
+function setSideTab(tab){
+  const props = tab === 'props';
+  $('paneNodes').hidden = props; $('paneProps').hidden = !props;
+  $('tabNodes').classList.toggle('on', !props); $('tabProps').classList.toggle('on', props);
+  $('tabNodes').setAttribute('aria-selected', !props); $('tabProps').setAttribute('aria-selected', props);
+}
+$('tabNodes').addEventListener('click', ()=> setSideTab('nodes'));
+$('tabProps').addEventListener('click', ()=> setSideTab('props'));
+// the Settings tab: the selected node's sliders, through the same paramEl() as on the node
+function renderProps(){
+  const n = nodes.get(selectedId), body = $('propBody');
+  $('propTitle').textContent = n ? t('n_' + n.type) : '';
+  body.innerHTML = '';
+  const list = n ? (NODE_DEFS[n.type].params || []).filter(d=> d.kind !== 'hidden') : [];
+  list.forEach(d=> body.appendChild(paramEl(n, d, true)));
+  if(!list.length){ const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t(n ? 'propsEmpty' : 'propsNone'); body.appendChild(p); }
+}
+// the selected node's thumbnail, drawn again at the panel's size
+function paintPreview(){
+  const n = nodes.get(selectedId), big = $('previewCanvas');
+  const has = !!(n && n.thumb) && !sidebar.hidden;
+  $('sidePreview').hidden = !has;
+  if(!has) return;
+  const small = n.thumb;
+  n.thumb = big;
+  try{ drawThumb(n); } finally { n.thumb = small; }
 }
 function setSidebar(open){
   sidebar.hidden = !open;
+  if(open) paintPreview();
   $('sideBtn').setAttribute('aria-expanded', open);
   $('sideBtn').classList.toggle('primary', open);
 }
+setSideTab('nodes');
 (function(){
   let stored = null;
   try{ stored = localStorage.getItem('dessons.sidebar'); }catch(e){}
@@ -3768,6 +3895,7 @@ function applySnapshot(str){
   nodes.forEach(n=> n.dirty = true);
   scheduleRun(true);
   requestAnimationFrame(drawWires);
+  renderProps();
   history_[histPos] = snapshot();     // a restored node comes back last in the list: same graph, different text
   syncUndoButtons();
   clearTimeout(saveTimer);
