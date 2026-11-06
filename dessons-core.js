@@ -606,8 +606,3 @@ function parseMidi(buf){
   const list = [...layers.values()];
   return {notes, layers:list, segs, ppq, duration:notes.reduce((a, n)=> Math.max(a, n.sec + n.dur), 0)};
 }
-function midiSecToBeat(m, sec){
-  let s = m.segs[0];
-  for(const g of m.segs){ if(g.sec <= sec) s = g; else break; }
-  return s.tick/m.ppq + (sec - s.sec)*1e6/s.us;
-}

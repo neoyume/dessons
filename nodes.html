@@ -31,7 +31,6 @@
     --t-track:#f3efe9;
     --t-path:#ff6b6b;
     --t-curve:#8fa8ff;
-    --t-midi:#ff9f4d;
     --t-signal:#7dffb0;
   }
   *{box-sizing:border-box;}
@@ -143,7 +142,7 @@
   body.wiring .port.in:not(.compatible) .dot{opacity:.3;}
   body.wiring.rev .port.out:not(.compatible) .dot{opacity:.3;}
   .ty-image{color:var(--t-image);} .ty-field{color:var(--t-field);} .ty-scale{color:var(--t-scale);}
-  .ty-notes{color:var(--t-notes);} .ty-track{color:var(--t-track);} .ty-path{color:var(--t-path);} .ty-curve{color:var(--t-curve);} .ty-midi{color:var(--t-midi);} .ty-signal{color:var(--t-signal);} .ty-any{color:var(--text-dim);}
+  .ty-notes{color:var(--t-notes);} .ty-track{color:var(--t-track);} .ty-path{color:var(--t-path);} .ty-curve{color:var(--t-curve);} .ty-signal{color:var(--t-signal);} .ty-any{color:var(--text-dim);}
   .port span{color:var(--text-dim);}
 
   .nodeBody{padding:4px 10px 10px; display:flex; flex-direction:column; gap:7px;}
@@ -311,12 +310,10 @@ const I18N = {
     cycleErr:'Ce branchement créerait une boucle.',
     catSource:'Source', catImage:'Image', catAnalysis:'Analyse', catLayers:'Calques', catMusic:'Musique', catOut:'Sortie',
     t_image:'image', t_field:'contours', t_scale:'gamme', t_notes:'notes', t_track:'piste',
-    n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_srcMidi:'Fichier MIDI', n_sigRange:'Plage', n_clip:'Clip vidéo',
-    t_midi:'midi', t_signal:'signal', s_env:'niveau', s_pitch:'hauteur', s_pos:'position', in_signal:'signal',
-    p_part:'Piste', p_repeats:'Boucles', midiAll:'Toutes', p_lo:'Bas', p_hi:'Haut', p_passBars:'Mesures par passage',
-    srcPickMidi:'Charger un .mid', midiFileErr:'Fichier MIDI illisible.', midiSum:'{n} notes · {s} s', midiDrums:'Batterie dessinée, pas jouée.', midiEmpty:'Charge un .mid ou dépose-le ici.',
-    btnClipExport:'Exporter la vidéo', clipRec:'Enregistrement {x}', clipNoRec:'Export vidéo indisponible dans ce navigateur.',
-    clipNoInput:'Rien à jouer : branche un fil midi, pistes ou notes.', clipNoNotes:'Aucune note pour l’instant : charge une source, ou baisse la sensibilité du Balayage.',
+    n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_srcMidi:'Fichier MIDI', n_sigRange:'Plage',
+    t_signal:'signal', s_env:'niveau', s_pitch:'hauteur', s_pos:'position', in_signal:'signal',
+    p_part:'Piste', midiAll:'Toutes', p_lo:'Bas', p_hi:'Haut',
+    srcPickMidi:'Charger un .mid', midiFileErr:'Fichier MIDI illisible.', midiSum:'{n} notes · {b} mesures · {t} bpm', btnFitLoop:'Caler la Boucle', midiEmpty:'Charge un .mid ou dépose-le ici.',
     n_rgbaSplit:'Séparer RVBA', n_rgbaCombine:'Combiner RVBA',
     ch_r:'R', ch_g:'V', ch_b:'B', ch_a:'A', rgbaHint:'Entrée libre : R, V, B à 0, A à 255. Contours ne lit pas l’alpha.',
     n_invert:'Inverser', n_blur:'Flou', n_tone:'Tons', n_edges:'Contours',
@@ -379,12 +376,10 @@ const I18N = {
     cycleErr:'This connection would create a loop.',
     catSource:'Source', catImage:'Image', catAnalysis:'Analysis', catLayers:'Layers', catMusic:'Music', catOut:'Output',
     t_image:'image', t_field:'edges', t_scale:'scale', t_notes:'notes', t_track:'track',
-    n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_srcMidi:'MIDI file', n_sigRange:'Range', n_clip:'Video clip',
-    t_midi:'midi', t_signal:'signal', s_env:'level', s_pitch:'pitch', s_pos:'position', in_signal:'signal',
-    p_part:'Track', p_repeats:'Loops', midiAll:'All', p_lo:'Low', p_hi:'High', p_passBars:'Bars per pass',
-    srcPickMidi:'Load a .mid', midiFileErr:'Unreadable MIDI file.', midiSum:'{n} notes · {s} s', midiDrums:'Drums are drawn, not played.', midiEmpty:'Load a .mid or drop it here.',
-    btnClipExport:'Export the video', clipRec:'Recording {x}', clipNoRec:'Video export unavailable in this browser.',
-    clipNoInput:'Nothing to play: plug in a midi, tracks or notes wire.', clipNoNotes:'No notes yet: load a source, or lower the Scan\'s sensitivity.',
+    n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_srcMidi:'MIDI file', n_sigRange:'Range',
+    t_signal:'signal', s_env:'level', s_pitch:'pitch', s_pos:'position', in_signal:'signal',
+    p_part:'Track', midiAll:'All', p_lo:'Low', p_hi:'High',
+    srcPickMidi:'Load a .mid', midiFileErr:'Unreadable MIDI file.', midiSum:'{n} notes · {b} bars · {t} bpm', btnFitLoop:'Match the Loop', midiEmpty:'Load a .mid or drop it here.',
     n_rgbaSplit:'Separate RGBA', n_rgbaCombine:'Combine RGBA',
     ch_r:'R', ch_g:'G', ch_b:'B', ch_a:'A', rgbaHint:'Free input: R, G, B at 0, A at 255. Edges doesn’t read alpha.',
     n_invert:'Invert', n_blur:'Blur', n_tone:'Tones', n_edges:'Edges',
@@ -458,7 +453,7 @@ function setLang(lang){
 document.querySelectorAll('#langToggle button').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)));
 
 /* ---- small shared helpers ---- */
-const TYPE_VAR = {image:'--t-image', field:'--t-field', scale:'--t-scale', notes:'--t-notes', track:'--t-track', path:'--t-path', curve:'--t-curve', midi:'--t-midi', signal:'--t-signal', any:'--text-dim'};
+const TYPE_VAR = {image:'--t-image', field:'--t-field', scale:'--t-scale', notes:'--t-notes', track:'--t-track', path:'--t-path', curve:'--t-curve', signal:'--t-signal', any:'--text-dim'};
 const typeColor = ty => getComputedStyle(document.documentElement).getPropertyValue(TYPE_VAR[ty]).trim() || '#fff';
 const LAVENDER = '#b4a7ff';   // curve and path: Music nodes that feed a Scan's optional inputs
 const CAT_COLOR = {catSource:'#0000ff', catImage:'#4dd9c9', catAnalysis:'#00ff00', catLayers:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2', catTools:'#9fbcb9'};
@@ -531,25 +526,24 @@ const NODE_DEFS = {
       return n.params.meshName ? t('meshReload').replace('{x}', n.params.meshName) : t('meshNoFile');
     }
   }),
-  // a .mid: its notes for a Video clip, and three signals (0..1 over time) for any
-  // parameter with a signal input. Tiny files, so unlike a mesh it's saved with the graph.
+  // a .mid in the graph: its notes on the usual wire, and three signals (0..1) that follow
+  // the Loop. Tiny files, so unlike a mesh it's saved with the graph.
   srcMidi: {
     cat:'catSource', custom:'midiFile', thumb:'midiRoll',
-    outputs:[{id:'midi', type:'midi'}, {id:'env', type:'signal', label:'s_env'}, {id:'pitch', type:'signal', label:'s_pitch'}, {id:'pos', type:'signal', label:'s_pos'}],
+    outputs:[{id:'notes', type:'notes'}, {id:'env', type:'signal', label:'s_env'}, {id:'pitch', type:'signal', label:'s_pitch'}, {id:'pos', type:'signal', label:'s_pos'}],
     params:[
       {id:'file', kind:'hidden', def:null}, {id:'fileName', kind:'hidden', def:''},
       {id:'part', label:'p_part', kind:'select', def:'all', options:n=> [['all', t('midiAll')]].concat(((n.midi && n.midi.layers) || []).map(l=> [String(l.id), l.name || (t('p_part') + ' ' + (l.id + 1))]))}
     ],
     compute:(p, inp, n)=>{
-      if(!n.midi) return {midi:null, env:null, pitch:null, pos:null};
+      if(!n.midi) return {notes:null, env:null, pitch:null, pos:null};
       if(!n.sel || n.selPart !== p.part){ n.sel = midiSelection(n.midi, p.part); n.selPart = p.part; }
-      return n.sel.out;
+      return n.sel;
     },
     summary:n=>{
       if(!n.midi) return '';
-      const notes = n.sel ? n.sel.notes : n.midi.notes;
-      return t('midiSum').replace('{n}', notes.length).replace('{s}', Math.round(n.midi.duration))
-        + (notes.some(x=> x.drums) ? ' · ' + t('midiDrums') : '');
+      const o = n.out && n.out.notes, f = midiShape(n.midi);
+      return t('midiSum').replace('{n}', o ? o.notes.length : n.midi.notes.length).replace('{b}', f.bars).replace('{t}', f.tempo);
     }
   },
   // wire tools: each lane takes the type of its first wire. A reroute is one lane; a cable
@@ -565,48 +559,6 @@ const NODE_DEFS = {
       {id:'hi', label:'p_hi', kind:'range', min:0, max:100, step:1, def:25, fmt:v=>v+'%'}
     ],
     compute:(p, inp)=> ({out: inp.in ? {at:s=> (p.lo + (p.hi - p.lo)*inp.in.at(s))/100} : null})
-  },
-  clip: {
-    cat:'catOut', custom:'clip', thumb:'clip', outputs:[],
-    inputs:[
-      {id:'image', type:'image', opt:true}, {id:'midi', type:'midi', multi:true, opt:true},
-      {id:'tracks', type:'track', multi:true, opt:true, label:'in_tracks'}, {id:'notes', type:'notes', multi:true, opt:true}
-    ],
-    params:[
-      {id:'bars', label:'p_passBars', kind:'range', min:1, max:16, step:1, def:4},
-      {id:'tempo', label:'p_tempo', kind:'range', min:40, max:200, step:1, def:100, fmt:v=>v+' bpm'},
-      {id:'repeats', label:'p_repeats', kind:'range', min:1, max:32, step:1, def:4}
-    ],
-    compute:(p, inp, n)=>{
-      const parts = inp.midi || [], loops = (inp.tracks || []).filter(tr=> !tr.mute).concat(inp.notes || []);
-      if(!parts.length && !loops.length) return {_clip:null};
-      if(!n.parts || n.parts.length !== parts.length || parts.some((m, i)=> m !== n.parts[i])){
-        n.parts = parts;
-        n.merged = parts.flatMap(m=> m.notes);
-      }
-      // a file sets the clock; otherwise the node's own tempo does
-      const file = parts.length ? parts[0].file : {segs:[{tick:0, sec:0, us:60e6/p.tempo}], ppq:1, duration:0};
-      const spb = file.segs[0].us/1e6, loopBeats = p.bars*4, played = [];
-      loops.forEach((tr, i)=>{
-        for(let r=0; r<p.repeats; r++) tr.notes.forEach(nt=>{
-          const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + 1);
-          const beat = (r + f0)*loopBeats, len = (f1 - f0)*loopBeats*0.8;
-          played.push({sec:beat*spb, dur:len*spb, beat, beatEnd:beat + len, midi:nt.midi, vel:nt.vel, layer:i, prog:tr.program || 0, drums:false, col:tr.color});
-        });
-      });
-      const notes = played.length ? n.merged.concat(played).sort((a, b)=> a.sec - b.sec)
-        : parts.length > 1 ? n.merged.slice().sort((a, b)=> a.sec - b.sec) : n.merged;
-      if(!notes.length) return {_clip:null};
-      return {_clip:{
-        notes, file, bars:p.bars, image:inp.image,
-        lo:notes.reduce((a, x)=> x.drums ? a : Math.min(a, x.midi), 127), hi:notes.reduce((a, x)=> x.drums ? a : Math.max(a, x.midi), 0),
-        duration:Math.max(file.duration, loops.length ? p.repeats*loopBeats*spb : 0) + 1.2    // room for the release and reverb tail
-      }};
-    },
-    summary:n=>{
-      if(n.out && n.out._clip) return '';
-      return t(links.some(l=> l.to === n.id && l.toPort !== 'image') ? 'clipNoNotes' : 'clipNoInput');
-    }
   },
   // each channel leaves as a grey image, so every image node can work on it alone
   rgbaSplit: {
@@ -956,7 +908,7 @@ const NODE_DEFS = {
     cat:'catOut', inputs:[{id:'tracks', type:'track', multi:true, label:'in_tracks'}], outputs:[], thumb:'loop', wide:true, custom:'loop',
     params:[
       {id:'tempo', label:'p_tempo', kind:'range', min:40, max:200, step:1, def:100, fmt:v=>v+' bpm'},
-      {id:'bars', label:'p_bars', kind:'range', min:1, max:8, step:1, def:2},
+      {id:'bars', label:'p_bars', kind:'range', min:1, max:64, step:1, def:2},
       {id:'gate', label:'p_gate', kind:'range', min:10, max:100, step:1, def:80, fmt:v=>v+'%'}
     ],
     compute:(p, {tracks})=>{
@@ -995,7 +947,7 @@ function modParams(def, p, inp){
   def.sigParams.forEach(d=>{
     const s = inp['sig_' + d.id];
     if(!s) return;
-    const v = p[d.id] + s.at(clipTime())*(d.max - d.min);
+    const v = p[d.id] + s.at(playing ? schedPos % 1 : 0)*(d.max - d.min);
     q[d.id] = d.wrap ? v : (d.step >= 1 ? Math.round(clamp(v, d.min, d.max)) : clamp(v, d.min, d.max));
   });
   return q;
@@ -1006,7 +958,7 @@ const ADD_MENU = [
   ['catAnalysis', ['edges', 'sens']],
   ['catLayers', ['hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
   ['catMusic', ['scale', 'scan', 'curve', 'path', 'octave', 'limit', 'sigRange']],
-  ['catOut', ['track', 'loop', 'midiOut', 'clip']],
+  ['catOut', ['track', 'loop', 'midiOut']],
   ['catTools', ['reroute', 'cableClip', 'frame']]
 ];
 
@@ -1060,7 +1012,6 @@ function removeNode(id){
   const n = nodes.get(id);
   if(!n) return;
   if(isSource(n)) stopMedia(n);
-  if(clipState && clipState.id === id) stopClip();
   if(playingLoopId === id) stopPlayback();
   const downstream = links.filter(l=> l.from === id).map(l=> l.to);
   // deleting a wire tool closes the gap instead of cutting the wire
@@ -1251,7 +1202,6 @@ function buildNodeEl(n){
     if(def.thumb === 'loop') c.addEventListener('click', ()=> togglePlay(n));
   }
   if(def.custom === 'loop') buildLoopControls(n, body);
-  if(def.custom === 'clip') buildClipControls(n, body);
   if(def.custom === 'midi') buildMidiControls(n, body);
   if(def.custom === 'sens') buildSensControls(n, body);
   if(def.custom === 'scale') buildScaleControls(n, body);
@@ -1490,11 +1440,6 @@ function drawThumb(n){
     blitRGBA(sizeThumb(c, im.w, im.h), c, im.w, im.h, im.data);
   } else if(kind === 'midiRoll'){
     drawMidiRoll(n);
-  } else if(kind === 'clip'){
-    const C = n.out._clip;
-    syncClipButtons(n);
-    if(!C){ emptyThumb(c); return; }
-    paintClip(sizeThumb(c, 9, 16), C, clipState && clipState.id === n.id ? clipTime() : 0);
   } else if(kind === 'rgba'){
     // the four channels in a 2x2 grid, in port order
     const ims = RGBA_PORTS.map(p=> n.out[p.id]);
@@ -1562,7 +1507,7 @@ function drawRoll(ctx, x, y, w, h, tracks, gate){
   tracks.forEach(tr=>{
     ctx.fillStyle = tr.color;
     tr.notes.forEach(nt=>{
-      const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + 1);
+      const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + (nt.len || 1));
       ctx.globalAlpha = (tr.mute ? 0.18 : 0.4 + 0.6*(nt.vel/127));
       ctx.fillRect(x + f0*w, y + (hi - nt.midi)*rowH, Math.max(1.5, (f1 - f0)*w*gate), Math.max(1.5, rowH - 0.5));
     });
@@ -1955,6 +1900,10 @@ setInterval(()=>{
   nodes.forEach(n=>{
     if((n.type === 'srcVideo' || n.type === 'srcWebcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
     else if(n.type === 'srcMesh' && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
+    else if(n.type === 'srcMidi' && (playing || n.sigLive) && links.some(l=> l.from === n.id && l.fromPort !== 'notes')){
+      n.sigLive = playing;        // one last pass when the Loop stops, back to position 0
+      markDirty(n.id);
+    }
   });
 }, 66);
 
@@ -2167,7 +2116,6 @@ function renderMesh(mesh, p, phase){
 // so a step is read from the frame of the moment it gets scheduled
 function meshPhase(){
   if(meshPhaseOverride !== null) return meshPhaseOverride;
-  if(clipState){ const C = clipState.C; return (midiSecToBeat(C.file, clipTime())/(C.bars*4)) % 1; }
   return playing ? schedPos % 1 : 0;
 }
 // live, each step hears the mesh at that step's angle. The .mid must say the
@@ -2189,6 +2137,7 @@ function bakeSpin(loopNode){
   };
   try{
     const tracks = base.tracks.map((tr, i)=>{
+      if(tr.fixed) return tr;     // a .mid doesn't depend on the mesh
       const notes = [];
       for(let k=0;k<tr.steps;k++){
         const at = tracksAt(stepFrac(tr, k) % 1)[i];
@@ -2204,25 +2153,35 @@ function bakeSpin(loopNode){
 }
 
 /* ============================================================
-   MIDI file -> video: the reverse trip. Notes light the image up on a sweep
-   (x = position in the pass, y = pitch), signals move whatever they're wired to.
-   Its own timeline in seconds, separate from the loop transport.
+   MIDI file: a .mid on the graph's usual notes wire. The whole file is one
+   pass of the Loop, on a fine grid (96 steps a bar: 1/32 and triplets stay put),
+   so the Loop needs its length and tempo: that's the Match button.
    ============================================================ */
+const MIDI_GRID = 96;
+function midiShape(file){
+  const last = file.notes.reduce((a, x)=> Math.max(a, x.beatEnd), 0);
+  return {bars:Math.max(1, Math.ceil(last/4 - 1e-6)), tempo:Math.round(60e6/file.segs[0].us), secPerBeat:file.duration/Math.max(last, 1e-6)};
+}
 function midiSelection(file, part){
-  const notes = part === 'all' ? file.notes : file.notes.filter(x=> String(x.layer) === part);
-  const melodic = notes.filter(x=> !x.drums), src = melodic.length ? melodic : notes;
+  const src = part === 'all' ? file.notes : file.notes.filter(x=> String(x.layer) === part);
+  const {bars, secPerBeat} = midiShape(file), steps = bars*MIDI_GRID, perBeat = MIDI_GRID/4;
   const lo = src.reduce((a, x)=> Math.min(a, x.midi), 127), hi = src.reduce((a, x)=> Math.max(a, x.midi), 0);
-  // index of the last note started at time s
-  const last = s=>{ let a = 0, b = notes.length; while(a < b){ const m = (a + b)>>1; if(notes[m].sec <= s) a = m + 1; else b = m; } return a - 1; };
-  const env = {at:s=>{
+  const notes = src.map(x=>{
+    const step = Math.min(steps - 1, Math.round(x.beat*perBeat));
+    return {step, len:Math.max(1, Math.round((x.beatEnd - x.beat)*perBeat)), midi:x.midi, vel:x.vel, row:0, layer:x.layer};
+  });
+  // signals read a position in the pass (0..1), and work in seconds at the file's own pace
+  const span = bars*4*secPerBeat, at = x=> x.beat/(bars*4)*span;
+  const last = sec=>{ let a = 0, b = src.length; while(a < b){ const m = (a + b)>>1; if(at(src[m]) <= sec) a = m + 1; else b = m; } return a - 1; };
+  const env = {at:f=>{
+    const sec = f*span;
     let v = 0;
-    for(let i=last(s); i>=0 && s - notes[i].sec < 2; i--) v = Math.max(v, notes[i].vel/127*Math.exp(-(s - notes[i].sec)/0.35));
+    for(let i=last(sec); i>=0 && sec - at(src[i]) < 2; i--) v = Math.max(v, src[i].vel/127*Math.exp(-(sec - at(src[i]))/0.35));
     return v;
   }};
-  const pitch = {at:s=>{ const i = last(s); return i < 0 ? 0 : (notes[i].midi - lo)/Math.max(1, hi - lo); }};
-  const pos = {at:s=> clamp(s/file.duration, 0, 1)};
-  const midi = {notes, file, lo, hi};
-  return {notes, out:{midi, env, pitch, pos}};
+  const pitch = {at:f=>{ const i = last(f*span); return i < 0 ? 0 : (src[i].midi - lo)/Math.max(1, hi - lo); }};
+  const pos = {at:f=> f};
+  return {notes:{steps, curve:'linear', notes, fixed:true, lo, hi}, env, pitch, pos};
 }
 function loadMidiFile(n, f){
   f.arrayBuffer().then(buf=>{
@@ -2247,235 +2206,46 @@ function buildMidiFileControls(n, body){
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'miniBtn' + (n.midi ? '' : ' primary'); b.textContent = n.params.fileName || t('srcPickMidi');
   b.addEventListener('click', ()=>{ mediaTarget = n; mediaInput.accept = '.mid,.midi'; mediaInput.value = ''; mediaInput.click(); });
-  row.appendChild(b); body.appendChild(row);
+  row.appendChild(b);
+  if(n.midi){
+    const fit = document.createElement('button');
+    fit.type = 'button'; fit.className = 'miniBtn'; fit.textContent = t('btnFitLoop');
+    fit.addEventListener('click', ()=> matchLoop(n));
+    row.appendChild(fit);
+  }
+  body.appendChild(row);
   if(n.mediaErr || !n.midi){
     const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t(n.mediaErr || 'midiEmpty'); body.appendChild(p);
   }
 }
+// the Loop this file feeds (else the first one) takes its length, tempo and note lengths
+function matchLoop(n){
+  const seen = new Set(), queue = [n.id];
+  let loop = null;
+  while(queue.length && !loop){
+    const id = queue.shift();
+    if(seen.has(id)) continue;
+    seen.add(id);
+    if(nodes.get(id).type === 'loop') loop = nodes.get(id);
+    links.forEach(l=>{ if(l.from === id) queue.push(l.to); });
+  }
+  loop = loop || [...nodes.values()].find(m=> m.type === 'loop');
+  if(!loop) return;
+  const f = midiShape(n.midi);
+  loop.params.bars = clamp(f.bars, 1, 64); loop.params.tempo = clamp(f.tempo, 40, 200);
+  loop.params.gate = 100;     // the file's own note lengths, not shortened
+  buildNodeEl(loop); drawWires(); markDirty(loop.id); saveSoon();
+}
 function drawMidiRoll(n){
-  const c = n.thumb, sel = n.sel && n.midi;
-  if(!sel){ emptyThumb(c); return; }
-  const ctx = sizeThumb(c, 3, 1), W = c.width, H = c.height, m = n.out.midi, D = n.midi.duration;
+  const c = n.thumb, o = n.out && n.out.notes;
+  if(!o){ emptyThumb(c); return; }
+  const ctx = sizeThumb(c, 3, 1), W = c.width, H = c.height;
   ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, W, H);
-  const span = Math.max(1, m.hi - m.lo + 1), h = Math.max(1, H/span);
-  m.notes.forEach(x=>{
+  const span = Math.max(1, o.hi - o.lo + 1), h = Math.max(1, H/span);
+  o.notes.forEach(x=>{
     ctx.fillStyle = TRACK_COLORS[x.layer % TRACK_COLORS.length];
-    ctx.fillRect(x.sec/D*W, H - (clamp(x.midi, m.lo, m.hi) - m.lo + 1)*H/span, Math.max(1, x.dur/D*W), h);
+    ctx.fillRect(x.step/o.steps*W, H - (x.midi - o.lo + 1)*H/span, Math.max(1, x.len/o.steps*W), h);
   });
-  if(clipState){ ctx.fillStyle = '#fff'; ctx.fillRect(clipTime()/D*W, 0, 1, H); }
-}
-
-const VIDEO_W = 1080, VIDEO_H = 1920, VIDEO_FPS = 30, VIDEO_URL = 'neoyume.github.io/dessons';
-let clipState = null, clipTap = null, clipTimer = null, clipRaf = null;
-const clipImgCanvas = document.createElement('canvas'), clipLight = document.createElement('canvas');
-function clipTime(){ return clipState && clipState.t0 !== Infinity ? Math.max(0, (performance.now() - clipState.t0)/1000) : 0; }
-function clipBox(im){
-  if(!im) return {x:0, y:(VIDEO_H - VIDEO_W)/2, w:VIDEO_W, h:VIDEO_W};
-  const s = Math.min(VIDEO_W/im.w, VIDEO_H/im.h), w = Math.round(im.w*s), h = Math.round(im.h*s);
-  return {x:Math.round((VIDEO_W - w)/2), y:Math.round((VIDEO_H - h)/2), w, h};
-}
-// same frame as the workshop's export: the app's backdrop, its watermark (always
-// on: these clips travel without context), in the bottom band or on a plate
-function clipWatermark(ctx, box){
-  const name = 52, url = 27, gap = 12, block = name + gap + url, cx = VIDEO_W/2;
-  const bandTop = box.y + box.h, inBand = VIDEO_H - bandTop >= block + 70;
-  const top = inBand ? bandTop + (VIDEO_H - bandTop - block)/2 : VIDEO_H - 64 - block;
-  const font = sz=> sz + 'px "DotGothic16", "SF Mono", monospace';
-  ctx.save();
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  if(!inBand){
-    ctx.font = font(url);
-    const bw = ctx.measureText(VIDEO_URL).width + 52;
-    ctx.fillStyle = 'rgba(0,43,42,.58)';
-    ctx.fillRect(cx - bw/2, top - 21, bw, block + 42);
-  }
-  ctx.globalAlpha = 0.58; ctx.fillStyle = '#00ff00';
-  ctx.font = font(name); ctx.fillText('dessons', cx, top);
-  ctx.font = font(url); ctx.fillText(VIDEO_URL, cx, top + name + gap);
-  ctx.restore();
-}
-function paintClip(ctx, C, sec){
-  const cv = ctx.canvas, U = cv.width/VIDEO_W, im = C.image, box = clipBox(im);
-  ctx.setTransform(U, 0, 0, U, 0, 0);
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#002b2a'; ctx.fillRect(0, 0, VIDEO_W, VIDEO_H);
-  const glow = ctx.createRadialGradient(VIDEO_W*0.15, -VIDEO_H*0.1, 0, VIDEO_W*0.15, -VIDEO_H*0.1, VIDEO_H*0.55);
-  glow.addColorStop(0, 'rgba(0,74,72,1)'); glow.addColorStop(1, 'rgba(0,74,72,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, VIDEO_W, VIDEO_H);
-
-  const win = C.bars*4, beat = midiSecToBeat(C.file, sec), passStart = Math.floor(beat/win)*win;
-  const secPerBeat = beat > 0 ? sec/beat : 0.5, memory = win*secPerBeat;
-  const px = b=> box.x + (((b % win) + win) % win)/win*box.w;
-  const py = m=> box.y + box.h*(0.92 - 0.84*(m - C.lo)/Math.max(1, C.hi - C.lo));
-  // the notes still glowing: started, and less than a whole pass old
-  const lit = [], notes = C.notes;
-  let a = 0, b = notes.length;
-  while(a < b){ const m = (a + b)>>1; if(notes[m].sec <= sec) a = m + 1; else b = m; }
-  for(let i=a-1; i>=0 && sec - notes[i].sec < memory && lit.length < 500; i--) lit.push(notes[i]);
-
-  if(im){
-    if(clipImgCanvas.lastData !== im.data){
-      clipImgCanvas.width = im.w; clipImgCanvas.height = im.h;
-      clipImgCanvas.getContext('2d').putImageData(new ImageData(im.data instanceof Uint8ClampedArray ? im.data : new Uint8ClampedArray(im.data), im.w, im.h), 0, 0);
-      clipImgCanvas.lastData = im.data;
-    }
-    ctx.imageSmoothingEnabled = false;
-    ctx.globalAlpha = 0.3;
-    ctx.drawImage(clipImgCanvas, box.x, box.y, box.w, box.h);
-    ctx.globalAlpha = 1;
-    // each note uncovers the image around it at full brightness
-    clipLight.width = cv.width; clipLight.height = cv.height;
-    const lc = clipLight.getContext('2d');
-    lc.setTransform(U, 0, 0, U, 0, 0);
-    lit.forEach(n=>{
-      const f = 1 - (sec - n.sec)/memory, x = px(n.beat), y = py(n.midi), r = 70 + 170*n.vel/127*f;
-      const g = lc.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, 'rgba(255,255,255,' + f + ')'); g.addColorStop(1, 'rgba(255,255,255,0)');
-      lc.fillStyle = g; lc.fillRect(x - r, y - r, r*2, r*2);
-    });
-    lc.globalCompositeOperation = 'source-in';
-    lc.imageSmoothingEnabled = false;
-    lc.drawImage(clipImgCanvas, box.x, box.y, box.w, box.h);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(clipLight, 0, 0);
-    ctx.setTransform(U, 0, 0, U, 0, 0);
-  }
-  ctx.save();
-  ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
-  lit.forEach(n=>{
-    const f = 1 - (sec - n.sec)/memory, age = sec - n.sec, x = px(n.beat), y = py(n.midi), col = n.col || TRACK_COLORS[n.layer % TRACK_COLORS.length];
-    ctx.globalAlpha = 0.25 + 0.75*f;
-    ctx.fillStyle = ctx.strokeStyle = col;
-    const len = (Math.min(beat, n.beatEnd) - n.beat)/win*box.w;
-    if(len > 2){ ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y); ctx.stroke(); }
-    ctx.beginPath(); ctx.arc(x, y, 7 + 13*n.vel/127, 0, TAU); ctx.fill();
-    if(age < 0.35){
-      ctx.globalAlpha = 1 - age/0.35; ctx.lineWidth = 3; ctx.strokeStyle = '#fff';
-      ctx.beginPath(); ctx.arc(x, y, 20 + age*220, 0, TAU); ctx.stroke();
-    }
-  });
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = '#00ff00'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(px(beat), box.y); ctx.lineTo(px(beat), box.y + box.h); ctx.stroke();
-  ctx.restore();
-  clipWatermark(ctx, box);
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-}
-function clipExportSupported(){
-  return typeof MediaRecorder !== 'undefined' && typeof HTMLCanvasElement.prototype.captureStream === 'function' && audioSupported();
-}
-function buildClipControls(n, body){
-  const row = document.createElement('div'); row.className = 'btnRow';
-  const live = clipState && clipState.id === n.id;
-  const play = document.createElement('button');
-  play.type = 'button'; play.className = 'miniBtn primary clipPlay' + (live && !clipState.rec ? ' on' : ''); play.textContent = t(live && !clipState.rec ? 'btnStop' : 'btnPlay');
-  play.addEventListener('click', ()=>{ if(clipState && clipState.id === n.id) stopClip(); else startClip(n, false); });
-  const rec = document.createElement('button');
-  rec.type = 'button'; rec.className = 'miniBtn clipRec' + (live && clipState.rec ? ' on' : ''); rec.textContent = t('btnClipExport');
-  if(!clipExportSupported()) rec.title = t('clipNoRec');
-  rec.addEventListener('click', ()=>{ if(clipState && clipState.id === n.id && clipState.rec) stopClip(); else startClip(n, true); });
-  row.append(play, rec); body.appendChild(row);
-  syncClipButtons(n, play, rec);
-}
-// nothing to play = visibly nothing to click; a running clip can always be stopped
-function syncClipButtons(n, play, rec){
-  play = play || n.el.querySelector('.clipPlay'); rec = rec || n.el.querySelector('.clipRec');
-  if(!play || !rec) return;
-  const live = clipState && clipState.id === n.id, has = !!(n.out && n.out._clip);
-  play.disabled = !audioSupported() || !!(live && clipState.rec) || (!has && !live);
-  rec.disabled = !clipExportSupported() || (!has && !live);
-}
-// synchronous from the click to the first voice, like togglePlay() (iOS)
-function startClip(n, record){
-  const C = evalNode(n)._clip;
-  if(!C || !audioSupported()) return;
-  stopPlayback();
-  ensureAudio();
-  if(ac.state !== 'running') ac.resume().catch(()=>{});
-  const st = {id:n.id, C, t0:performance.now() + 150, done:-Infinity, frames:0, rec:null, chunks:[], canvas:null, ctx:null, stream:null};
-  if(record){
-    if(!clipExportSupported()) return;
-    if(!clipTap){ clipTap = ac.createMediaStreamDestination(); bus.out.connect(clipTap); }
-    st.canvas = document.createElement('canvas');
-    st.canvas.width = VIDEO_W; st.canvas.height = VIDEO_H;
-    st.ctx = st.canvas.getContext('2d');
-    paintClip(st.ctx, C, 0);     // never open the stream on a blank canvas
-    st.stream = new MediaStream([...st.canvas.captureStream(VIDEO_FPS).getVideoTracks(), ...clipTap.stream.getAudioTracks()]);
-    const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(m=> MediaRecorder.isTypeSupported(m));
-    const opts = {videoBitsPerSecond:8000000, audioBitsPerSecond:128000};
-    if(mime) opts.mimeType = mime;
-    try{ st.rec = new MediaRecorder(st.stream, opts); }
-    catch(e){
-      try{ st.rec = new MediaRecorder(st.stream); }     // let the browser pick what it supports
-      catch(e2){ st.stream.getVideoTracks().forEach(tr=> tr.stop()); alert(t('clipNoRec')); return; }
-    }
-    st.rec.ondataavailable = e=>{ if(e.data && e.data.size) st.chunks.push(e.data); };
-    // a recorder takes its time to get going: the music waits for it, or the
-    // video would open partway into the piece
-    st.t0 = Infinity;
-    st.rec.onstart = ()=>{ st.t0 = performance.now() + 100; };
-    st.rec.onstop = ()=>{
-      st.stream.getVideoTracks().forEach(tr=> tr.stop());   // the audio track belongs to clipTap, reused next time
-      const type = st.rec.mimeType || 'video/webm';
-      const blob = new Blob(st.chunks, {type:type.split(';')[0]});
-      if(blob.size) downloadBlob(blob, 'dessons-midi-9x16.' + (/mp4/i.test(type) ? 'mp4' : 'webm'));
-    };
-    st.rec.start();
-  }
-  clipState = st;
-  clipTimer = setInterval(clipSchedule, SCHED_INTERVAL_MS);
-  clipSchedule();
-  clipRaf = requestAnimationFrame(clipFrame);
-  buildNodeEl(n); drawWires();
-}
-// by time window, not by index: notes coming from a Scan change while it plays
-function clipSchedule(){
-  const st = clipState;
-  if(!st || st.t0 === Infinity) return;
-  const now = performance.now(), horizon = now + LOOKAHEAD_MS, notes = st.C.notes, epoch = ac.currentTime - now/1000;
-  let i = 0, hi = notes.length;
-  while(i < hi){ const m = (i + hi)>>1; if(st.t0 + notes[m].sec*1000 < st.done) i = m + 1; else hi = m; }
-  for(; i < notes.length; i++){
-    const nt = notes[i], at = st.t0 + nt.sec*1000;
-    if(at >= horizon) break;
-    if(nt.drums || voices.size >= MAX_VOICES) continue;
-    const v = nt.prog === PIZZ_PROGRAM
-      ? playPluckVoice(ac, bus.master, nt.midi, nt.vel, epoch + at/1000, nt.dur)
-      : playSynthVoice(ac, bus.master, nt.prog, nt.midi, nt.vel, epoch + at/1000, nt.dur, false);
-    voices.add(v);
-    v.osc.onended = ()=> voices.delete(v);
-  }
-  st.done = horizon;
-}
-function clipFrame(){
-  const st = clipState;
-  if(!st) return;
-  const n = nodes.get(st.id);
-  nodes.forEach(m=>{ if(m.type === 'srcMidi' || (m.type === 'srcMesh' && m.params.turns)) markDirty(m.id); });
-  const C = evalNode(n)._clip;
-  if(C) st.C = C;
-  const sec = clipTime();
-  if(st.ctx) paintClip(st.ctx, st.C, sec);
-  if(!st.rec || st.frames++ % 4 === 0) drawThumb(n);    // while recording, the frame comes first
-  if(st.rec){
-    const b = n.el.querySelector('.clipRec');
-    if(b) b.textContent = t('clipRec').replace('{x}', Math.floor(sec) + 's / ' + Math.ceil(st.C.duration) + 's');
-  }
-  if(sec >= st.C.duration){ stopClip(); return; }
-  clipRaf = requestAnimationFrame(clipFrame);
-}
-function stopClip(){
-  const st = clipState;
-  if(!st) return;
-  clipState = null;
-  clearInterval(clipTimer); cancelAnimationFrame(clipRaf);
-  if(st.rec && st.rec.state !== 'inactive') st.rec.stop();
-  else if(st.stream) st.stream.getVideoTracks().forEach(tr=> tr.stop());
-  if(ac) voices.forEach(v=> fadeOutVoice(ac, v));
-  voices.clear();
-  const n = nodes.get(st.id);
-  if(n){ buildNodeEl(n); drawWires(); }
-  nodes.forEach(m=>{ if(m.type === 'srcMidi' || m.type === 'srcMesh') markDirty(m.id); });
 }
 
 /* ---- drag & drop a file: onto a source node, else the selected / first node of
@@ -2534,7 +2304,7 @@ function buildLoopMidi(L){
   L.tracks.forEach((tr, i)=>{
     const chan = i % 16, events = [{tick:0, bytes:[0xC0|chan, tr.program & 0x7F]}];
     tr.notes.forEach(nt=>{
-      const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + 1);
+      const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + (nt.len || 1));
       const on = Math.round(totalTicks*f0);
       const off = Math.round(totalTicks*f0 + Math.max(10, totalTicks*(f1 - f0)*L.gate));
       events.push({tick:on, bytes:[0x90|chan, nt.midi & 0x7F, nt.vel & 0x7F]});
@@ -2658,7 +2428,6 @@ function togglePlay(n){
   startTransport(n, 'synth');
 }
 function stopPlayback(){
-  if(clipState) stopClip();
   if(schedTimer) clearInterval(schedTimer);
   if(rafId) cancelAnimationFrame(rafId);
   schedTimer = rafId = null;
@@ -2724,7 +2493,7 @@ function scheduler(){
       // every pass of this note whose start falls in [schedPos, endPos)
       for(let k = Math.ceil(schedPos - f0); k + f0 < endPos; k++){
         const at = schedAt + (k + f0 - schedPos)*loopMs;
-        const span = (stepFrac(tr, nt.step + 1) - f0)*loopMs;
+        const span = (stepFrac(tr, nt.step + (nt.len || 1)) - f0)*loopMs;
         const dur = Math.max(15, Math.min(span - 3, span*L.gate));
         if(target){
           midiNoteOn(target, nt.midi & 0x7F, nt.vel & 0x7F, at, dur);
@@ -2960,7 +2729,7 @@ function playheadFrame(){
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopPlayback(); });
 // reload / close / navigate away while playing: send the note-offs now
-window.addEventListener('pagehide', ()=>{ if(playing || clipState) stopPlayback(); });
+window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); });
 
 /* ============================================================
    Canvas interaction: pan / zoom, node drag, wiring
