@@ -657,8 +657,10 @@ function lfoValue(p, f){
   if(p.shape === 'random') return hash01(Math.floor(f*p.rate + p.phase/360) % p.rate, 7, p.seed);
   return 0.5 - 0.5*Math.cos(x*Math.PI*2);
 }
-function generateImage(p){
-  const S = MAXDIM, d = new Uint8ClampedArray(S*S*4), D = p.detail;
+// t: position in the cycle, whole numbers land on the same picture for every kind
+function generateImage(p, t){
+  const S = MAXDIM, d = new Uint8ClampedArray(S*S*4), D = p.detail, TWO_PI = Math.PI*2;
+  const fr = ((t % 1) + 1) % 1, nx = 1.5*Math.cos(t*TWO_PI), ny = 1.5*Math.sin(t*TWO_PI);
   // smooth value noise, one lattice per colour channel
   const lat = (x, y, c)=>{
     const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, sx = fx*fx*(3 - 2*fx), sy = fy*fy*(3 - 2*fy);
@@ -668,10 +670,18 @@ function generateImage(p){
   for(let y=0;y<S;y++) for(let x=0;x<S;x++){
     const i = (y*S + x)*4, u = x/S, v = y/S;
     let r, g, b;
-    if(p.kind === 'gradient'){ r = u; g = v; b = 1 - u; }
-    else if(p.kind === 'grid'){ const on = (u*D % 1) < 0.5 !== (v*D % 1) < 0.5 ? 1 : 0; r = g = b = on; }
-    else if(p.kind === 'rings'){ r = g = b = 0.5 + 0.5*Math.sin(Math.hypot(u - 0.5, v - 0.5)*D*Math.PI*2 + p.seed); }
-    else { r = lat(u*D, v*D, 0); g = lat(u*D, v*D, 1); b = lat(u*D, v*D, 2); }
+    if(p.kind === 'gradient'){
+      // a there-and-back ramp: it can slide without a seam
+      const tri = x=> 1 - Math.abs(2*(((x % 1) + 1) % 1) - 1);
+      r = tri(u/2 + fr); g = tri(v/2 + fr); b = 1 - r;
+    }
+    else if(p.kind === 'grid'){ const on = ((u*D + fr) % 1) < 0.5 !== ((v*D + fr) % 1) < 0.5 ? 1 : 0; r = g = b = on; }
+    else if(p.kind === 'rings'){ r = g = b = 0.5 + 0.5*Math.sin(Math.hypot(u - 0.5, v - 0.5)*D*TWO_PI + p.seed - fr*TWO_PI); }
+    else {
+      // the noise is read along a small circle, which comes back to where it started
+      const x0 = u*D + nx, y0 = v*D + ny;
+      r = lat(x0, y0, 0); g = lat(x0, y0, 1); b = lat(x0, y0, 2);
+    }
     d[i] = r*255; d[i+1] = g*255; d[i+2] = b*255; d[i+3] = 255;
   }
   return {w:S, h:S, data:d};
@@ -796,9 +806,15 @@ const NODE_DEFS = {
     params:[
       {id:'kind', label:'p_kind', kind:'select', def:'noise', options:()=> ['noise', 'gradient', 'grid', 'rings'].map(k=>[k, t('g_' + k)])},
       {id:'detail', label:'p_detail', kind:'range', min:2, max:32, step:1, def:8},
-      {id:'seed', label:'p_rnd', kind:'range', min:1, max:99, step:1, def:1}
+      {id:'seed', label:'p_rnd', kind:'range', min:1, max:99, step:1, def:1},
+      {id:'phase', label:'p_phase', kind:'range', min:0, max:360, step:1, def:0, fmt:v=>v+'°', sig:true, wrap:true},
+      {id:'turns', label:'p_rate', kind:'range', min:-4, max:4, step:1, def:0}
     ],
-    compute:p=> ({image:generateImage(p)})
+    // the pattern's own cycle: whole turns per loop, like the Mesh, so a loop ends where it began
+    compute:(p, inp, n)=>{
+      n.lastPhase = meshPhase();
+      return {image:generateImage(p, p.phase/360 + p.turns*n.lastPhase)};
+    }
   },
   blend: {
     cat:'catImage', inputs:[{id:'a', type:'image', label:'in_a'}, {id:'b', type:'image', label:'in_b'}], outputs:[{id:'image', type:'image'}], thumb:'image',
@@ -2324,7 +2340,7 @@ setInterval(()=>{
   if(document.hidden) return;
   nodes.forEach(n=>{
     if((n.type === 'srcVideo' || n.type === 'srcWebcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
-    else if(n.type === 'srcMesh' && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
+    else if((n.type === 'srcMesh' || n.type === 'srcGen') && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
     else if(n.type === 'srcMic') readMic(n);
     else if(NODE_DEFS[n.type].sigSource && (playing || n.sigLive) && drivesSignal(n)){
       n.sigLive = playing;        // one last pass when the Loop stops, back to position 0
@@ -2575,7 +2591,7 @@ function meshPhase(){
 const drivesSignal = n=> links.some(l=> l.from === n.id && outputDef(n, l.fromPort).type === 'signal');
 function bakeSpin(loopNode){
   const base = evalNode(loopNode)._loop;
-  const spin = [...nodes.values()].filter(m=> (m.type === 'srcMesh' && m.params.turns) || (NODE_DEFS[m.type].sigSource && drivesSignal(m)));
+  const spin = [...nodes.values()].filter(m=> ((m.type === 'srcMesh' || m.type === 'srcGen') && m.params.turns) || (NODE_DEFS[m.type].sigSource && drivesSignal(m)));
   if(!base || !spin.length) return base;
   const seen = new Map();
   const tracksAt = phase=>{
