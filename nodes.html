@@ -339,7 +339,17 @@ const I18N = {
     cycleErr:'Ce branchement créerait une boucle.',
     catSource:'Sources', catImage:'Retouche', catAnalysis:'Détection', catMusic:'Musique', catOut:'Sortie',
     t_image:'image', t_field:'contours', t_scale:'gamme', t_notes:'notes', t_track:'piste',
-    n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_srcMidi:'Fichier MIDI', n_sigRange:'Plage',
+    n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_srcMidi:'Fichier MIDI', n_sigRange:'Plage', n_lfo:'LFO', n_srcMic:'Micro', n_ccOut:'Signal → CC MIDI',
+    n_srcGen:'Générateur', n_blend:'Mélanger', n_flip:'Miroir / Rotation',
+    n_snapScale:'Caler sur la gamme', n_degree:'Transposer en degrés', n_merge:'Fusionner', n_chance:'Probabilité', n_echo:'Écho', n_euclid:'Euclidien',
+    p_shape2:'Forme', p_rate:'Cycles / boucle', p_phase:'Phase', p_rnd:'Graine', p_gain:'Gain', p_cc:'CC', p_kind:'Type', p_detail:'Détail',
+    p_mode:'Mode', p_amount:'Dosage', p_mirror:'Miroir', p_rot:'Rotation', p_degrees:'Degrés', p_keep:'Garder', p_delay:'Retard', p_repeats:'Répétitions', p_decay:'Déclin',
+    p_pulses:'Coups', p_length:'Longueur', p_rotate:'Décalage',
+    w_sine:'Sinus', w_tri:'Triangle', w_saw:'Dent de scie', w_square:'Carré', w_random:'Aléatoire',
+    g_noise:'Bruit', g_gradient:'Dégradé', g_grid:'Grille', g_rings:'Anneaux',
+    b_mix:'Fondu', b_add:'Addition', b_mult:'Produit', b_diff:'Différence', b_screen:'Écran',
+    m_none:'Aucun', m_h:'Horizontal', m_v:'Vertical', m_both:'Les deux',
+    ccHint:'Envoie pendant la lecture de la Boucle.', ccState:'{x}', micHint:'Le son reste sur ta machine.', micErr:'Micro indisponible ou refusé.',
     t_signal:'signal', s_env:'niveau', s_pitch:'hauteur', s_pos:'position', in_signal:'signal',
     p_part:'Piste', midiAll:'Toutes', p_lo:'Bas', p_hi:'Haut',
     srcPickMidi:'Charger un .mid', midiFileErr:'Fichier MIDI illisible.', midiSum:'{n} notes · {b} mesures · {t} bpm', btnFitLoop:'Caler la Boucle', midiEmpty:'Charge un .mid ou dépose-le ici.',
@@ -405,7 +415,17 @@ const I18N = {
     cycleErr:'This connection would create a loop.',
     catSource:'Sources', catImage:'Adjust', catAnalysis:'Detection', catMusic:'Music', catOut:'Output',
     t_image:'image', t_field:'edges', t_scale:'scale', t_notes:'notes', t_track:'track',
-    n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_srcMidi:'MIDI file', n_sigRange:'Range',
+    n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_srcMidi:'MIDI file', n_sigRange:'Range', n_lfo:'LFO', n_srcMic:'Microphone', n_ccOut:'Signal → MIDI CC',
+    n_srcGen:'Generator', n_blend:'Blend', n_flip:'Mirror / Rotate',
+    n_snapScale:'Snap to scale', n_degree:'Transpose by degrees', n_merge:'Merge', n_chance:'Chance', n_echo:'Echo', n_euclid:'Euclidean',
+    p_shape2:'Shape', p_rate:'Cycles / loop', p_phase:'Phase', p_rnd:'Seed', p_gain:'Gain', p_cc:'CC', p_kind:'Type', p_detail:'Detail',
+    p_mode:'Mode', p_amount:'Amount', p_mirror:'Mirror', p_rot:'Rotation', p_degrees:'Degrees', p_keep:'Keep', p_delay:'Delay', p_repeats:'Repeats', p_decay:'Decay',
+    p_pulses:'Hits', p_length:'Length', p_rotate:'Offset',
+    w_sine:'Sine', w_tri:'Triangle', w_saw:'Saw', w_square:'Square', w_random:'Random',
+    g_noise:'Noise', g_gradient:'Gradient', g_grid:'Grid', g_rings:'Rings',
+    b_mix:'Mix', b_add:'Add', b_mult:'Multiply', b_diff:'Difference', b_screen:'Screen',
+    m_none:'None', m_h:'Horizontal', m_v:'Vertical', m_both:'Both',
+    ccHint:'Sends while the Loop plays.', ccState:'{x}', micHint:'The sound stays on your machine.', micErr:'Microphone unavailable or denied.',
     t_signal:'signal', s_env:'level', s_pitch:'pitch', s_pos:'position', in_signal:'signal',
     p_part:'Track', midiAll:'All', p_lo:'Low', p_hi:'High',
     srcPickMidi:'Load a .mid', midiFileErr:'Unreadable MIDI file.', midiSum:'{n} notes · {b} bars · {t} bpm', btnFitLoop:'Match the Loop', midiEmpty:'Load a .mid or drop it here.',
@@ -523,6 +543,70 @@ const CUSTOM_X = [0, 0.25, 0.5, 0.75, 1];
    compute(p, inp, node) -> {outputId: value}  (null = nothing to pass on)
    thumb: what the node previews — 'image' | 'field' | 'scan' | 'roll' | 'loop'
    ============================================================ */
+const hash01 = (a, b, c)=>{
+  let h = (Math.imul(a, 374761393) + Math.imul(b, 668265263) + Math.imul(c, 2246822519))|0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0)/4294967296;
+};
+function lfoValue(p, f){
+  const x = (f*p.rate + p.phase/360) % 1;
+  if(p.shape === 'tri') return 1 - Math.abs(2*x - 1);
+  if(p.shape === 'saw') return x;
+  if(p.shape === 'square') return x < 0.5 ? 1 : 0;
+  if(p.shape === 'random') return hash01(Math.floor(f*p.rate + p.phase/360) % p.rate, 7, p.seed);
+  return 0.5 - 0.5*Math.cos(x*Math.PI*2);
+}
+function generateImage(p){
+  const S = MAXDIM, d = new Uint8ClampedArray(S*S*4), D = p.detail;
+  // smooth value noise, one lattice per colour channel
+  const lat = (x, y, c)=>{
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, sx = fx*fx*(3 - 2*fx), sy = fy*fy*(3 - 2*fy);
+    const g = (a, b)=> hash01(a + c*131, b, p.seed);
+    return (g(ix, iy)*(1 - sx) + g(ix + 1, iy)*sx)*(1 - sy) + (g(ix, iy + 1)*(1 - sx) + g(ix + 1, iy + 1)*sx)*sy;
+  };
+  for(let y=0;y<S;y++) for(let x=0;x<S;x++){
+    const i = (y*S + x)*4, u = x/S, v = y/S;
+    let r, g, b;
+    if(p.kind === 'gradient'){ r = u; g = v; b = 1 - u; }
+    else if(p.kind === 'grid'){ const on = (u*D % 1) < 0.5 !== (v*D % 1) < 0.5 ? 1 : 0; r = g = b = on; }
+    else if(p.kind === 'rings'){ r = g = b = 0.5 + 0.5*Math.sin(Math.hypot(u - 0.5, v - 0.5)*D*Math.PI*2 + p.seed); }
+    else { r = lat(u*D, v*D, 0); g = lat(u*D, v*D, 1); b = lat(u*D, v*D, 2); }
+    d[i] = r*255; d[i+1] = g*255; d[i+2] = b*255; d[i+3] = 255;
+  }
+  return {w:S, h:S, data:d};
+}
+const withNotes = (src, list)=> Object.assign({}, src, {notes:list});
+// one note per (step, pitch): the loudest
+function uniqueNotes(list){
+  const best = new Map();
+  list.forEach(n=>{ const k = n.step*128 + n.midi, o = best.get(k); if(!o || n.vel > o.vel) best.set(k, n); });
+  return [...best.values()].sort((a, b)=> a.step - b.step || a.midi - b.midi);
+}
+// every MIDI note of the scale, any octave
+function scaleLadder(scale){
+  const src = scale ? scale.pitches : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh);
+  const cls = new Set(src.map(m=> m % 12)), lad = [];
+  for(let m=0;m<128;m++) if(cls.has(m % 12)) lad.push(m);
+  return lad;
+}
+function nearestIn(lad, m){
+  let best = 0;
+  lad.forEach((v, i)=>{ if(Math.abs(v - m) < Math.abs(lad[best] - m)) best = i; });
+  return best;
+}
+// different grids meet on the smallest one that holds them all (capped)
+function mergeNotes(parts){
+  if(!parts.length) return null;
+  const a = parts[0], same = parts.every(q=> q.steps === a.steps && q.curve === a.curve && !q.customPts);
+  if(same) return Object.assign({}, a, {notes:uniqueNotes(parts.flatMap(q=> q.notes)), fixed:parts.every(q=> q.fixed)});
+  const gcd = (x, y)=> y ? gcd(y, x % y) : x;
+  const S = Math.min(3072, parts.reduce((m, q)=> m*q.steps/gcd(m, q.steps), 1));
+  const notes = parts.flatMap(q=> q.notes.map(n=>{
+    const f0 = stepFrac(q, n.step), f1 = stepFrac(q, n.step + (n.len || 1));
+    return Object.assign({}, n, {step:Math.min(S - 1, Math.round(f0*S)), len:Math.max(1, Math.round((f1 - f0)*S))});
+  }));
+  return {steps:S, curve:'linear', notes:uniqueNotes(notes), fixed:parts.every(q=> q.fixed)};
+}
 const RGBA_PORTS = ['r', 'g', 'b', 'a'].map(id=> ({id, type:'image', label:'ch_' + id}));
 function sourceDef(){
   return {
@@ -560,7 +644,7 @@ const NODE_DEFS = {
   // a .mid in the graph: its notes on the usual wire, and three signals (0..1) that follow
   // the Loop. Tiny files, so unlike a mesh it's saved with the graph.
   srcMidi: {
-    cat:'catSource', custom:'midiFile', thumb:'midiRoll',
+    cat:'catSource', custom:'midiFile', thumb:'midiRoll', sigSource:true,
     outputs:[{id:'notes', type:'notes'}, {id:'env', type:'signal', label:'s_env'}, {id:'pitch', type:'signal', label:'s_pitch'}, {id:'pos', type:'signal', label:'s_pos'}],
     params:[
       {id:'file', kind:'hidden', def:null}, {id:'fileName', kind:'hidden', def:''},
@@ -582,6 +666,156 @@ const NODE_DEFS = {
   // two ends of one chain can share a clip: see wireSource() and reachesPort().
   reroute: {cat:'catTools', lanes:'one', params:[{id:'lanes', kind:'hidden', def:[null]}], compute:()=> ({})},
   cableClip: {cat:'catTools', lanes:'grow', params:[{id:'lanes', kind:'hidden', def:[null]}], compute:()=> ({})},
+  // whole cycles per loop, so it always comes back where it started
+  lfo: {
+    cat:'catTools', thumb:'signal', sigSource:true, outputs:[{id:'sig', type:'signal', label:'t_signal'}],
+    params:[
+      {id:'shape', label:'p_shape2', kind:'select', def:'sine', options:()=> ['sine', 'tri', 'saw', 'square', 'random'].map(k=>[k, t('w_' + k)])},
+      {id:'rate', label:'p_rate', kind:'range', min:1, max:32, step:1, def:1},
+      {id:'phase', label:'p_phase', kind:'range', min:0, max:360, step:1, def:0, fmt:v=>v+'°'},
+      {id:'seed', label:'p_rnd', kind:'range', min:1, max:99, step:1, def:1}
+    ],
+    compute:p=> ({sig:{at:f=> lfoValue(p, f)}})
+  },
+  // the room's level, live: not tied to the Loop, and not in a .mid export
+  srcMic: {
+    cat:'catSource', custom:'mic', thumb:'meter', outputs:[{id:'sig', type:'signal', label:'s_env'}],
+    params:[{id:'gain', label:'p_gain', kind:'range', min:50, max:800, step:10, def:200, fmt:v=>v+'%'}],
+    note:'micHint',
+    compute:(p, inp, n)=> ({sig: n.micStream ? {at:()=> clamp((n.level || 0)*p.gain/100, 0, 1)} : null})
+  },
+  srcGen: {
+    cat:'catSource', thumb:'image', outputs:[{id:'image', type:'image'}],
+    params:[
+      {id:'kind', label:'p_kind', kind:'select', def:'noise', options:()=> ['noise', 'gradient', 'grid', 'rings'].map(k=>[k, t('g_' + k)])},
+      {id:'detail', label:'p_detail', kind:'range', min:2, max:32, step:1, def:8},
+      {id:'seed', label:'p_rnd', kind:'range', min:1, max:99, step:1, def:1}
+    ],
+    compute:p=> ({image:generateImage(p)})
+  },
+  blend: {
+    cat:'catImage', inputs:[{id:'a', type:'image', label:'in_a'}, {id:'b', type:'image', label:'in_b'}], outputs:[{id:'image', type:'image'}], thumb:'image',
+    params:[
+      {id:'mode', label:'p_mode', kind:'select', def:'mix', options:()=> ['mix', 'add', 'mult', 'diff', 'screen'].map(k=>[k, t('b_' + k)])},
+      {id:'amount', label:'p_amount', kind:'range', min:0, max:100, step:1, def:50, fmt:v=>v+'%', sig:true}
+    ],
+    // size = input A; B is resampled to it
+    compute:(p, {a, b})=>{
+      if(!a || !b) return {image:a || b || null};
+      const {w, h} = a, d = new Uint8ClampedArray(w*h*4), k = p.amount/100;
+      const f = {mix:(x, y)=> y, add:(x, y)=> x + y, mult:(x, y)=> x*y/255, diff:(x, y)=> Math.abs(x - y), screen:(x, y)=> 255 - (255 - x)*(255 - y)/255}[p.mode];
+      for(let y=0;y<h;y++){
+        const sy = Math.min(b.h - 1, Math.floor(y*b.h/h));
+        for(let x=0;x<w;x++){
+          const i = (y*w + x)*4, j = (sy*b.w + Math.min(b.w - 1, Math.floor(x*b.w/w)))*4;
+          for(let c=0;c<3;c++){ const v = a.data[i+c]; d[i+c] = v + (f(v, b.data[j+c]) - v)*k; }
+          d[i+3] = a.data[i+3];
+        }
+      }
+      return {image:{w, h, data:d}};
+    }
+  },
+  flip: {
+    cat:'catImage', inputs:[{id:'image', type:'image'}], outputs:[{id:'image', type:'image'}], thumb:'image',
+    params:[
+      {id:'mirror', label:'p_mirror', kind:'select', def:'h', options:()=> ['none', 'h', 'v', 'both'].map(k=>[k, t('m_' + k)])},
+      {id:'rot', label:'p_rot', kind:'select', def:'0', options:()=> ['0', '90', '180', '270'].map(k=>[k, k + '°'])}
+    ],
+    compute:(p, {image})=>{
+      if(!image) return {image:null};
+      const {w, h, data} = image, q = parseInt(p.rot)/90, W = q % 2 ? h : w, H = q % 2 ? w : h;
+      const fx = p.mirror === 'h' || p.mirror === 'both', fy = p.mirror === 'v' || p.mirror === 'both';
+      const d = new Uint8ClampedArray(W*H*4), src = new Uint32Array(data.buffer, data.byteOffset, w*h), dst = new Uint32Array(d.buffer);
+      for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+        // back from the output pixel: undo the rotation, then the mirror
+        let sx = q === 0 ? x : q === 1 ? y : q === 2 ? W - 1 - x : H - 1 - y;
+        let sy = q === 0 ? y : q === 1 ? W - 1 - x : q === 2 ? H - 1 - y : x;
+        if(fx) sx = w - 1 - sx;
+        if(fy) sy = h - 1 - sy;
+        dst[y*W + x] = src[sy*w + sx];
+      }
+      return {image:{w:W, h:H, data:d}};
+    }
+  },
+  // moves each note to the nearest one in the scale: the one way back into the
+  // scale for notes that came from a .mid
+  snapScale: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}, {id:'scale', type:'scale', opt:true}], outputs:[{id:'notes', type:'notes'}], thumb:'roll', params:[],
+    compute:(p, {notes, scale})=>{
+      if(!notes) return {notes:null};
+      const lad = scaleLadder(scale);
+      return {notes:withNotes(notes, uniqueNotes(notes.notes.map(n=> Object.assign({}, n, {midi:lad[nearestIn(lad, n.midi)]}))))};
+    }
+  },
+  degree: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}, {id:'scale', type:'scale', opt:true}], outputs:[{id:'notes', type:'notes'}], thumb:'roll',
+    params:[{id:'shift', label:'p_degrees', kind:'range', min:-14, max:14, step:1, def:2, fmt:v=>(v>0?'+':'')+v}],
+    compute:(p, {notes, scale})=>{
+      if(!notes) return {notes:null};
+      const lad = scaleLadder(scale), out = [];
+      notes.notes.forEach(n=>{
+        const m = lad[nearestIn(lad, n.midi) + p.shift];
+        if(m != null) out.push(Object.assign({}, n, {midi:m}));
+      });
+      return {notes:withNotes(notes, uniqueNotes(out))};
+    }
+  },
+  merge: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes', multi:true}], outputs:[{id:'notes', type:'notes'}], thumb:'roll', params:[],
+    compute:(p, {notes})=> ({notes:mergeNotes(notes || [])})
+  },
+  chance: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'notes', type:'notes'}], thumb:'roll',
+    params:[
+      {id:'keep', label:'p_keep', kind:'range', min:0, max:100, step:1, def:60, fmt:v=>v+'%', sig:true},
+      {id:'seed', label:'p_rnd', kind:'range', min:1, max:99, step:1, def:1}
+    ],
+    // decided by the note and the seed, not a dice roll: the loop stays the same each pass
+    compute:(p, {notes})=> notes ? {notes:withNotes(notes, notes.notes.filter(n=> hash01(n.step, n.midi, p.seed) < p.keep/100))} : {notes:null}
+  },
+  echo: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'notes', type:'notes'}], thumb:'roll',
+    params:[
+      {id:'delay', label:'p_delay', kind:'range', min:1, max:32, step:1, def:3, fmt:v=>v+'/32'},
+      {id:'repeats', label:'p_repeats', kind:'range', min:1, max:6, step:1, def:2},
+      {id:'decay', label:'p_decay', kind:'range', min:10, max:95, step:1, def:55, fmt:v=>v+'%'}
+    ],
+    // in fractions of the loop, wrapping round: same echo whatever the Scan's step count
+    compute:(p, {notes})=>{
+      if(!notes) return {notes:null};
+      const out = notes.notes.slice(), S = notes.steps, off = Math.max(1, Math.round(p.delay/32*S));
+      notes.notes.forEach(n=>{
+        for(let r=1;r<=p.repeats;r++){
+          const vel = Math.round(n.vel*Math.pow(p.decay/100, r));
+          if(vel >= 8) out.push(Object.assign({}, n, {step:(n.step + r*off) % S, vel}));
+        }
+      });
+      return {notes:withNotes(notes, uniqueNotes(out))};
+    }
+  },
+  euclid: {
+    cat:'catMusic', inputs:[{id:'notes', type:'notes'}], outputs:[{id:'notes', type:'notes'}], thumb:'roll',
+    params:[
+      {id:'pulses', label:'p_pulses', kind:'range', min:1, max:32, step:1, def:5},
+      {id:'length', label:'p_length', kind:'range', min:2, max:32, step:1, def:16},
+      {id:'rotate', label:'p_rotate', kind:'range', min:0, max:31, step:1, def:0}
+    ],
+    // hits spread as evenly as possible over the loop; only notes under a hit go through
+    compute:(p, {notes})=>{
+      if(!notes) return {notes:null};
+      const L = p.length, k = Math.min(p.pulses, L), hit = i=> ((((i + p.rotate) % L)*k) % L) < k;
+      return {notes:withNotes(notes, notes.notes.filter(n=> hit(Math.floor(n.step/notes.steps*L))))};
+    }
+  },
+  ccOut: {
+    cat:'catOut', custom:'cc', inputs:[{id:'sig', type:'signal', label:'t_signal'}], outputs:[],
+    params:[
+      {id:'cc', label:'p_cc', kind:'range', min:0, max:127, step:1, def:1},
+      {id:'channel', label:'p_channel', kind:'range', min:1, max:16, step:1, def:1}
+    ],
+    note:'ccHint',
+    compute:()=> ({})
+  },
   // squeezes a 0..1 signal into a smaller range: a parameter takes the whole of its slider's span otherwise
   sigRange: {
     cat:'catTools', inputs:[{id:'in', type:'signal', label:'in_signal'}], outputs:[{id:'out', type:'signal', label:'in_signal'}],
@@ -652,8 +886,8 @@ const NODE_DEFS = {
     params:[
       {id:'black', label:'p_black', kind:'range', min:0, max:254, step:1, def:21},
       {id:'white', label:'p_white', kind:'range', min:1, max:255, step:1, def:234},
-      {id:'gamma', label:'p_gamma', kind:'range', min:0.2, max:3, step:0.05, def:1, fmt:v=>(+v).toFixed(2)},
-      {id:'sat',   label:'p_sat',   kind:'range', min:0, max:200, step:1, def:100, fmt:v=>v+'%'}
+      {id:'gamma', label:'p_gamma', kind:'range', min:0.2, max:3, step:0.05, def:1, fmt:v=>(+v).toFixed(2), sig:true},
+      {id:'sat',   label:'p_sat',   kind:'range', min:0, max:200, step:1, def:100, fmt:v=>v+'%', sig:true}
     ],
     compute:(p, {image})=>{
       if(!image) return {image:null};
@@ -815,7 +1049,7 @@ const NODE_DEFS = {
     params:[
       {id:'dir', label:'p_dir', kind:'select', def:'lr', options:()=> DIR_KEYS.map(k=>[k, DIR_LABELS[k]])},
       {id:'steps', label:'p_steps', kind:'range', min:4, max:64, step:1, def:16},
-      {id:'thresh', label:'p_thresh', kind:'range', min:1, max:100, step:1, def:55, fmt:v=>v+'%'},
+      {id:'thresh', label:'p_thresh', kind:'range', min:1, max:100, step:1, def:55, fmt:v=>v+'%', sig:true},
       {id:'curve', label:'p_curve', kind:'select', def:'linear', options:()=> CURVE_KEYS.map(k=>[k, t('curve_'+k)])}
     ],
     // the workshop's grid: every masked pixel lands in a (time step, pitch row)
@@ -978,18 +1212,18 @@ function modParams(def, p, inp){
   def.sigParams.forEach(d=>{
     const s = inp['sig_' + d.id];
     if(!s) return;
-    const v = p[d.id] + s.at(playing ? schedPos % 1 : 0)*(d.max - d.min);
+    const v = p[d.id] + s.at(meshPhase())*(d.max - d.min);
     q[d.id] = d.wrap ? v : (d.step >= 1 ? Math.round(clamp(v, d.min, d.max)) : clamp(v, d.min, d.max));
   });
   return q;
 }
 const ADD_MENU = [
-  ['catSource', ['srcImage', 'srcVideo', 'srcWebcam', 'srcMesh', 'srcMidi']],
-  ['catImage', ['crop', 'tone', 'blur', 'invert', 'rgbaSplit', 'rgbaCombine']],
+  ['catSource', ['srcImage', 'srcVideo', 'srcWebcam', 'srcMesh', 'srcGen', 'srcMidi', 'srcMic']],
+  ['catImage', ['crop', 'tone', 'blur', 'invert', 'flip', 'blend', 'rgbaSplit', 'rgbaCombine']],
   ['catAnalysis', ['edges', 'sens', 'hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
-  ['catMusic', ['scale', 'scan', 'octave', 'limit']],
-  ['catOut', ['track', 'loop', 'midiOut']],
-  ['catTools', ['curve', 'path', 'sigRange', 'reroute', 'cableClip', 'frame']]
+  ['catMusic', ['scale', 'scan', 'octave', 'degree', 'snapScale', 'merge', 'limit', 'chance', 'echo', 'euclid']],
+  ['catOut', ['track', 'loop', 'midiOut', 'ccOut']],
+  ['catTools', ['curve', 'path', 'lfo', 'sigRange', 'reroute', 'cableClip', 'frame']]
 ];
 
 // layer nodes: copy of the field with mask narrowed to pixels passing test
@@ -1042,6 +1276,7 @@ function removeNode(id, plain){
   const n = nodes.get(id);
   if(!n) return;
   if(isSource(n)) stopMedia(n);
+  if(n.type === 'srcMic') stopMic(n);
   if(playingLoopId === id) stopPlayback();
   const downstream = links.filter(l=> l.from === id).map(l=> l.to);
   // deleting a wire tool closes the gap instead of cutting the wire
@@ -1221,6 +1456,8 @@ function buildNodeEl(n){
   body.className = 'nodeBody';
   if(def.custom === 'source') buildSourceControls(n, body);
   if(def.custom === 'midiFile') buildMidiFileControls(n, body);
+  if(def.custom === 'mic') buildMicControls(n, body);
+  if(def.custom === 'cc') buildCcControls(n, body);
   (def.params || []).forEach(d=>{ if(d.kind !== 'hidden') body.appendChild(paramEl(n, d)); });
   if(def.thumb){
     const c = document.createElement('canvas');
@@ -1468,6 +1705,18 @@ function drawThumb(n){
     const im = n.out.image;
     if(!im){ emptyThumb(c); return; }
     blitRGBA(sizeThumb(c, im.w, im.h), c, im.w, im.h, im.data);
+  } else if(kind === 'signal'){
+    const ctx = sizeThumb(c, 3, 1), W = c.width, H = c.height, s = n.out.sig;
+    ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, W, H);
+    if(!s) return;
+    ctx.strokeStyle = typeColor('signal'); ctx.lineWidth = Math.max(1, W/200);
+    ctx.beginPath();
+    for(let x=0;x<=W;x+=2){ const y = H*(0.92 - 0.84*s.at(x/W)); if(x) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+    ctx.stroke();
+  } else if(kind === 'meter'){
+    const ctx = sizeThumb(c, 6, 1), W = c.width, H = c.height, s = n.out.sig;
+    ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, W, H);
+    if(s){ ctx.fillStyle = typeColor('signal'); ctx.fillRect(0, 0, W*s.at(0), H); }
   } else if(kind === 'midiRoll'){
     drawMidiRoll(n);
   } else if(kind === 'rgba'){
@@ -1930,7 +2179,8 @@ setInterval(()=>{
   nodes.forEach(n=>{
     if((n.type === 'srcVideo' || n.type === 'srcWebcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
     else if(n.type === 'srcMesh' && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
-    else if(n.type === 'srcMidi' && (playing || n.sigLive) && links.some(l=> l.from === n.id && l.fromPort !== 'notes')){
+    else if(n.type === 'srcMic') readMic(n);
+    else if(NODE_DEFS[n.type].sigSource && (playing || n.sigLive) && drivesSignal(n)){
       n.sigLive = playing;        // one last pass when the Loop stops, back to position 0
       markDirty(n.id);
     }
@@ -2150,9 +2400,10 @@ function meshPhase(){
 }
 // live, each step hears the mesh at that step's angle. The .mid must say the
 // same: walk the turn, re-evaluate the graph at each step, keep that step's notes.
+const drivesSignal = n=> links.some(l=> l.from === n.id && outputDef(n, l.fromPort).type === 'signal');
 function bakeSpin(loopNode){
   const base = evalNode(loopNode)._loop;
-  const spin = [...nodes.values()].filter(m=> m.type === 'srcMesh' && m.params.turns);
+  const spin = [...nodes.values()].filter(m=> (m.type === 'srcMesh' && m.params.turns) || (NODE_DEFS[m.type].sigSource && drivesSignal(m)));
   if(!base || !spin.length) return base;
   const seen = new Map();
   const tracksAt = phase=>{
@@ -2276,6 +2527,48 @@ function drawMidiRoll(n){
     ctx.fillStyle = TRACK_COLORS[x.layer % TRACK_COLORS.length];
     ctx.fillRect(x.step/o.steps*W, H - (x.midi - o.lo + 1)*H/span, Math.max(1, x.len/o.steps*W), h);
   });
+}
+
+/* ---- Microphone: an analyser on the mic, never connected to the speakers ---- */
+function buildMicControls(n, body){
+  const row = document.createElement('div'); row.className = 'btnRow';
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'miniBtn' + (n.micStream ? '' : ' primary'); b.textContent = t(n.micStream ? 'srcCamOff' : 'srcCamOn');
+  b.addEventListener('click', ()=>{ if(n.micStream){ stopMic(n); buildNodeEl(n); drawWires(); markDirty(n.id); } else startMic(n); });
+  row.appendChild(b); body.appendChild(row);
+}
+async function startMic(n){
+  if(n.micStream || n.micStarting) return;
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || !audioSupported()){ alert(t('micErr')); return; }
+  n.micStarting = true;
+  ensureAudio();
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}, video:false});
+    if(nodes.get(n.id) !== n){ stream.getTracks().forEach(tr=> tr.stop()); return; }
+    if(ac.state !== 'running') ac.resume().catch(()=>{});
+    n.micSrc = ac.createMediaStreamSource(stream);
+    n.micAn = ac.createAnalyser();
+    n.micAn.fftSize = 1024;
+    n.micSrc.connect(n.micAn);
+    n.micBuf = new Float32Array(n.micAn.fftSize);
+    n.micStream = stream; n.level = 0;
+    buildNodeEl(n); drawWires(); markDirty(n.id);
+  }catch(e){ alert(t('micErr')); }
+  finally{ n.micStarting = false; }
+}
+function stopMic(n){
+  if(n.micSrc) n.micSrc.disconnect();
+  if(n.micStream) n.micStream.getTracks().forEach(tr=> tr.stop());
+  n.micStream = n.micSrc = n.micAn = null; n.level = 0;
+}
+function readMic(n){
+  if(!n.micAn) return;
+  n.micAn.getFloatTimeDomainData(n.micBuf);
+  let s = 0;
+  for(let i=0;i<n.micBuf.length;i++) s += n.micBuf[i]*n.micBuf[i];
+  const v = Math.sqrt(s/n.micBuf.length);
+  n.level = Math.max(v, (n.level || 0)*0.85);     // fast up, slower down
+  markDirty(n.id);
 }
 
 /* ---- drag & drop a file: onto a source node, else the selected / first node of
@@ -2541,6 +2834,7 @@ function scheduler(){
   });
   if(sink === 'midi') flushNoteOffs(horizon);
   schedPos = endPos; schedAt = horizon;
+  if(midiAccess) sendControllers();
 }
 
 /* ---- Web MIDI (Logic nodes) ---- */
@@ -2655,6 +2949,14 @@ function setMidiState(key){ midiState = key; renderMidiState(); }
 // each Logic node says what's missing (access, port, track, loop) or where it plays
 function renderMidiState(){
   nodes.forEach(n=>{
+    if(n.type === 'ccOut' && n.el){
+      const st = n.el.querySelector('.midiState'), port = midiState === 'midiReady' && portFor(n, midiOuts);
+      if(st){
+        st.querySelector('.dot').classList.toggle('on', !!(playing && port));
+        st.querySelector('span').textContent = port ? port.name + ' · ' + t('chanWord') + ' ' + n.params.channel + ' · CC ' + n.params.cc : t(midiState).replace('{x}', '');
+      }
+      return;
+    }
     if(n.type !== 'midiOut' || !n.el) return;
     const st = n.el.querySelector('.midiState');
     if(!st) return;
@@ -2698,7 +3000,7 @@ function refreshPorts(){
   if(!midiAccess) return;
   midiOuts = Array.from(midiAccess.outputs.values());
   nodes.forEach(n=>{
-    if(n.type !== 'midiOut' || !n.el) return;
+    if((n.type !== 'midiOut' && n.type !== 'ccOut') || !n.el) return;
     const sel = n.el.querySelector('.portSel');
     sel.innerHTML = '';
     if(!midiOuts.length){ sel.appendChild(new Option(t('midiNoPortOpt'), '')); return; }
@@ -2720,7 +3022,7 @@ async function toggleMidi(n){
   stopPlayback();                                // synth or another Loop -> switch
   startTransport(nodes.get(loopId), 'midi');
 }
-function buildMidiControls(n, body){
+function portSelect(n, body){
   const row = document.createElement('label');
   row.className = 'prm full';
   const lab = document.createElement('span'); lab.textContent = t('p_port');
@@ -2733,6 +3035,30 @@ function buildMidiControls(n, body){
   });
   row.append(lab, sel);
   body.appendChild(row);
+}
+function buildCcControls(n, body){
+  portSelect(n, body);
+  const st = document.createElement('div');
+  st.className = 'midiState';
+  st.innerHTML = '<i class="dot"></i><span></span>';
+  body.appendChild(st);
+  n.onParam = ()=> renderMidiState();
+  requestAnimationFrame(()=>{ renderMidiState(); if(midiAccess) refreshPorts(); else ensureMidi(); });
+}
+// a signal as a controller: only when its value changes, on the Loop's clock
+function sendControllers(){
+  nodes.forEach(n=>{
+    if(n.type !== 'ccOut') return;
+    const l = links.find(x=> x.to === n.id), s = l && wireValue(l), port = portFor(n, midiOuts);
+    if(!s || !port) return;
+    const v = Math.round(clamp(s.at(schedPos % 1), 0, 1)*127);
+    if(v === n.lastCC) return;
+    n.lastCC = v;
+    port.send([0xB0 | ((n.params.channel - 1) & 15), n.params.cc & 0x7F, v]);
+  });
+}
+function buildMidiControls(n, body){
+  portSelect(n, body);
   const play = document.createElement('button');
   play.type = 'button'; play.className = 'miniBtn primary loopPlay';
   play.addEventListener('click', ()=> toggleMidi(n));
@@ -3366,7 +3692,7 @@ function pasteAtPointer(){
 }
 function clearGraph(){
   stopPlayback();
-  nodes.forEach(n=>{ if(isSource(n)) stopMedia(n); n.el.remove(); });
+  nodes.forEach(n=>{ if(isSource(n)) stopMedia(n); if(n.type === 'srcMic') stopMic(n); n.el.remove(); });
   nodes.clear(); links = []; selectedId = null; selection.clear();
   frames.forEach(f=> f.el.remove()); frames = [];
 }
