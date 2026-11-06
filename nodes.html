@@ -221,7 +221,7 @@
   .prm{position:relative; display:grid; grid-template-columns:70px 1fr auto; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
   .prm.full{grid-template-columns:70px 1fr;}
   .prm .v{font-family:var(--mono); font-size:10.5px; color:var(--accent); min-width:30px; text-align:right;}
-  .prm select, .prm input[type=text]{
+  .prm select, .prm input[type=text], .prm input[type=number]{
     width:100%; min-width:0; background:var(--panel-2); color:var(--text); border:1px solid var(--line);
     border-radius:5px; font-size:11px; padding:3px 5px;
   }
@@ -426,7 +426,12 @@ const I18N = {
     cycleErr:'Ce branchement créerait une boucle.',
     catSource:'Sources', catImage:'Retouche', catAnalysis:'Détection', catMusic:'Musique', catOut:'Sortie',
     t_image:'image', t_field:'contours', t_scale:'gamme', t_notes:'notes', t_track:'piste',
-    n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_srcMidi:'Fichier MIDI', n_sigRange:'Plage', n_lfo:'LFO', n_srcMic:'Micro', n_ccOut:'Signal → CC MIDI',
+    n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_srcMidi:'Fichier MIDI', n_sigRange:'Plage', n_time:'Temps / Frame', n_math:'Maths', n_sigScale:'Échelle', catSignal:'Signaux',
+    s_loop:'boucle', s_bar:'mesure', s_beat:'battement', s_sec:'secondes', s_frame:'frame',
+    p_fps:'Images / s', p_op:'Opération', p_inMin:'Entrée min', p_inMax:'Entrée max', p_outMin:'Sortie min', p_outMax:'Sortie max', p_clampOut:'Limiter',
+    op_add:'A + B', op_sub:'A − B', op_mult:'A × B', op_div:'A ÷ B', op_pow:'A puissance B', op_mod:'A modulo B', op_min:'Minimum', op_max:'Maximum',
+    op_abs:'Valeur absolue de A', op_sin:'Sinus de A (A en tours)', op_cos:'Cosinus de A (A en tours)', op_floor:'Arrondi inférieur de A', op_frac:'Partie décimale de A',
+    n_lfo:'LFO', n_srcMic:'Micro', n_ccOut:'Signal → CC MIDI',
     n_srcGen:'Générateur', n_blend:'Mélanger', n_flip:'Miroir / Rotation',
     n_snapScale:'Caler sur la gamme', n_degree:'Transposer en degrés', n_merge:'Fusionner', n_chance:'Probabilité', n_echo:'Écho', n_euclid:'Euclidien',
     p_shape2:'Forme', p_rate:'Cycles / boucle', p_phase:'Phase', p_rnd:'Graine', p_gain:'Gain', p_cc:'CC', p_kind:'Type', p_detail:'Détail',
@@ -504,7 +509,12 @@ const I18N = {
     cycleErr:'This connection would create a loop.',
     catSource:'Sources', catImage:'Adjust', catAnalysis:'Detection', catMusic:'Music', catOut:'Output',
     t_image:'image', t_field:'edges', t_scale:'scale', t_notes:'notes', t_track:'track',
-    n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_srcMidi:'MIDI file', n_sigRange:'Range', n_lfo:'LFO', n_srcMic:'Microphone', n_ccOut:'Signal → MIDI CC',
+    n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_srcMidi:'MIDI file', n_sigRange:'Range', n_time:'Time / Frame', n_math:'Math', n_sigScale:'Scale signal', catSignal:'Signals',
+    s_loop:'loop', s_bar:'bar', s_beat:'beat', s_sec:'seconds', s_frame:'frame',
+    p_fps:'Frames / s', p_op:'Operation', p_inMin:'In min', p_inMax:'In max', p_outMin:'Out min', p_outMax:'Out max', p_clampOut:'Clamp',
+    op_add:'A + B', op_sub:'A − B', op_mult:'A × B', op_div:'A ÷ B', op_pow:'A to the power B', op_mod:'A modulo B', op_min:'Minimum', op_max:'Maximum',
+    op_abs:'Absolute value of A', op_sin:'Sine of A (A in turns)', op_cos:'Cosine of A (A in turns)', op_floor:'A rounded down', op_frac:'Fractional part of A',
+    n_lfo:'LFO', n_srcMic:'Microphone', n_ccOut:'Signal → MIDI CC',
     n_srcGen:'Generator', n_blend:'Blend', n_flip:'Mirror / Rotate',
     n_snapScale:'Snap to scale', n_degree:'Transpose by degrees', n_merge:'Merge', n_chance:'Chance', n_echo:'Echo', n_euclid:'Euclidean',
     p_shape2:'Shape', p_rate:'Cycles / loop', p_phase:'Phase', p_rnd:'Seed', p_gain:'Gain', p_cc:'CC', p_kind:'Type', p_detail:'Detail',
@@ -599,7 +609,7 @@ document.querySelectorAll('#langToggle button').forEach(b=> b.addEventListener('
 const TYPE_VAR = {image:'--t-image', field:'--t-field', scale:'--t-scale', notes:'--t-notes', track:'--t-track', path:'--t-path', curve:'--t-curve', signal:'--t-signal', any:'--text-dim'};
 const typeColor = ty => getComputedStyle(document.documentElement).getPropertyValue(TYPE_VAR[ty]).trim() || '#fff';
 const LAVENDER = '#b4a7ff';   // curve and path: the tools that feed a Scan's optional inputs
-const CAT_COLOR = {catSource:'#0000ff', catImage:'#4dd9c9', catAnalysis:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2', catTools:'#9fbcb9'};
+const CAT_COLOR = {catSource:'#0000ff', catImage:'#4dd9c9', catAnalysis:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2', catTools:'#9fbcb9', catSignal:'#7dffb0'};
 const DIR_KEYS = ['lr','rl','tb','bt','tlbr','brtl','trbl','bltr'];
 const DIR_LABELS = {lr:'→', rl:'←', tb:'↓', bt:'↑', tlbr:'↘', brtl:'↖', trbl:'↙', bltr:'↗'};
 const CURVE_KEYS = ['linear','accel','decel','pulse','swing'];
@@ -635,6 +645,11 @@ const CUSTOM_X = [0, 0.25, 0.5, 0.75, 1];
    compute(p, inp, node) -> {outputId: value}  (null = nothing to pass on)
    thumb: what the node previews — 'image' | 'field' | 'scan' | 'roll' | 'loop'
    ============================================================ */
+const MATH_OPS = {
+  add:(a, b)=> a + b, sub:(a, b)=> a - b, mult:(a, b)=> a*b, div:(a, b)=> a/b, pow:(a, b)=> Math.pow(a, b),
+  mod:(a, b)=> b ? ((a % b) + b) % b : 0, min:Math.min, max:Math.max,
+  abs:a=> Math.abs(a), sin:a=> Math.sin(a*Math.PI*2), cos:a=> Math.cos(a*Math.PI*2), floor:a=> Math.floor(a), frac:a=> a - Math.floor(a)
+};
 const hash01 = (a, b, c)=>{
   let h = (Math.imul(a, 374761393) + Math.imul(b, 668265263) + Math.imul(c, 2246822519))|0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -780,9 +795,65 @@ const NODE_DEFS = {
   // two ends of one chain can share a clip: see wireSource() and reachesPort().
   reroute: {cat:'catTools', lanes:'one', params:[{id:'lanes', kind:'hidden', def:[null]}], compute:()=> ({})},
   cableClip: {cat:'catTools', lanes:'grow', params:[{id:'lanes', kind:'hidden', def:[null]}], compute:()=> ({})},
+  // the Loop's clock as signals. Everything restarts with the loop, so a pass always
+  // sounds the same and the .mid can follow it
+  time: {
+    cat:'catSignal', sigSource:true, tags:'time frame clock horloge beat bar seconde',
+    outputs:[
+      {id:'loop', type:'signal', label:'s_loop'}, {id:'bar', type:'signal', label:'s_bar'}, {id:'beat', type:'signal', label:'s_beat'},
+      {id:'sec', type:'signal', label:'s_sec'}, {id:'frame', type:'signal', label:'s_frame'}
+    ],
+    params:[{id:'fps', label:'p_fps', kind:'range', min:1, max:120, step:1, def:30}],
+    compute:p=>{
+      const L = ()=>{ const n = transportLoop(); return n ? n.params : {bars:2, tempo:100}; };
+      const secs = f=>{ const q = L(); return f*q.bars*4*60/q.tempo; };
+      return {
+        loop:{at:f=> f}, bar:{at:f=> (f*L().bars) % 1}, beat:{at:f=> (f*L().bars*4) % 1},
+        sec:{at:secs}, frame:{at:f=> Math.floor(secs(f)*p.fps)}
+      };
+    }
+  },
+  // one node for all the arithmetic: A and B are the wires, or the two numbers when unplugged.
+  // A wire can carry any number, not just 0..1: whatever receives it clamps.
+  math: {
+    cat:'catSignal', thumb:'signal', tags:'math add sub subtract mult multiply div divide power pow mod modulo min max abs sin cos floor frac addition soustraction multiplication division puissance',
+    inputs:[{id:'a', type:'signal', label:'in_a', opt:true}, {id:'b', type:'signal', label:'in_b', opt:true}],
+    outputs:[{id:'sig', type:'signal', label:'t_signal'}],
+    params:[
+      {id:'op', label:'p_op', kind:'select', def:'mult', options:()=> Object.keys(MATH_OPS).map(k=>[k, t('op_' + k)])},
+      {id:'a', label:'in_a', kind:'number', step:0.01, def:0},
+      {id:'b', label:'in_b', kind:'number', step:0.01, def:1}
+    ],
+    compute:(p, {a, b})=>{
+      const op = MATH_OPS[p.op] || MATH_OPS.add;
+      return {sig:{at:f=>{
+        const v = op(a ? a.at(f) : p.a, b ? b.at(f) : p.b);
+        return isFinite(v) ? v : 0;       // 1/0 and the like: a wire must stay a number
+      }}};
+    }
+  },
+  sigScale: {
+    cat:'catSignal', thumb:'signal', tags:'scale remap map range echelle',
+    inputs:[{id:'in', type:'signal', label:'in_signal'}], outputs:[{id:'sig', type:'signal', label:'t_signal'}],
+    params:[
+      {id:'inMin', label:'p_inMin', kind:'number', step:0.01, def:0},
+      {id:'inMax', label:'p_inMax', kind:'number', step:0.01, def:1},
+      {id:'outMin', label:'p_outMin', kind:'number', step:0.01, def:0},
+      {id:'outMax', label:'p_outMax', kind:'number', step:0.01, def:1},
+      {id:'clamp', label:'p_clampOut', kind:'check', def:true}
+    ],
+    compute:(p, inp)=>{
+      if(!inp.in) return {sig:null};
+      return {sig:{at:f=>{
+        let u = (inp.in.at(f) - p.inMin)/((p.inMax - p.inMin) || 1);
+        if(p.clamp) u = clamp(u, 0, 1);
+        return p.outMin + u*(p.outMax - p.outMin);
+      }}};
+    }
+  },
   // whole cycles per loop, so it always comes back where it started
   lfo: {
-    cat:'catTools', thumb:'signal', sigSource:true, outputs:[{id:'sig', type:'signal', label:'t_signal'}],
+    cat:'catSignal', thumb:'signal', sigSource:true, outputs:[{id:'sig', type:'signal', label:'t_signal'}],
     params:[
       {id:'shape', label:'p_shape2', kind:'select', def:'sine', options:()=> ['sine', 'tri', 'saw', 'square', 'random'].map(k=>[k, t('w_' + k)])},
       {id:'rate', label:'p_rate', kind:'range', min:1, max:32, step:1, def:1},
@@ -938,7 +1009,7 @@ const NODE_DEFS = {
   },
   // squeezes a 0..1 signal into a smaller range: a parameter takes the whole of its slider's span otherwise
   sigRange: {
-    cat:'catTools', inputs:[{id:'in', type:'signal', label:'in_signal'}], outputs:[{id:'out', type:'signal', label:'in_signal'}],
+    cat:'catSignal', inputs:[{id:'in', type:'signal', label:'in_signal'}], outputs:[{id:'out', type:'signal', label:'in_signal'}],
     params:[
       {id:'lo', label:'p_lo', kind:'range', min:0, max:100, step:1, def:0, fmt:v=>v+'%'},
       {id:'hi', label:'p_hi', kind:'range', min:0, max:100, step:1, def:25, fmt:v=>v+'%'}
@@ -1342,8 +1413,9 @@ const ADD_MENU = [
   ['catImage', ['crop', 'tone', 'blur', 'invert', 'flip', 'blend', 'rgbaSplit', 'rgbaCombine']],
   ['catAnalysis', ['edges', 'sens', 'hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
   ['catMusic', ['scale', 'scan', 'octave', 'degree', 'snapScale', 'merge', 'limit', 'chance', 'echo', 'euclid', 'track']],
+  ['catSignal', ['time', 'lfo', 'math', 'sigScale', 'sigRange']],
   ['catOut', ['loop', 'midiOut', 'ccOut']],
-  ['catTools', ['curve', 'path', 'lfo', 'sigRange', 'reroute', 'cableClip', 'frame']]
+  ['catTools', ['curve', 'path', 'reroute', 'cableClip', 'frame']]
 ];
 
 // layer nodes: copy of the field with mask narrowed to pixels passing test
@@ -1657,6 +1729,7 @@ function paramEl(n, d, side){
     input = document.createElement('input');
     input.type = d.kind === 'check' ? 'checkbox' : d.kind;
     if(d.kind === 'range'){ input.min = d.min; input.max = d.max; input.step = d.step; input.value = n.params[d.id]; }
+    else if(d.kind === 'number'){ input.step = d.step; input.value = n.params[d.id]; }
     else if(d.kind === 'check') input.checked = !!n.params[d.id];
     else input.value = n.params[d.id];
     if(d.kind === 'check') input.style.justifySelf = 'start';
@@ -1675,7 +1748,7 @@ function paramEl(n, d, side){
   show();
   input.refresh = show;
   input.addEventListener(d.kind === 'text' ? 'change' : 'input', ()=>{
-    n.params[d.id] = d.kind === 'check' ? input.checked : d.kind === 'range' ? parseFloat(input.value) : input.value;
+    n.params[d.id] = d.kind === 'check' ? input.checked : d.kind === 'range' ? parseFloat(input.value) : d.kind === 'number' ? (parseFloat(input.value) || 0) : input.value;
     show();
     syncTwins(n, d, input);
     if(n.type === 'midiOut' && d.id === 'sustain') sendSustain(n);
@@ -1864,9 +1937,15 @@ function drawThumb(n){
     const ctx = sizeThumb(c, 3, 1), W = c.width, H = c.height, s = n.out.sig;
     ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, W, H);
     if(!s) return;
+    // 0..1 at least, wider if the signal goes beyond it
+    let lo = 0, hi = 1;
+    for(let x=0;x<=W;x+=2){ const v = s.at(Math.min(x/W, 0.9999)); lo = Math.min(lo, v); hi = Math.max(hi, v); }
     ctx.strokeStyle = typeColor('signal'); ctx.lineWidth = Math.max(1, W/200);
     ctx.beginPath();
-    for(let x=0;x<=W;x+=2){ const y = H*(0.92 - 0.84*s.at(x/W)); if(x) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+    for(let x=0;x<=W;x+=2){
+      const y = H*(0.92 - 0.84*(s.at(Math.min(x/W, 0.9999)) - lo)/(hi - lo));
+      if(x) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    }
     ctx.stroke();
   } else if(kind === 'meter'){
     const ctx = sizeThumb(c, 6, 1), W = c.width, H = c.height, s = n.out.sig;
@@ -3551,7 +3630,7 @@ function menuEntries(wire){
   return ADD_MENU.flatMap(([cat, types])=> types.filter(fits).map(ty=> ({
     ty, cat, label:t('n_' + ty), color:(NODE_DEFS[ty] && NODE_DEFS[ty].color) || CAT_COLOR[cat],
     // both languages: a name you remember works whatever the interface is set to
-    words:plain([I18N.fr['n_' + ty], I18N.en['n_' + ty], I18N.fr[cat], I18N.en[cat], ty].join(' '))
+    words:plain([I18N.fr['n_' + ty], I18N.en['n_' + ty], I18N.fr[cat], I18N.en[cat], ty, (NODE_DEFS[ty] && NODE_DEFS[ty].tags) || ''].join(' '))
   })));
 }
 function addFromMenu(ty, wx, wy, wire){
