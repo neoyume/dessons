@@ -95,6 +95,9 @@
     border-bottom:1px solid var(--line); border-radius:9px 9px 0 0; background:var(--panel-2);
   }
   .nodeHead:active{cursor:grabbing;}
+  .node.source .nodeHead{background:#0000ff; border-bottom-color:#0000ff; color:#fff;}
+  .node.source .nodeHead .cat{background:#fff !important;}
+  .node.source .nodeDel{color:#fff;}
   .nodeHead .cat{width:8px; height:8px; border-radius:2px; flex:none;}
   .nodeHead .title{flex:1; font-size:12.5px; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .nodeDel{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; line-height:1; padding:0 2px;}
@@ -114,6 +117,7 @@
   .port.linked .dot{background:currentColor;}
   .port .dot:hover, body.wiring .port.compatible .dot{box-shadow:0 0 0 3px rgba(255,255,255,.18); transform:scale(1.15);}
   body.wiring .port.in:not(.compatible) .dot{opacity:.3;}
+  body.wiring.rev .port.out:not(.compatible) .dot{opacity:.3;}
   .ty-image{color:var(--t-image);} .ty-field{color:var(--t-field);} .ty-scale{color:var(--t-scale);}
   .ty-notes{color:var(--t-notes);} .ty-track{color:var(--t-track);} .ty-path{color:var(--t-path);} .ty-curve{color:var(--t-curve);}
   .port span{color:var(--text-dim);}
@@ -258,7 +262,7 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Atelier',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
-    stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic : ajouter un node · Tirer un fil d\'une sortie vers une entrée · Suppr : effacer le node sélectionné · Déposer une image ou une vidéo ici',
+    stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic : ajouter un node · Tirer un fil d\'une sortie vers une entrée · Suppr : effacer le node sélectionné · Déposer une image, une vidéo ou un .obj / .stl ici',
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -266,7 +270,9 @@ const I18N = {
     cycleErr:'Ce branchement créerait une boucle.',
     catSource:'Source', catImage:'Image', catAnalysis:'Analyse', catLayers:'Calques', catMusic:'Musique', catOut:'Sortie',
     t_image:'image', t_field:'contours', t_scale:'gamme', t_notes:'notes', t_track:'piste',
-    n_source:'Source', n_invert:'Inverser', n_blur:'Flou', n_tone:'Tons', n_edges:'Contours',
+    n_srcImage:'Image', n_srcVideo:'Vidéo', n_srcWebcam:'Webcam', n_srcMesh:'Mesh 3D', n_rgbaSplit:'Séparer RVBA', n_rgbaCombine:'Combiner RVBA',
+    ch_r:'R', ch_g:'V', ch_b:'B', ch_a:'A', rgbaHint:'Entrée libre : R, V, B à 0, A à 255. Contours ne lit pas l’alpha.',
+    n_invert:'Inverser', n_blur:'Flou', n_tone:'Tons', n_edges:'Contours',
     n_hueBand:'Bande de teinte', n_lumaBand:'Bande de luminosité', n_colorKey:'Clé couleur', n_orient:'Orientation', n_union:'Union',
     n_scale:'Gamme', n_scan:'Balayage', n_octave:'Octave', n_limit:'Limiter', n_track:'Piste', n_loop:'Boucle',
     p_radius:'Rayon', p_black:'Noir', p_white:'Blanc', p_gamma:'Gamma', p_sat:'Saturation',
@@ -279,8 +285,13 @@ const I18N = {
     p_instr:'Instrument', p_name:'Nom', p_mute:'Muet',
     p_tempo:'Tempo', p_bars:'Mesures', p_gate:'Gate',
     in_a:'A', in_b:'B', in_tracks:'pistes',
-    srcImage:'Image', srcVideo:'Vidéo', srcWebcam:'Webcam', srcFreeze:'Figer', srcUnfreeze:'Reprendre',
-    srcEmpty:'Clique Image / Vidéo / Webcam, ou dépose un fichier sur ce node.',
+    srcPickImage:'Choisir une image', srcPickVideo:'Choisir une vidéo', srcCamOn:'Allumer', srcCamOff:'Éteindre',
+    srcFreeze:'Figer', srcUnfreeze:'Reprendre',
+    srcPickMesh:'Charger un .obj / .stl', p_shape:'Forme', p_turns:'Tours par boucle', p_angle:'Angle', p_tilt:'Inclinaison', p_zoom:'Zoom',
+    shape_torus:'Tore', shape_knot:'Nœud', shape_cube:'Cube', shape_blob:'Sphère bosselée', shape_file:'Fichier',
+    meshTris:'{x} triangles', meshReload:'Fichier à recharger : {x}', meshNoFile:'Aucun fichier chargé.',
+    meshErr:'Fichier 3D illisible.', meshNoGL:'WebGL indisponible dans ce navigateur.',
+    srcEmptyFile:'Ou dépose un fichier sur ce node.', srcEmptyCam:'La caméra reste éteinte tant que tu ne l’allumes pas.',
     keyHint:'Clique l\'aperçu pour prélever une couleur.',
     btnPlay:'▶ Écouter', btnStop:'■ Stop', btnExport:'Exporter le .mid',
     loopEmpty:'Branche des pistes ici.',
@@ -311,7 +322,7 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Workshop',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
-    stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click: add a node · Drag a wire from an output to an input · Delete: remove the selected node · Drop an image or a video here',
+    stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click: add a node · Drag a wire from an output to an input · Delete: remove the selected node · Drop an image, a video or an .obj / .stl here',
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -319,7 +330,9 @@ const I18N = {
     cycleErr:'This connection would create a loop.',
     catSource:'Source', catImage:'Image', catAnalysis:'Analysis', catLayers:'Layers', catMusic:'Music', catOut:'Output',
     t_image:'image', t_field:'edges', t_scale:'scale', t_notes:'notes', t_track:'track',
-    n_source:'Source', n_invert:'Invert', n_blur:'Blur', n_tone:'Tones', n_edges:'Edges',
+    n_srcImage:'Image', n_srcVideo:'Video', n_srcWebcam:'Webcam', n_srcMesh:'3D mesh', n_rgbaSplit:'Separate RGBA', n_rgbaCombine:'Combine RGBA',
+    ch_r:'R', ch_g:'G', ch_b:'B', ch_a:'A', rgbaHint:'Free input: R, G, B at 0, A at 255. Edges doesn’t read alpha.',
+    n_invert:'Invert', n_blur:'Blur', n_tone:'Tones', n_edges:'Edges',
     n_hueBand:'Hue band', n_lumaBand:'Brightness band', n_colorKey:'Color key', n_orient:'Orientation', n_union:'Union',
     n_scale:'Scale', n_scan:'Scan', n_octave:'Octave', n_limit:'Limit', n_track:'Track', n_loop:'Loop',
     p_radius:'Radius', p_black:'Black', p_white:'White', p_gamma:'Gamma', p_sat:'Saturation',
@@ -332,8 +345,13 @@ const I18N = {
     p_instr:'Instrument', p_name:'Name', p_mute:'Mute',
     p_tempo:'Tempo', p_bars:'Bars', p_gate:'Gate',
     in_a:'A', in_b:'B', in_tracks:'tracks',
-    srcImage:'Image', srcVideo:'Video', srcWebcam:'Webcam', srcFreeze:'Freeze', srcUnfreeze:'Resume',
-    srcEmpty:'Click Image / Video / Webcam, or drop a file on this node.',
+    srcPickImage:'Choose an image', srcPickVideo:'Choose a video', srcCamOn:'Turn on', srcCamOff:'Turn off',
+    srcFreeze:'Freeze', srcUnfreeze:'Resume',
+    srcPickMesh:'Load an .obj / .stl', p_shape:'Shape', p_turns:'Turns per loop', p_angle:'Angle', p_tilt:'Tilt', p_zoom:'Zoom',
+    shape_torus:'Torus', shape_knot:'Knot', shape_cube:'Cube', shape_blob:'Bumpy sphere', shape_file:'File',
+    meshTris:'{x} triangles', meshReload:'File to reload: {x}', meshNoFile:'No file loaded.',
+    meshErr:'Unreadable 3D file.', meshNoGL:'WebGL unavailable in this browser.',
+    srcEmptyFile:'Or drop a file on this node.', srcEmptyCam:'The camera stays off until you turn it on.',
     keyHint:'Click the preview to sample a color.',
     btnPlay:'▶ Listen', btnStop:'■ Stop', btnExport:'Export .mid',
     loopEmpty:'Wire tracks in here.',
@@ -387,7 +405,8 @@ document.querySelectorAll('#langToggle button').forEach(b=> b.addEventListener('
 /* ---- small shared helpers ---- */
 const TYPE_VAR = {image:'--t-image', field:'--t-field', scale:'--t-scale', notes:'--t-notes', track:'--t-track', path:'--t-path', curve:'--t-curve'};
 const typeColor = ty => getComputedStyle(document.documentElement).getPropertyValue(TYPE_VAR[ty]).trim() || '#fff';
-const CAT_COLOR = {catSource:'#4dd9c9', catImage:'#4dd9c9', catAnalysis:'#00ff00', catLayers:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2'};
+const LAVENDER = '#b4a7ff';   // curve and path: Music nodes that feed a Scan's optional inputs
+const CAT_COLOR = {catSource:'#0000ff', catImage:'#4dd9c9', catAnalysis:'#00ff00', catLayers:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2'};
 const DIR_KEYS = ['lr','rl','tb','bt','tlbr','brtl','trbl','bltr'];
 const DIR_LABELS = {lr:'→', rl:'←', tb:'↓', bt:'↑', tlbr:'↘', brtl:'↖', trbl:'↙', bltr:'↗'};
 const CURVE_KEYS = ['linear','accel','decel','pulse','swing'];
@@ -423,10 +442,77 @@ const CUSTOM_X = [0, 0.25, 0.5, 0.75, 1];
    compute(p, inp, node) -> {outputId: value}  (null = nothing to pass on)
    thumb: what the node previews — 'image' | 'field' | 'scan' | 'roll' | 'loop'
    ============================================================ */
-const NODE_DEFS = {
-  source: {
+const RGBA_PORTS = ['r', 'g', 'b', 'a'].map(id=> ({id, type:'image', label:'ch_' + id}));
+function sourceDef(){
+  return {
     cat:'catSource', outputs:[{id:'image', type:'image'}], params:[], thumb:'image', custom:'source',
     compute:(p, inp, n)=> ({image: n.frame || null})
+  };
+}
+const isSource = n=> NODE_DEFS[n.type].custom === 'source';
+const NODE_DEFS = {
+  srcImage: sourceDef(),
+  srcVideo: sourceDef(),
+  srcWebcam: sourceDef(),
+  // rendered, not filmed: normals in RGB, depth in alpha (0 = nothing there)
+  srcMesh: Object.assign(sourceDef(), {
+    params:[
+      {id:'shape', label:'p_shape', kind:'select', def:'torus', options:()=> ['torus', 'knot', 'cube', 'blob', 'file'].map(k=>[k, t('shape_' + k)])},
+      {id:'turns', label:'p_turns', kind:'range', min:-4, max:4, step:1, def:1},
+      {id:'angle', label:'p_angle', kind:'range', min:0, max:360, step:1, def:0, fmt:v=>v+'°'},
+      {id:'tilt', label:'p_tilt', kind:'range', min:-90, max:90, step:1, def:20, fmt:v=>v+'°'},
+      {id:'zoom', label:'p_zoom', kind:'range', min:50, max:200, step:1, def:100, fmt:v=>v+'%'}
+    ],
+    compute:(p, inp, n)=>{
+      n.lastPhase = meshPhase();
+      const mesh = p.shape === 'file' ? n.mesh : builtinMesh(p.shape);
+      n.frame = mesh ? renderMesh(mesh, p, n.lastPhase) : null;
+      return {image:n.frame};
+    },
+    summary:n=>{
+      if(!meshGL()) return t('meshNoGL');
+      const mesh = n.params.shape === 'file' ? n.mesh : builtinMesh(n.params.shape);
+      if(mesh) return t('meshTris').replace('{x}', mesh.tris);
+      return n.params.meshName ? t('meshReload').replace('{x}', n.params.meshName) : t('meshNoFile');
+    }
+  }),
+  // each channel leaves as a grey image, so every image node can work on it alone
+  rgbaSplit: {
+    cat:'catImage', inputs:[{id:'image', type:'image'}], thumb:'rgba',
+    outputs:RGBA_PORTS, params:[],
+    compute:(p, {image})=>{
+      if(!image) return {r:null, g:null, b:null, a:null};
+      const {w, h, data} = image, out = {};
+      RGBA_PORTS.forEach((port, c)=>{
+        const d = new Uint8ClampedArray(w*h*4);
+        for(let i=0;i<d.length;i+=4){ d[i] = d[i+1] = d[i+2] = data[i+c]; d[i+3] = 255; }
+        out[port.id] = {w, h, data:d};
+      });
+      return out;
+    }
+  },
+  // size = first plugged input, the others are resampled to it. A colour image
+  // plugged in counts for its luminosity (a grey one for its exact value).
+  rgbaCombine: {
+    cat:'catImage', inputs:RGBA_PORTS.map(p=> Object.assign({opt:true}, p)), outputs:[{id:'image', type:'image'}],
+    params:[], thumb:'image', note:'rgbaHint',
+    compute:(p, inp)=>{
+      const ref = RGBA_PORTS.map(port=> inp[port.id]).find(Boolean);
+      if(!ref) return {image:null};
+      const {w, h} = ref, d = new Uint8ClampedArray(w*h*4);
+      RGBA_PORTS.forEach((port, c)=>{
+        const im = inp[port.id];
+        if(!im){ if(c === 3) for(let i=3;i<d.length;i+=4) d[i] = 255; return; }
+        for(let y=0;y<h;y++){
+          const sy = Math.min(im.h - 1, Math.floor(y*im.h/h));
+          for(let x=0;x<w;x++){
+            const j = (sy*im.w + Math.min(im.w - 1, Math.floor(x*im.w/w)))*4;
+            d[(y*w + x)*4 + c] = 0.299*im.data[j] + 0.587*im.data[j+1] + 0.114*im.data[j+2];
+          }
+        }
+      });
+      return {image:{w, h, data:d}};
+    }
   },
   invert: {
     cat:'catImage', inputs:[{id:'image', type:'image'}], outputs:[{id:'image', type:'image'}], params:[], thumb:'image',
@@ -673,7 +759,7 @@ const NODE_DEFS = {
     }
   },
   curve: {
-    cat:'catMusic', outputs:[{id:'curve', type:'curve'}], thumb:'curve', thumbClass:'drag',
+    cat:'catMusic', color:LAVENDER, outputs:[{id:'curve', type:'curve'}], thumb:'curve', thumbClass:'drag',
     params:[
       {id:'pts', kind:'hidden', def:[0, 0.25, 0.5, 0.75, 1]},
       // picking a preset copies its shape into the handles, then resets to '—'
@@ -689,7 +775,7 @@ const NODE_DEFS = {
     thumbPointer:(n, c)=> curvePointer(n, c)
   },
   path: {
-    cat:'catMusic', inputs:[{id:'image', type:'image', opt:true}], outputs:[{id:'path', type:'path'}], thumb:'path', thumbClass:'draw',
+    cat:'catMusic', color:LAVENDER, inputs:[{id:'image', type:'image', opt:true}], outputs:[{id:'path', type:'path'}], thumb:'path', thumbClass:'draw',
     params:[{id:'points', kind:'hidden', def:[[0.04,0.7],[0.25,0.3],[0.5,0.55],[0.75,0.25],[0.96,0.6]]}],
     note:'pathHint',
     compute:(p)=> ({path:{points:p.points}}),
@@ -765,8 +851,8 @@ const NODE_DEFS = {
   }
 };
 const ADD_MENU = [
-  ['catSource', ['source']],
-  ['catImage', ['crop', 'tone', 'blur', 'invert']],
+  ['catSource', ['srcImage', 'srcVideo', 'srcWebcam', 'srcMesh']],
+  ['catImage', ['crop', 'tone', 'blur', 'invert', 'rgbaSplit', 'rgbaCombine']],
   ['catAnalysis', ['edges', 'sens']],
   ['catLayers', ['hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
   ['catMusic', ['scale', 'scan', 'curve', 'path', 'octave', 'limit']],
@@ -813,13 +899,13 @@ function addNode(type, x, y, params, id){
   }
   nodes.set(n.id, n);
   buildNodeEl(n);
-  if(type === 'source' && n.params.img) restoreSourceImage(n);
+  if(type === 'srcImage' && n.params.img) restoreSourceImage(n);
   return n;
 }
 function removeNode(id){
   const n = nodes.get(id);
   if(!n) return;
-  if(n.type === 'source') stopMedia(n);
+  if(isSource(n)) stopMedia(n);
   if(playingLoopId === id) stopPlayback();
   const downstream = links.filter(l=> l.from === id).map(l=> l.to);
   links = links.filter(l=> l.from !== id && l.to !== id);
@@ -914,14 +1000,14 @@ function buildNodeEl(n){
   const def = NODE_DEFS[n.type];
   const old = n.el;
   const el = document.createElement('div');
-  el.className = 'node' + (def.wide ? ' wide' : '') + (selectedId === n.id ? ' selected' : '');
+  el.className = 'node' + (def.wide ? ' wide' : '') + (def.custom === 'source' ? ' source' : '') + (selectedId === n.id ? ' selected' : '');
   el.dataset.id = n.id;
   el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
 
   const head = document.createElement('div');
   head.className = 'nodeHead';
   head.innerHTML = '<span class="cat"></span><span class="title"></span><button type="button" class="nodeDel" aria-label="×">×</button>';
-  head.querySelector('.cat').style.background = CAT_COLOR[def.cat];
+  head.querySelector('.cat').style.background = def.color || CAT_COLOR[def.cat];
   head.querySelector('.title').textContent = t('n_' + n.type);
   head.querySelector('.nodeDel').addEventListener('click', e=>{ e.stopPropagation(); removeNode(n.id); });
   head.addEventListener('pointerdown', e=> startNodeDrag(e, n));
@@ -1176,6 +1262,16 @@ function drawThumb(n){
     const im = n.out.image;
     if(!im){ emptyThumb(c); return; }
     blitRGBA(sizeThumb(c, im.w, im.h), c, im.w, im.h, im.data);
+  } else if(kind === 'rgba'){
+    // the four channels in a 2x2 grid, in port order
+    const ims = RGBA_PORTS.map(p=> n.out[p.id]);
+    if(!ims[0]){ emptyThumb(c); return; }
+    const ctx = sizeThumb(c, ims[0].w, ims[0].h), qw = c.width/2, qh = c.height/2;
+    ims.forEach((im, i)=>{
+      scratch.width = im.w; scratch.height = im.h;
+      scratchCtx.putImageData(new ImageData(im.data, im.w, im.h), 0, 0);
+      ctx.drawImage(scratch, (i%2)*qw, (i>>1)*qh, qw, qh);
+    });
   } else if(kind === 'field'){
     const f = n.out.field;
     if(!f){ emptyThumb(c); return; }
@@ -1475,47 +1571,65 @@ function pickColorFromThumb(n, e){
 }
 
 /* ============================================================
-   Source node: image / video / webcam
+   Source nodes: one each for image, video and webcam
    ============================================================ */
 const mediaInput = $('mediaInput');
 let mediaTarget = null;
 function buildSourceControls(n, body){
+  const btn = (label, fn, primary)=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn' + (primary ? ' primary' : ''); b.textContent = t(label);
+    b.addEventListener('click', fn);
+    return b;
+  };
   const row = document.createElement('div');
   row.className = 'btnRow';
-  [['image','srcImage'], ['video','srcVideo'], ['webcam','srcWebcam']].forEach(([k, label])=>{
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'miniBtn' + (n.kind === k ? ' primary' : ''); b.textContent = t(label);
-    b.addEventListener('click', ()=>{
-      if(k === 'webcam'){ startWebcam(n); return; }
+  if(n.type === 'srcMesh'){
+    row.appendChild(btn('srcPickMesh', ()=>{
       mediaTarget = n;
-      mediaInput.accept = k === 'image' ? 'image/*' : 'video/*';
+      mediaInput.accept = '.obj,.stl';
       mediaInput.value = '';
       mediaInput.click();
-    });
-    row.appendChild(b);
-  });
-  body.appendChild(row);
-  if(n.kind === 'video' || n.kind === 'webcam'){
-    const fz = document.createElement('button');
-    fz.type = 'button'; fz.className = 'miniBtn'; fz.textContent = t(n.frozen ? 'srcUnfreeze' : 'srcFreeze');
-    fz.addEventListener('click', ()=>{ n.frozen = !n.frozen; fz.textContent = t(n.frozen ? 'srcUnfreeze' : 'srcFreeze'); });
-    body.appendChild(fz);
+    }));
+  } else if(n.type === 'srcWebcam'){
+    row.appendChild(btn(n.media ? 'srcCamOff' : 'srcCamOn', ()=> n.media ? stopWebcam(n) : startWebcam(n), !n.media));
+  } else {
+    row.appendChild(btn(n.type === 'srcImage' ? 'srcPickImage' : 'srcPickVideo', ()=>{
+      mediaTarget = n;
+      mediaInput.accept = n.type === 'srcImage' ? 'image/*' : 'video/*';
+      mediaInput.value = '';
+      mediaInput.click();
+    }, !n.frame));
   }
-  if(!n.frame){
-    const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t(n.mediaErr || 'srcEmpty');
+  if((n.type === 'srcVideo' || n.type === 'srcWebcam') && n.media){
+    const fz = btn(n.frozen ? 'srcUnfreeze' : 'srcFreeze', ()=>{ toggleFreeze(n); fz.textContent = t(n.frozen ? 'srcUnfreeze' : 'srcFreeze'); });
+    row.appendChild(fz);
+  }
+  body.appendChild(row);
+  if(n.mediaErr || (!n.frame && n.type !== 'srcMesh')){
+    const p = document.createElement('div'); p.className = 'nodeNote';
+    p.textContent = t(n.mediaErr || (n.type === 'srcWebcam' ? 'srcEmptyCam' : 'srcEmptyFile'));
     body.appendChild(p);
   }
 }
 mediaInput.addEventListener('change', ()=>{
   const f = mediaInput.files[0];
-  if(f && mediaTarget) loadMediaFile(mediaTarget, f);
+  if(f && mediaTarget) loadMediaFile(sourceFor(mediaTarget, f), f);
 });
 
+// the element itself stops: a Crop downstream re-reads it at full resolution,
+// and must get the frozen frame, not the one playing now
+function toggleFreeze(n){
+  n.frozen = !n.frozen;
+  if(n.frozen){ n.media.pause(); grabFrame(n); markDirty(n.id); }
+  else n.media.play().catch(()=>{});
+}
 function stopMedia(n){
+  if(n.mesh){ freeMesh(n.mesh); n.mesh = null; }
   if(n.stream){ n.stream.getTracks().forEach(tr=> tr.stop()); n.stream = null; }
   if(n.media && n.media.tagName === 'VIDEO'){ n.media.pause(); n.media.removeAttribute('src'); n.media.srcObject = null; n.media.load(); }
   if(n.mediaUrl){ URL.revokeObjectURL(n.mediaUrl); n.mediaUrl = null; }
-  n.media = null; n.kind = null; n.frozen = false;
+  n.media = null; n.frozen = false;
 }
 // copy the current frame, downscaled to MAXDIM, into the node's image value
 function grabFrame(n){
@@ -1532,74 +1646,344 @@ function grabFrame(n){
   n.frame = {w, h, data:ctx.getImageData(0, 0, w, h).data, orig:m, region:[0, 0, 1, 1]};
   return true;
 }
-function setSourceMedia(n, el, kind){
-  n.media = el; n.kind = kind; n.mediaErr = null;
-  if(grabFrame(n)){
-    if(kind === 'image'){
-      // persisted with the graph: the analysis-size frame only, as a small JPEG
-      try{ n.params.img = n.canvas.toDataURL('image/jpeg', 0.9); }catch(e){}
-    } else n.params.img = null;
+function setSourceMedia(n, el){
+  n.media = el; n.mediaErr = null;
+  if(grabFrame(n) && n.type === 'srcImage'){
+    // persisted with the graph: the analysis-size frame only, as a small JPEG
+    try{ n.params.img = n.canvas.toDataURL('image/jpeg', 0.9); }catch(e){}
   }
   buildNodeEl(n); drawWires();
   markDirty(n.id); saveSoon();
 }
+const fileNodeType = file=> /\.(obj|stl)$/i.test(file.name) ? 'srcMesh' : ((file.type || '').startsWith('video/') || /\.(mp4|mov|webm|m4v|ogv)$/i.test(file.name)) ? 'srcVideo' : 'srcImage';
 function loadMediaFile(n, file){
+  if(n.type === 'srcMesh'){ loadMeshFile(n, file); return; }
   stopMedia(n);
-  const isVideo = (file.type || '').startsWith('video/') || /\.(mp4|mov|webm|m4v|ogv)$/i.test(file.name);
   const url = URL.createObjectURL(file);
-  if(isVideo){
+  if(n.type === 'srcVideo'){
     const v = document.createElement('video');
     v.muted = true; v.loop = true; v.playsInline = true; v.src = url;
-    v.addEventListener('loadeddata', ()=>{ n.mediaUrl = url; v.play().catch(()=>{}); setSourceMedia(n, v, 'video'); }, {once:true});
-    v.addEventListener('error', ()=>{ URL.revokeObjectURL(url); n.mediaErr = 'mediaErr'; buildNodeEl(n); }, {once:true});
+    v.addEventListener('loadeddata', ()=>{ n.mediaUrl = url; v.play().catch(()=>{}); setSourceMedia(n, v); }, {once:true});
+    v.addEventListener('error', ()=>{ URL.revokeObjectURL(url); n.mediaErr = 'mediaErr'; buildNodeEl(n); drawWires(); }, {once:true});
   } else {
     const im = new Image();
-    im.onload = ()=>{ setSourceMedia(n, im, 'image'); URL.revokeObjectURL(url); };
-    im.onerror = ()=>{ URL.revokeObjectURL(url); n.mediaErr = 'mediaErr'; buildNodeEl(n); };
+    im.onload = ()=>{ setSourceMedia(n, im); URL.revokeObjectURL(url); };
+    im.onerror = ()=>{ URL.revokeObjectURL(url); n.mediaErr = 'mediaErr'; buildNodeEl(n); drawWires(); };
     im.src = url;
   }
 }
+// a source node of another kind becomes the right one, in place, keeping its wires
+function sourceFor(n, file){
+  const type = fileNodeType(file);
+  if(n.type === type) return n;
+  const {id, x, y} = n, wires = links.filter(l=> l.from === id), wasSelected = selectedId === id;
+  removeNode(id);
+  const m = addNode(type, x, y, null, id);
+  links.push(...wires);
+  if(wasSelected) selectNode(id);
+  refreshLinkedPorts(); drawWires();
+  return m;
+}
 async function startWebcam(n){
+  if(n.stream || n.camStarting) return;
   if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ alert(t('camErr')); return; }
-  stopMedia(n);
+  n.camStarting = true;
   try{
     const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:false});
+    // node deleted while the permission prompt was open: don't leave the camera on
+    if(nodes.get(n.id) !== n){ stream.getTracks().forEach(tr=> tr.stop()); return; }
     const v = document.createElement('video');
     v.muted = true; v.playsInline = true; v.srcObject = stream;
     n.stream = stream;
     await v.play();
-    const ready = ()=> v.videoWidth ? setSourceMedia(n, v, 'webcam') : requestAnimationFrame(ready);
+    const ready = ()=>{
+      if(n.stream !== stream) return;
+      if(v.videoWidth) setSourceMedia(n, v); else requestAnimationFrame(ready);
+    };
     ready();
   }catch(e){ stopMedia(n); alert(t('camErr')); }
+  finally{ n.camStarting = false; }
+}
+function stopWebcam(n){
+  stopMedia(n);
+  n.frame = null;
+  buildNodeEl(n); drawWires();
+  markDirty(n.id);
 }
 function restoreSourceImage(n){
   const im = new Image();
-  im.onload = ()=>{ n.media = im; n.kind = 'image'; grabFrame(n); buildNodeEl(n); drawWires(); markDirty(n.id); };
+  im.onload = ()=>{ n.media = im; grabFrame(n); buildNodeEl(n); drawWires(); markDirty(n.id); };
   im.src = n.params.img;
 }
 // live sources: re-analyze ~15 fps, like the workshop's liveLoop()
 setInterval(()=>{
   if(document.hidden) return;
   nodes.forEach(n=>{
-    if(n.type === 'source' && (n.kind === 'video' || n.kind === 'webcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
+    if((n.type === 'srcVideo' || n.type === 'srcWebcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
+    else if(n.type === 'srcMesh' && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
   });
 }, 66);
 
-/* ---- drag & drop a file: onto a source node, else the selected / first one, else a new one ---- */
+/* ============================================================
+   3D mesh source: a small WebGL renderer (one context for every Mesh node)
+   and .obj / .stl readers. Models are centred and scaled to a radius of 1.
+   ============================================================ */
+function packMesh(pos, nrm){
+  const count = pos.length/3;
+  if(count < 3 || count % 3) throw new Error('empty mesh');
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for(let i=0;i<pos.length;i++){ const a = i%3; if(pos[i] < lo[a]) lo[a] = pos[i]; if(pos[i] > hi[a]) hi[a] = pos[i]; }
+  const c = lo.map((v, a)=> (v + hi[a])/2);
+  let r = 0;
+  for(let i=0;i<pos.length;i+=3) r = Math.max(r, Math.hypot(pos[i]-c[0], pos[i+1]-c[1], pos[i+2]-c[2]));
+  if(!(r > 0) || !isFinite(r)) throw new Error('bad mesh');
+  const data = new Float32Array(count*6);
+  for(let i=0;i<count;i+=3){
+    let fn = null;
+    if(!nrm){   // no normals given: one per face
+      const q = i*3, ux = pos[q+3]-pos[q], uy = pos[q+4]-pos[q+1], uz = pos[q+5]-pos[q+2];
+      const vx = pos[q+6]-pos[q], vy = pos[q+7]-pos[q+1], vz = pos[q+8]-pos[q+2];
+      fn = [uy*vz - uz*vy, uz*vx - ux*vz, ux*vy - uy*vx];
+    }
+    for(let k=0;k<3;k++){
+      const v = (i+k)*3, o = (i+k)*6;
+      for(let a=0;a<3;a++){ data[o+a] = (pos[v+a] - c[a])/r; data[o+3+a] = fn ? fn[a] : nrm[v+a]; }
+    }
+  }
+  return {data, count, tris:count/3, buf:null};
+}
+// shared vertices: smooth shading, each normal the area-weighted mean of its faces
+function smoothMesh(verts, tris){
+  const acc = new Float32Array(verts.length), pos = new Float32Array(tris.length*3), nrm = new Float32Array(tris.length*3);
+  for(let i=0;i<tris.length;i+=3){
+    const a = tris[i]*3, b = tris[i+1]*3, c = tris[i+2]*3;
+    const ux = verts[b]-verts[a], uy = verts[b+1]-verts[a+1], uz = verts[b+2]-verts[a+2];
+    const vx = verts[c]-verts[a], vy = verts[c+1]-verts[a+1], vz = verts[c+2]-verts[a+2];
+    const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx;
+    [a, b, c].forEach(v=>{ acc[v] += nx; acc[v+1] += ny; acc[v+2] += nz; });
+  }
+  tris.forEach((v, i)=>{ for(let a=0;a<3;a++){ pos[i*3+a] = verts[v*3+a]; nrm[i*3+a] = acc[v*3+a]; } });
+  return packMesh(pos, nrm);
+}
+// a surface over a (u, v) grid in [0,1]²; u always closes on itself, v only if wrapV
+function gridMesh(nu, nv, wrapV, f){
+  const rows = wrapV ? nv : nv + 1, verts = new Float32Array(nu*rows*3), tris = [];
+  for(let j=0;j<rows;j++) for(let i=0;i<nu;i++) verts.set(f(i/nu, j/nv), (j*nu + i)*3);
+  for(let j=0;j<nv;j++) for(let i=0;i<nu;i++){
+    const j2 = (j+1)%rows, i2 = (i+1)%nu;
+    const a = j*nu+i, b = j*nu+i2, c = j2*nu+i2, d = j2*nu+i;
+    tris.push(a, b, c, a, c, d);
+  }
+  return smoothMesh(verts, tris);
+}
+const TAU = Math.PI*2;
+const MESH_SHAPES = {
+  torus:()=> gridMesh(72, 36, true, (u, v)=>{
+    const a = u*TAU, b = v*TAU, r = 0.68 + 0.32*Math.cos(b);
+    return [r*Math.cos(a), r*Math.sin(a), 0.32*Math.sin(b)];
+  }),
+  knot:()=>{   // a (2,3) torus knot: a tube around the curve
+    const P = u=>{ const a = u*TAU, r = 2 + Math.cos(3*a); return [r*Math.cos(2*a), r*Math.sin(2*a), Math.sin(3*a)]; };
+    const unit = v=>{ const l = Math.hypot(...v) || 1; return v.map(x=> x/l); };
+    return gridMesh(240, 16, true, (u, v)=>{
+      const e = 0.002, p = P(u), a = P(u - e), b = P(u + e);
+      const T = unit(b.map((x, i)=> x - a[i]));
+      const N = unit(b.map((x, i)=> x + a[i] - 2*p[i]));
+      const B = [T[1]*N[2]-T[2]*N[1], T[2]*N[0]-T[0]*N[2], T[0]*N[1]-T[1]*N[0]];
+      const c = 0.45*Math.cos(v*TAU), s = 0.45*Math.sin(v*TAU);
+      return p.map((x, i)=> x + c*N[i] + s*B[i]);
+    });
+  },
+  cube:()=>{
+    const q = [[0,1,3,2],[4,6,7,5],[0,4,5,1],[2,3,7,6],[0,2,6,4],[1,5,7,3]], pos = [];
+    const C = i=> [i&1 ? 1 : -1, i&2 ? 1 : -1, i&4 ? 1 : -1];
+    q.forEach(([a, b, c, d])=> [a, b, c, a, c, d].forEach(i=> pos.push(...C(i))));
+    return packMesh(new Float32Array(pos), null);
+  },
+  blob:()=> gridMesh(120, 80, false, (u, v)=>{
+    const a = u*TAU, b = v*Math.PI;
+    const r = 1 + 0.16*Math.sin(5*a)*Math.sin(4*b) + 0.08*Math.cos(9*b);
+    return [r*Math.sin(b)*Math.cos(a), r*Math.cos(b), r*Math.sin(b)*Math.sin(a)];
+  })
+};
+const meshCache = {};
+function builtinMesh(shape){
+  if(!MESH_SHAPES[shape]) return null;
+  return meshCache[shape] || (meshCache[shape] = MESH_SHAPES[shape]());
+}
+function parseOBJ(text){
+  const v = [], vn = [], corners = [], cornerN = [];
+  let allN = true;
+  text.split('\n').forEach(line=>{
+    const w = line.trim().split(/\s+/);
+    if(w[0] === 'v') v.push(+w[1], +w[2], +w[3]);
+    else if(w[0] === 'vn') vn.push(+w[1], +w[2], +w[3]);
+    else if(w[0] === 'f'){
+      const c = w.slice(1).map(tok=>{
+        const [a, , b] = tok.split('/'), i = parseInt(a), j = parseInt(b);
+        return [i < 0 ? v.length/3 + i : i - 1, j < 0 ? vn.length/3 + j : j - 1];
+      });
+      for(let k=1;k<c.length-1;k++) [c[0], c[k], c[k+1]].forEach(([i, j])=>{
+        if(!(i >= 0 && i < v.length/3)) throw new Error('bad face');
+        corners.push(i);
+        if(j >= 0 && j < vn.length/3) cornerN.push(j); else allN = false;
+      });
+    }
+  });
+  if(!allN || !vn.length) return smoothMesh(new Float32Array(v), corners);
+  const pos = new Float32Array(corners.length*3), nrm = new Float32Array(corners.length*3);
+  corners.forEach((c, i)=>{ for(let a=0;a<3;a++){ pos[i*3+a] = v[c*3+a]; nrm[i*3+a] = vn[cornerN[i]*3+a]; } });
+  return packMesh(pos, nrm);
+}
+function parseSTL(buf){
+  const dv = new DataView(buf);
+  if(buf.byteLength >= 84 && 84 + 50*dv.getUint32(80, true) === buf.byteLength){
+    const tris = dv.getUint32(80, true), pos = new Float32Array(tris*9);
+    for(let i=0;i<tris;i++) for(let k=0;k<9;k++) pos[i*9+k] = dv.getFloat32(84 + i*50 + 12 + k*4, true);
+    return packMesh(pos, null);
+  }
+  const text = new TextDecoder().decode(buf), pos = [];
+  for(const m of text.matchAll(/vertex\s+(\S+)\s+(\S+)\s+(\S+)/g)) pos.push(+m[1], +m[2], +m[3]);
+  return packMesh(new Float32Array(pos), null);
+}
+async function loadMeshFile(n, file){
+  let mesh = null;
+  try{
+    mesh = /\.stl$/i.test(file.name) ? parseSTL(await file.arrayBuffer()) : parseOBJ(await file.text());
+  }catch(e){ console.warn('mesh not read', e); }
+  if(nodes.get(n.id) !== n) return;
+  n.mediaErr = mesh ? null : 'meshErr';
+  if(mesh){
+    if(n.mesh) freeMesh(n.mesh);
+    n.mesh = mesh;
+    n.params.shape = 'file'; n.params.meshName = file.name;
+  }
+  buildNodeEl(n); drawWires();
+  markDirty(n.id); saveSoon();
+}
+
+let meshGLState, meshPhaseOverride = null;
+const MESH_VS = `attribute vec3 aPos; attribute vec3 aNrm;
+uniform mat3 uRot; uniform float uZoom;
+varying vec3 vN; varying float vZ;
+void main(){
+  vec3 p = uRot*aPos;
+  float w = 1.0 - p.z*0.2;      // mild perspective: camera 5 radii away
+  vN = uRot*aNrm; vZ = p.z;
+  gl_Position = vec4(p.xy*uZoom*0.8, -p.z*0.9*w, w);
+}`;
+const MESH_FS = `precision mediump float;
+varying vec3 vN; varying float vZ;
+void main(){
+  vec3 n = normalize(vN);
+  if(!gl_FrontFacing) n = -n;   // open models: inner faces still look at the camera
+  gl_FragColor = vec4(n*0.5 + 0.5, mix(0.12, 1.0, vZ*0.5 + 0.5));
+}`;
+function meshGL(){
+  if(meshGLState !== undefined) return meshGLState;
+  const c = document.createElement('canvas');
+  c.width = c.height = MAXDIM;
+  const gl = c.getContext('webgl', {alpha:true, depth:true, antialias:false, premultipliedAlpha:false, preserveDrawingBuffer:true});
+  if(!gl) return meshGLState = null;
+  const sh = (type, src)=>{ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, MESH_VS));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, MESH_FS));
+  gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return meshGLState = null;
+  gl.useProgram(prog);
+  gl.enable(gl.DEPTH_TEST);
+  gl.clearColor(0, 0, 0, 0);
+  return meshGLState = {
+    gl, aPos:gl.getAttribLocation(prog, 'aPos'), aNrm:gl.getAttribLocation(prog, 'aNrm'),
+    uRot:gl.getUniformLocation(prog, 'uRot'), uZoom:gl.getUniformLocation(prog, 'uZoom')
+  };
+}
+function freeMesh(mesh){
+  if(mesh.buf && meshGLState) meshGLState.gl.deleteBuffer(mesh.buf);
+  mesh.buf = null;
+}
+function renderMesh(mesh, p, phase){
+  const G = meshGL();
+  if(!G || G.gl.isContextLost()) return null;
+  const gl = G.gl, S = MAXDIM;
+  if(!mesh.buf){
+    mesh.buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buf);
+    gl.bufferData(gl.ARRAY_BUFFER, mesh.data, gl.STATIC_DRAW);
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buf);
+  gl.enableVertexAttribArray(G.aPos); gl.enableVertexAttribArray(G.aNrm);
+  gl.vertexAttribPointer(G.aPos, 3, gl.FLOAT, false, 24, 0);
+  gl.vertexAttribPointer(G.aNrm, 3, gl.FLOAT, false, 24, 12);
+  // spin around Y, then tilt around X; whole turns only, so a loop ends where it began
+  const y = (p.angle + 360*p.turns*phase)*Math.PI/180, x = p.tilt*Math.PI/180;
+  const cy = Math.cos(y), sy = Math.sin(y), cx = Math.cos(x), sx = Math.sin(x);
+  gl.uniformMatrix3fv(G.uRot, false, [cy, sx*sy, -cx*sy,  0, cx, sx,  sy, -sx*cy, cx*cy]);
+  gl.uniform1f(G.uZoom, p.zoom/100);
+  gl.viewport(0, 0, S, S);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
+  const raw = new Uint8Array(S*S*4), data = new Uint8ClampedArray(S*S*4);
+  gl.readPixels(0, 0, S, S, gl.RGBA, gl.UNSIGNED_BYTE, raw);
+  for(let r=0;r<S;r++) data.set(raw.subarray((S-1-r)*S*4, (S-r)*S*4), r*S*4);   // GL rows go bottom-up
+  return {w:S, h:S, data};
+}
+// where the mesh is in its turn: the scheduler's position, not the playhead's,
+// so a step is read from the frame of the moment it gets scheduled
+function meshPhase(){
+  if(meshPhaseOverride !== null) return meshPhaseOverride;
+  return playing ? schedPos % 1 : 0;
+}
+// live, each step hears the mesh at that step's angle. The .mid must say the
+// same: walk the turn, re-evaluate the graph at each step, keep that step's notes.
+function bakeSpin(loopNode){
+  const base = evalNode(loopNode)._loop;
+  const spin = [...nodes.values()].filter(m=> m.type === 'srcMesh' && m.params.turns);
+  if(!base || !spin.length) return base;
+  const seen = new Map();
+  const tracksAt = phase=>{
+    const key = phase.toFixed(6);
+    if(!seen.has(key)){
+      meshPhaseOverride = phase;
+      spin.forEach(m=> markDirty(m.id));
+      const L = evalNode(loopNode)._loop;
+      seen.set(key, L ? L.tracks : []);
+    }
+    return seen.get(key);
+  };
+  try{
+    const tracks = base.tracks.map((tr, i)=>{
+      const notes = [];
+      for(let k=0;k<tr.steps;k++){
+        const at = tracksAt(stepFrac(tr, k) % 1)[i];
+        if(at) notes.push(...at.notes.filter(nt=> nt.step === k));
+      }
+      return Object.assign({}, tr, {notes});
+    });
+    return Object.assign({}, base, {tracks});
+  } finally {
+    meshPhaseOverride = null;
+    spin.forEach(m=> markDirty(m.id));
+  }
+}
+
+/* ---- drag & drop a file: onto a source node, else the selected / first node of
+   its kind, else an empty source (which changes kind, keeping its wires), else a new node ---- */
 stage.addEventListener('dragover', e=>{ e.preventDefault(); stage.classList.add('dropping'); });
 stage.addEventListener('dragleave', e=>{ if(e.target === stage) stage.classList.remove('dropping'); });
 stage.addEventListener('drop', e=>{
   e.preventDefault(); stage.classList.remove('dropping');
   const f = e.dataTransfer.files && e.dataTransfer.files[0];
   if(!f) return;
+  const type = fileNodeType(f), all = [...nodes.values()];
   const hit = e.target.closest && e.target.closest('.node');
-  let n = hit && nodes.get(hit.dataset.id);
-  if(!n || n.type !== 'source'){
-    const sel = nodes.get(selectedId);
-    n = (sel && sel.type === 'source') ? sel : [...nodes.values()].find(m=> m.type === 'source');
-  }
-  if(!n){ const [wx, wy] = toWorld(e.clientX, e.clientY); n = addNode('source', wx, wy); }
-  loadMediaFile(n, f);
+  const onNode = hit && nodes.get(hit.dataset.id), sel = nodes.get(selectedId);
+  let n = (onNode && isSource(onNode)) ? onNode
+    : (sel && sel.type === type) ? sel
+    : all.find(m=> m.type === type) || all.find(m=> isSource(m) && !m.frame && !m.camStarting);
+  if(!n){ const [wx, wy] = toWorld(e.clientX, e.clientY); n = addNode(type, wx, wy); }
+  loadMediaFile(sourceFor(n, f), f);
 });
 
 /* ============================================================
@@ -1617,7 +2001,7 @@ function buildLoopControls(n, body){
   const exp = document.createElement('button');
   exp.type = 'button'; exp.className = 'miniBtn'; exp.textContent = t('btnExport');
   exp.addEventListener('click', ()=>{
-    const L = evalNode(n)._loop;
+    const L = bakeSpin(n);
     if(L && L.tracks.length) downloadBlob(new Blob([buildLoopMidi(L)], {type:'audio/midi'}), 'dessons-nodes.mid');
   });
   row.append(play, exp);
@@ -2134,7 +2518,7 @@ function wirePath(a, b){
   const dx = Math.max(40, Math.abs(b[0] - a[0])*0.5);
   return `M${a[0]},${a[1]} C${a[0]+dx},${a[1]} ${b[0]-dx},${b[1]} ${b[0]},${b[1]}`;
 }
-let draft = null;   // {fromNode, fromPort, type, pos:[x,y]} while dragging a new wire
+let draft = null;   // {fromNode, fromPort, type, pos:[x,y]} while dragging a new wire; {toNode, toPort, ...} when pulled from an empty input
 function drawWires(){
   let html = '';
   links.forEach(l=>{
@@ -2143,8 +2527,9 @@ function drawWires(){
     if(a && b && od) html += `<path d="${wirePath(a, b)}" stroke="${typeColor(od.type)}"/>`;
   });
   if(draft){
-    const a = portPos(draft.fromNode, draft.fromPort, 'out');
-    if(a) html += `<path class="draft" d="${wirePath(a, draft.pos)}" stroke="${typeColor(draft.type)}"/>`;
+    const a = draft.toNode ? draft.pos : portPos(draft.fromNode, draft.fromPort, 'out');
+    const b = draft.toNode ? portPos(draft.toNode, draft.toPort, 'in') : draft.pos;
+    if(a && b) html += `<path class="draft" d="${wirePath(a, b)}" stroke="${typeColor(draft.type)}"/>`;
   }
   wiresSvg.innerHTML = html;
 }
@@ -2155,14 +2540,18 @@ function startWire(e, n, p, side){
   if(side === 'in'){
     // grabbing a plugged input picks its wire up (last one for multi inputs)
     const existing = links.filter(l=> l.to === n.id && l.toPort === p.id).pop();
-    if(!existing) return;
-    disconnect(existing);
-    draft = {fromNode:existing.from, fromPort:existing.fromPort, type:p.type, pos:toWorld(e.clientX, e.clientY)};
+    if(existing){
+      disconnect(existing);
+      draft = {fromNode:existing.from, fromPort:existing.fromPort, type:p.type, pos:toWorld(e.clientX, e.clientY)};
+    } else draft = {toNode:n.id, toPort:p.id, type:p.type, pos:toWorld(e.clientX, e.clientY)};
   } else {
     draft = {fromNode:n.id, fromPort:p.id, type:p.type, pos:toWorld(e.clientX, e.clientY)};
   }
   document.body.classList.add('wiring');
-  document.querySelectorAll('.port.in').forEach(pe=> pe.classList.toggle('compatible', pe.dataset.type === draft.type && pe.dataset.node !== draft.fromNode));
+  const rev = !!draft.toNode, wanted = rev ? 'out' : 'in', own = rev ? draft.toNode : draft.fromNode;
+  document.body.classList.toggle('rev', rev);
+  document.querySelectorAll('.port').forEach(pe=> pe.classList.toggle('compatible',
+    pe.dataset.side === wanted && pe.dataset.type === draft.type && pe.dataset.node !== own));
   const target = e.target;
   target.setPointerCapture(e.pointerId);
   const move = ev=>{ draft.pos = toWorld(ev.clientX, ev.clientY); drawWires(); };
@@ -2171,8 +2560,11 @@ function startWire(e, n, p, side){
     document.body.classList.remove('wiring');
     const d = draft; draft = null;
     const hit = document.elementFromPoint(ev.clientX, ev.clientY);
-    const pe = hit && hit.closest('.port.in');
-    if(pe && pe.dataset.type === d.type) connect(d.fromNode, d.fromPort, pe.dataset.node, pe.dataset.port);
+    const pe = hit && hit.closest('.port.' + wanted);
+    if(pe && pe.dataset.type === d.type){
+      if(rev) connect(pe.dataset.node, pe.dataset.port, d.toNode, d.toPort);
+      else connect(d.fromNode, d.fromPort, pe.dataset.node, pe.dataset.port);
+    }
     else if(!hit || !hit.closest('.node')) showMenu(ev.clientX, ev.clientY, d);   // dropped on empty canvas: add a node that takes it
     drawWires();
   };
@@ -2185,22 +2577,24 @@ function showMenu(cx, cy, wire){
   addMenu.innerHTML = '';
   const [wx, wy] = toWorld(cx, cy);
   ADD_MENU.forEach(([cat, types])=>{
-    const ok = types.filter(ty=> !wire || (NODE_DEFS[ty].inputs || []).some(p=> p.type === wire.type));
+    const side = wire && wire.toNode ? 'outputs' : 'inputs';
+    const ok = types.filter(ty=> !wire || (NODE_DEFS[ty][side] || []).some(p=> p.type === wire.type));
     if(!ok.length) return;
     const h = document.createElement('h3'); h.textContent = t(cat); addMenu.appendChild(h);
     ok.forEach(ty=>{
       const b = document.createElement('button');
       b.type = 'button';
       b.innerHTML = '<i></i><span></span>';
-      b.querySelector('i').style.background = CAT_COLOR[cat];
+      b.querySelector('i').style.background = NODE_DEFS[ty].color || CAT_COLOR[cat];
       b.querySelector('span').textContent = t('n_' + ty);
       b.addEventListener('click', ()=>{
         hideMenu();
-        const n = addNode(ty, wx, wy - 20);
+        const n = addNode(ty, wire && wire.toNode ? wx - 216 : wx, wy - 20);
         selectNode(n.id);
         if(wire){
-          const port = NODE_DEFS[ty].inputs.find(p=> p.type === wire.type);
-          connect(wire.fromNode, wire.fromPort, n.id, port.id);
+          const port = NODE_DEFS[ty][side].find(p=> p.type === wire.type);
+          if(wire.toNode) connect(n.id, port.id, wire.toNode, wire.toPort);
+          else connect(wire.fromNode, wire.fromPort, n.id, port.id);
         }
         markDirty(n.id); drawWires(); saveSoon();
       });
@@ -2263,13 +2657,16 @@ function saveSoon(){
 }
 function clearGraph(){
   stopPlayback();
-  nodes.forEach(n=>{ if(n.type === 'source') stopMedia(n); n.el.remove(); });
+  nodes.forEach(n=>{ if(isSource(n)) stopMedia(n); n.el.remove(); });
   nodes.clear(); links = []; selectedId = null;
 }
 function loadGraph(g){
   if(!g || g.app !== 'dessons-nodes' || !Array.isArray(g.nodes)) throw new Error('bad graph');
   clearGraph();
-  g.nodes.forEach(s=>{ if(NODE_DEFS[s.type]) addNode(s.type, s.x, s.y, s.params, s.id); });
+  g.nodes.forEach(s=>{
+    const type = s.type === 'source' ? 'srcImage' : s.type;   // graphs from before the split: only images were ever saved
+    if(NODE_DEFS[type]) addNode(type, s.x, s.y, s.params, s.id);
+  });
   nextId = 1 + Math.max(0, ...[...nodes.keys()].map(id=> parseInt(id.slice(1)) || 0));
   links = (g.links || []).filter(l=> nodes.has(l.from) && nodes.has(l.to)
     && outputDef(nodes.get(l.from), l.fromPort) && inputDef(nodes.get(l.to), l.toPort));
@@ -2285,7 +2682,7 @@ function loadGraph(g){
 // lines fast on a vibraphone, one shared scale
 function defaultGraph(){
   clearGraph();
-  const src = addNode('source', 0, 120);
+  const src = addNode('srcImage', 0, 120);
   const tone = addNode('tone', 260, 120);
   const edges = addNode('edges', 520, 120);
   const dark = addNode('lumaBand', 780, 0, {min:0, max:110});
