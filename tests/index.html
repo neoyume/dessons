@@ -249,6 +249,19 @@ test('Replay : l’avancement suit sa propre horloge', ()=>{
   ok(half > full*0.4 && half < full*0.6, half + ' sur ' + full);
   eq(dark(), full);
 });
+test('Calques d’affichage : sans effet sur les notes, et ids filtrés', ()=>{
+  clearGraph();
+  const g = addNode('srcGen', 0, 0, {kind:'noise'}), mk = i=> ({c:'#000000', s:80, o:1, h:1, r:0, pts:[1000,2000 + i*2000,100, 9000,2000 + i*2000,100].join(',')});
+  const d = addNode('srcDraw', 300, 0, {turns:0, strokes:[mk(0), mk(1), mk(2)]}), e = addNode('edges', 500, 0), s = addNode('scan', 700, 0, {thresh:30});
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
+  const notes = ()=>{ markDirty(d.id); return JSON.stringify(evalNode(s).notes.notes); }, before = notes();
+  ok(JSON.parse(before).length > 0);
+  d.params.layers = [{id:g.id, a:.7}];
+  eq(notes(), before);
+  ok(layerNodes(d).includes(g) && !layerNodes(d).includes(d));
+  loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{layers:[{id:5, a:1}, {id:'x', a:'non'}, {id:'y', a:9}, 'z']}}], links:[]});
+  eq(nodes.get('n1').params.layers, [{id:'y', a:1}]);
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;

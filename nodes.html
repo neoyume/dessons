@@ -118,6 +118,14 @@
   #drawEditor.watch #drawCanvas{cursor:default;}
   /* difference: the playhead shows on any colour of the painting */
   #drawScan{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; mix-blend-mode:difference;}
+  .drawFrame{isolation:isolate;}
+  .drawLayers, .drawLayers canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+  .drawLayers canvas{object-fit:contain;}
+  .layerList{display:flex; flex-direction:column; gap:5px;}
+  .layerList h3{margin:4px 0 0; font-size:10px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-dim); font-weight:600;}
+  .layerRow{display:grid; grid-template-columns:auto 1fr 74px; align-items:center; gap:6px; font-size:11.5px; color:var(--text);}
+  .layerRow span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .layerRow input[type=checkbox]{width:14px; height:14px; margin:0; accent-color:var(--accent);}
   .replayTime{font-family:var(--mono); font-size:22px; color:var(--accent); text-align:center;}
   .replayBar{height:10px; border-radius:5px; background:var(--panel-2); overflow:hidden; cursor:pointer;}
   .replayBar i{display:block; height:100%; width:0; background:var(--accent);}
@@ -438,6 +446,7 @@ const I18N = {
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
     btnMidiOn:'Activer le MIDI',
     n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer le dessin', replayStop:'Arrêter', replayEnd:'Terminé',
+    drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
     toolBrush:'Pinceau', toolSmudge:'Estompe', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
@@ -527,6 +536,7 @@ const I18N = {
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
     btnMidiOn:'Enable MIDI',
     n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay the drawing', replayStop:'Stop', replayEnd:'Finished',
+    drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
     toolBrush:'Brush', toolSmudge:'Smudge', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
@@ -907,6 +917,7 @@ const NODE_DEFS = {
     params:[
       {id:'strokes', kind:'hidden', def:[]},
       {id:'bg', kind:'hidden', def:'#FFFFFF'},
+      {id:'layers', kind:'hidden', def:[]},
       {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
       {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1},
       {id:'replayMin', label:'p_replayMin', kind:'range', min:0.5, max:20, step:0.5, def:3, fmt:v=> v + ' min'}
@@ -914,6 +925,7 @@ const NODE_DEFS = {
     clean:o=>{
       const hex = v=> typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
       if(!hex(o.bg)) delete o.bg;
+      o.layers = !Array.isArray(o.layers) ? [] : o.layers.filter(l=> isPlain(l) && typeof l.id === 'string' && isNum(l.a)).slice(0, 32).map(l=> ({id:l.id, a:clamp(l.a, 0, 1)}));
       o.strokes = !Array.isArray(o.strokes) ? [] : o.strokes.filter(st=> isPlain(st) && hex(st.c) && typeof st.pts === 'string' && /^[0-9,]*$/.test(st.pts))
         .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {})}));
     },
@@ -3216,12 +3228,68 @@ function scansOf(n){
   }
   return out;
 }
+/* ---- display layers: other nodes shown with the painting, never read by the music.
+   Blended over the paper (multiply on a light one, screen on a dark one), which puts
+   them behind the paint: a layer can move with the loop while you paint on it. ---- */
+function layerSource(m){
+  const port = portsOut(m).find(p=> p.type === 'image' || p.type === 'field');
+  return port ? {port, value:m.out && m.out[port.id]} : null;
+}
+function layerNodes(n){ return [...nodes.values()].filter(m=> m !== n && layerSource(m)); }
+function syncDrawLayers(){
+  const d = drawEd, [r, g, b] = hexToRgb(d.n.params.bg);
+  const blend = 0.299*r + 0.587*g + 0.114*b > 128 ? 'multiply' : 'screen', keep = new Set();
+  d.n.params.layers.forEach(l=>{
+    const m = nodes.get(l.id), src = m && layerSource(m), v = src && src.value;
+    if(!v) return;
+    keep.add(l.id);
+    let c = d.layerEls.get(l.id);
+    if(!c){ c = document.createElement('canvas'); d.layerEls.set(l.id, c); d.held.appendChild(c); }
+    c.style.opacity = l.a; c.style.mixBlendMode = blend;
+    if(c.shown === v) return;      // redrawn only when that node has a new frame
+    c.shown = v;
+    const data = src.port.type === 'field' ? fieldRGBA(v, false) : v.data;
+    c.width = v.w; c.height = v.h;
+    c.getContext('2d').putImageData(new ImageData(data instanceof Uint8ClampedArray ? data : new Uint8ClampedArray(data), v.w, v.h), 0, 0);
+  });
+  d.layerEls.forEach((c, id)=>{ if(!keep.has(id)){ c.remove(); d.layerEls.delete(id); } });
+}
+function buildLayerList(n, tools){
+  const list = layerNodes(n);
+  if(!list.length) return;
+  const box = document.createElement('div'); box.className = 'layerList';
+  const h = document.createElement('h3'); h.textContent = t('drLayers');
+  box.appendChild(h);
+  const count = {};
+  list.forEach(m=>{
+    count[m.type] = (count[m.type] || 0) + 1;
+    const same = list.filter(x=> x.type === m.type).length > 1;
+    const row = document.createElement('label'); row.className = 'layerRow';
+    const on = document.createElement('input'), name = document.createElement('span'), a = document.createElement('input');
+    on.type = 'checkbox'; a.type = 'range'; a.min = 5; a.max = 100; a.step = 1;
+    name.textContent = t('n_' + m.type) + (same ? ' ' + count[m.type] : '');
+    const cur = ()=> n.params.layers.find(l=> l.id === m.id);
+    on.checked = !!cur(); a.value = cur() ? cur().a*100 : 70; a.disabled = !on.checked;
+    a.setAttribute('aria-label', name.textContent);
+    on.addEventListener('change', ()=>{
+      n.params.layers = on.checked ? n.params.layers.concat([{id:m.id, a:a.value/100}]) : n.params.layers.filter(l=> l.id !== m.id);
+      a.disabled = !on.checked; saveSoon();
+    });
+    a.addEventListener('input', ()=>{ const l = cur(); if(l){ l.a = a.value/100; saveSoon(); } });
+    row.append(on, name, a);
+    box.appendChild(row);
+  });
+  const hint = document.createElement('div'); hint.className = 'nodeNote'; hint.textContent = t('drLayersHint');
+  box.appendChild(hint);
+  tools.appendChild(box);
+}
 function drawOverlay(){
   const d = drawEd;
   if(!d) return;
   d.scanRaf = requestAnimationFrame(drawOverlay);
   const c = d.scan, x = d.sctx, W = c.width;
   x.clearRect(0, 0, W, W);
+  syncDrawLayers();
   if(!playing) return;
   const pos = loopPosNow() % 1;
   scansOf(d.n).forEach(s=>{
@@ -3250,7 +3318,8 @@ function openDrawEditor(n, watch){
   const cv = document.createElement('canvas'); cv.id = 'drawCanvas'; cv.width = cv.height = DRAW_RES;
   const scan = document.createElement('canvas'); scan.id = 'drawScan'; scan.width = scan.height = 700;
   const frame = document.createElement('div'); frame.className = 'drawFrame';
-  frame.append(cv, scan);
+  const held = document.createElement('div'); held.className = 'drawLayers';
+  frame.append(cv, held, scan);
   area.appendChild(frame);
   const tools = document.createElement('div'); tools.className = 'drawTools';
   const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
@@ -3298,6 +3367,7 @@ function openDrawEditor(n, watch){
   const row1 = document.createElement('div'), row2 = document.createElement('div');
   row1.className = row2.className = 'btnRow';
   row1.append(undo, redoBtn); row2.append(bgBtn, clear);
+  buildLayerList(n, tools);
   tools.append(row1, row2, replayBtn, btn('drDone', closeDrawEditor, true));
   const time = document.createElement('div'), bar = document.createElement('div');
   if(watch){
@@ -3314,7 +3384,7 @@ function openDrawEditor(n, watch){
   box.append(area, tools);
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d')};
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map()};
   drawEd.scanRaf = requestAnimationFrame(drawOverlay);
   refreshDrawEditor();
   if(!watch){ ringSize(); setDrawTool(brush.tool); }
