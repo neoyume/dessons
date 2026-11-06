@@ -69,7 +69,7 @@ Commence par **Fichier → Modèles** : ils jouent tout de suite, sauf *MIDI imp
 - **Sortie** : boucle (synthé d'aperçu, export `.mid`), **Logic (MIDI live)**, un node par piste Logic, et **Signal → CC MIDI** pour automatiser un filtre ou un volume dans ton DAW. Le MIDI en direct nécessite Chrome ou Edge.
 - **Outils** : courbe personnalisée, trajet dessiné, reroute, attache-câbles, cadre de groupe.
 
-**Dessin** : peins directement dans le graphe avec un pinceau rond (taille, opacité, dureté, pression du stylet) et le nuancier NY. Chaque trait est enregistré : l'image peut se reconstruire à chaque passage de la boucle, et la musique suit le geste. Mets *Cycles / boucle* à 0 pour garder le dessin fini, ou pilote *Avancement* avec un signal.
+**Dessin** : peins directement dans le graphe avec un pinceau rond et une estompe (taille, opacité, dureté, pression du stylet) et le nuancier NY. Chaque trait est enregistré : l'image peut se reconstruire à chaque passage de la boucle, et la musique suit le geste. Mets *Cycles / boucle* à 0 pour garder le dessin fini, ou pilote *Avancement* avec un signal.
 
 Le `.mid` exporté suit ce que tu entends : un mesh qui tourne ou un signal qui bouge est rejoué pas à pas. Les notes d'un `.mid` importé gardent leurs hauteurs et peuvent donc sortir de la gamme : passe-les par **Caler sur la gamme** pour les y ramener. **Caler la Boucle**, sur le node MIDI, donne à la Boucle la longueur et le tempo du fichier.
 

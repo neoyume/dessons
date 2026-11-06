@@ -431,11 +431,12 @@ const I18N = {
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
     btnMidiOn:'Activer le MIDI',
     n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Partir d’un dessin',
+    toolBrush:'Pinceau', toolSmudge:'Estompe', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
-    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['?','Cette aide']],
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S','Pinceau, estompe, dans le dessin'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -519,11 +520,12 @@ const I18N = {
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
     btnMidiOn:'Enable MIDI',
     n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Start from a drawing',
+    toolBrush:'Brush', toolSmudge:'Smudge', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
-    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['?','This help']],
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S','Brush, smudge, in the drawing'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -905,7 +907,7 @@ const NODE_DEFS = {
       const hex = v=> typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
       if(!hex(o.bg)) delete o.bg;
       o.strokes = !Array.isArray(o.strokes) ? [] : o.strokes.filter(st=> isPlain(st) && hex(st.c) && typeof st.pts === 'string' && /^[0-9,]*$/.test(st.pts))
-        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts}));
+        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {})}));
     },
     compute:(p, inp, n)=>{
       n.lastPhase = meshPhase();
@@ -2928,10 +2930,37 @@ function brushTip(color, hard){
   brushTips.set(key, c);
   return c;
 }
+// the smudge carries a patch of what it touches: laid down a little further on, then
+// refreshed with what's there. It works on the picture itself, so it's replayed in place
+function smudgeStamp(ctx, S, st, state, sx, sy, sp, base){
+  const k = 1 - st.r*(1 - sp), rad = Math.max(0.5, base*k), force = clamp(st.o*k, 0, 1), src = ctx.canvas;
+  if(!state.patch){
+    const d = Math.max(2, Math.ceil(base*2));
+    state.patch = document.createElement('canvas'); state.mask = document.createElement('canvas');
+    state.patch.width = state.patch.height = state.mask.width = state.mask.height = d;
+    state.pc = state.patch.getContext('2d'); state.mc = state.mask.getContext('2d'); state.d = d;
+    state.pc.drawImage(src, sx*S - rad, sy*S - rad, rad*2, rad*2, 0, 0, d, d);
+    return;
+  }
+  const d = state.d, mc = state.mc;
+  mc.globalCompositeOperation = 'copy';
+  mc.drawImage(state.patch, 0, 0);
+  mc.globalCompositeOperation = 'destination-in';
+  mc.drawImage(brushTip('#000000', st.h), 0, 0, d, d);
+  // stamps overlap a lot: each lays down little and picks up more, so colours mix
+  // along the way instead of the first one being painted over everything
+  ctx.globalAlpha = force*0.45;
+  ctx.drawImage(state.mask, sx*S - rad, sy*S - rad, rad*2, rad*2);
+  ctx.globalAlpha = 1;
+  state.pc.globalAlpha = 0.04 + (1 - force)*0.5;
+  state.pc.drawImage(src, sx*S - rad, sy*S - rad, rad*2, rad*2, 0, 0, d, d);
+  state.pc.globalAlpha = 1;
+}
 // walks from the last point to this one, leaving a stamp every fraction of the brush
 function stampTo(ctx, S, st, state, x, y, p){
   const tip = brushTip(st.c, st.h), base = Math.max(0.4, st.s/DRAW_RES*S/2), flow = 0.3 + 0.7*st.h;
   const stamp = (sx, sy, sp)=>{
+    if(st.t === 's'){ smudgeStamp(ctx, S, st, state, sx, sy, sp, base); return; }
     const k = 1 - st.r*(1 - sp), rad = Math.max(0.35, base*k);    // pressure thins the line and lightens it
     ctx.globalAlpha = flow*k;
     ctx.drawImage(tip, sx*S - rad, sy*S - rad, rad*2, rad*2);
@@ -2955,6 +2984,12 @@ function strokeLayer(S){
 // a stroke is built on its own layer, then laid down at its opacity: crossing
 // itself doesn't darken it, like a real pass of the brush
 function commitStroke(ctx, S, st, limit){
+  if(st.t === 's'){
+    const pts = strokePoints(st), state = {}, n = limit == null ? pts.length/3 : limit;
+    for(let i=0;i<n;i++) stampTo(ctx, S, st, state, pts[i*3], pts[i*3+1], pts[i*3+2]);
+    ctx.globalAlpha = 1;
+    return;
+  }
   const pts = strokePoints(st), layer = strokeLayer(S), lc = layer.getContext('2d'), state = {}, n = limit == null ? pts.length/3 : limit;
   lc.clearRect(0, 0, S, S);
   for(let i=0;i<n;i++) stampTo(lc, S, st, state, pts[i*3], pts[i*3+1], pts[i*3+2]);
@@ -2976,10 +3011,13 @@ function drawAt(cache, S, strokes, bg, prog){
   strokes.forEach(st=>{ total += strokePoints(st).length/3; });
   let left = Math.round(clamp(prog, 0, 1)*total), i = 0;
   while(i < strokes.length && left >= strokePoints(strokes[i]).length/3 && (left > 0 || !strokePoints(strokes[i]).length)){ left -= strokePoints(strokes[i]).length/3; i++; }
-  if(cache.strokes !== strokes || cache.len !== strokes.length || cache.bg !== bg || i < cache.done){
-    cache.strokes = strokes; cache.len = strokes.length; cache.bg = bg; cache.done = 0;
+  // a new stroke at the end keeps the base: only what changes earlier starts it again
+  const prev = cache.strokes, same = prev && cache.done <= strokes.length && (!cache.done || prev[cache.done - 1] === strokes[cache.done - 1]);
+  if(!same || cache.bg !== bg || i < cache.done){
+    cache.bg = bg; cache.done = 0;
     cache.bctx.globalAlpha = 1; cache.bctx.fillStyle = bg; cache.bctx.fillRect(0, 0, S, S);
   }
+  cache.strokes = strokes;
   for(; cache.done < i; cache.done++) commitStroke(cache.bctx, S, strokes[cache.done]);
   cache.octx.globalAlpha = 1;
   cache.octx.drawImage(cache.base, 0, 0);
@@ -2995,12 +3033,11 @@ function buildDrawControls(n, body){
 }
 
 let drawEd = null;      // {n, cv, ctx, cache, cur, state, redo, ring, replay}
-let brush = {size:28, opacity:100, hard:75, press:60, color:'#231F20'};
+let brush = {size:28, opacity:100, hard:75, press:60, color:'#231F20', tool:'brush'};
 try{ brush = Object.assign(brush, JSON.parse(localStorage.getItem('dessons.brush') || '{}')); }catch(e){}
 const saveBrush = ()=>{ try{ localStorage.setItem('dessons.brush', JSON.stringify(brush)); }catch(e){} };
 function drawChanged(){
   const n = drawEd.n;
-  n.drawCache = null;
   markDirty(n.id); saveSoon();
   syncDrawButtons();
 }
@@ -3028,6 +3065,7 @@ function drawPaintView(){
   const d = drawEd;
   if(!d) return;
   d.raf = 0;
+  if(d.cur && d.cur.st.t === 's') return;     // the smudge is already working on this canvas
   d.ctx.globalAlpha = 1;
   d.ctx.drawImage(d.cache.out, 0, 0);
   if(d.cur){
@@ -3039,6 +3077,7 @@ function drawPaintView(){
 function drawAdd(e){
   const d = drawEd, [x, y, p] = drawPoint(e);
   d.cur.pts.push(Math.round(x*10000), Math.round(y*10000), Math.round(p*100));
+  if(d.cur.st.t === 's'){ stampTo(d.ctx, DRAW_RES, d.cur.st, d.cur.state, x, y, p); return; }
   const lc = strokeLayer(DRAW_RES).getContext('2d');
   stampTo(lc, DRAW_RES, d.cur.st, d.cur.state, x, y, p);
   lc.globalAlpha = 1;
@@ -3075,6 +3114,7 @@ function drawKey(e){
   const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
   if(e.key === 'Escape'){ closeDrawEditor(); return true; }
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
+  if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's')){ setDrawTool(key === 's' ? 'smudge' : 'brush'); return true; }
   if(!e.target.closest('input') && (e.key === '[' || e.key === ']')){
     brush.size = clamp(Math.round(brush.size*(e.key === ']' ? 1.2 : 1/1.2)), 1, 300);
     const f = $('brSize'); if(f){ f.value = brush.size; f.refresh(); }
@@ -3082,6 +3122,12 @@ function drawKey(e){
     return true;
   }
   return e.key !== ' ';     // the canvas shortcuts stay off, except play / stop
+}
+// the same sliders drive both tools; for the smudge, opacity is how far it drags
+function setDrawTool(tool){
+  brush.tool = tool; saveBrush();
+  drawEd.box.querySelectorAll('.drawTool').forEach(b=> b.classList.toggle('primary', b.dataset.tool === tool));
+  $('brOpacity').closest('.prm').firstChild.textContent = t(tool === 'smudge' ? 'brForce' : 'brOpacity');
 }
 function brushSlider(id, label, min, max, key, fmt){
   const row = document.createElement('label'); row.className = 'prm';
@@ -3103,6 +3149,14 @@ function openDrawEditor(n){
   const tools = document.createElement('div'); tools.className = 'drawTools';
   const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
   const pct = v=> v + '%';
+  const toolRow = document.createElement('div'); toolRow.className = 'btnRow';
+  [['brush', 'toolBrush'], ['smudge', 'toolSmudge']].forEach(([id, label])=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn drawTool'; b.dataset.tool = id; b.textContent = t(label);
+    b.addEventListener('click', ()=> setDrawTool(id));
+    toolRow.appendChild(b);
+  });
+  tools.appendChild(toolRow);
   tools.append(brushSlider('brSize', 'brSize', 1, 300, 'size', v=> v), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
     brushSlider('brHard', 'brHard', 0, 100, 'hard', pct), brushSlider('brPress', 'brPress', 0, 100, 'press', pct));
   const name = document.createElement('div'); name.className = 'nyName';
@@ -3142,9 +3196,10 @@ function openDrawEditor(n){
   box.append(area, tools);
   $('workspace').appendChild(box);
   document.body.appendChild(ring);
-  drawEd = {n, cv, ctx:cv.getContext('2d'), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0};
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0};
   refreshDrawEditor();
   ringSize();
+  setDrawTool(brush.tool);
   cv.addEventListener('pointerenter', ()=>{ ring.hidden = false; ringSize(); });
   cv.addEventListener('pointerleave', ()=>{ if(!drawEd.cur) ring.hidden = true; });
   cv.addEventListener('pointerdown', e=>{
@@ -3154,7 +3209,9 @@ function openDrawEditor(n){
     cv.setPointerCapture(e.pointerId);
     const lc = strokeLayer(DRAW_RES).getContext('2d');
     lc.clearRect(0, 0, DRAW_RES, DRAW_RES);
-    drawEd.cur = {st:{c:brush.color, s:brush.size, o:brush.opacity/100, h:brush.hard/100, r:brush.press/100, pts:''}, pts:[], state:{}};
+    const st = {c:brush.color, s:brush.size, o:brush.opacity/100, h:brush.hard/100, r:brush.press/100, pts:''};
+    if(brush.tool === 'smudge') st.t = 's';
+    drawEd.cur = {st, pts:[], state:{}};
     drawAdd(e);
   });
   cv.addEventListener('pointermove', e=>{

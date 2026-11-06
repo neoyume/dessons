@@ -213,6 +213,21 @@ test('Dessin : l’opacité ne s’accumule pas dans un même trait', ()=>{
   const v = drawAt({}, 200, [st], '#FFFFFF', 1).getContext('2d').getImageData(100, 100, 1, 1).data[0];
   ok(Math.abs(v - 128) < 6, v);
 });
+test('Estompe : tire la couleur et se rejoue pareil', ()=>{
+  const paint = {c:'#000000', s:300, o:1, h:1, r:0, pts:[2500,5000,100, 2500,5000,100].join(',')};
+  const sm = {c:'#000000', s:120, o:.9, h:.8, r:0, t:'s', pts:Array.from({length:40}, (_, i)=> [2500 + i*120, 5000, 100]).flat().join(',')};
+  const px = st=> drawAt({}, 400, st, '#FFFFFF', 1).getContext('2d').getImageData(240, 200, 1, 1).data[0];
+  eq(px([paint]), 255);          // nothing there before
+  ok(px([paint, sm]) < 200);     // dragged across
+  eq(px([paint, sm]), px([paint, sm]));
+});
+test('Estompe : un trait ajouté garde le reste en cache', ()=>{
+  const st = {c:'#000000', s:60, o:1, h:1, r:0, pts:'1000,1000,100,2000,2000,100'}, c = {};
+  drawAt(c, 100, [st], '#FFFFFF', 1);
+  const base = c.done, kept = c.base;
+  drawAt(c, 100, [st, {...st, pts:'8000,8000,100'}], '#FFFFFF', 1);
+  eq([base, c.done, c.base === kept], [1, 2, true]);
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;
