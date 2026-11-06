@@ -5,7 +5,9 @@
 [![Licence : PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/Licence-PolyForm%20Noncommercial%201.0.0-lightgrey.svg)](LICENSE)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Soutenir-13C3FF?logo=kofi&logoColor=white)](https://ko-fi.com/neoyume)
 
-*dessin + sons* — convertit une image, une vidéo ou un flux webcam en MIDI multi-pistes, exportable en `.mid` ou envoyé en temps réel dans ton DAW via un port MIDI virtuel. Pensé pour créer des loops dans Logic Pro (ou n'importe quel DAW). Peut aussi rendre la boucle en vidéo verticale, son compris, à poster directement sur les réseaux.
+*dessin + sons* — convertit une image, une vidéo, un flux webcam ou une peinture en direct en MIDI multi-pistes, exportable en `.mid` ou envoyé en temps réel dans ton DAW via un port MIDI virtuel. Pensé pour créer des loops dans Logic Pro (ou n'importe quel DAW). Peut aussi rendre la boucle en vidéo verticale, son compris, à poster directement sur les réseaux.
+
+**Nouveau :** [Nodes](https://neoyume.github.io/dessons/nodes.html), la version modulaire : branche le traitement à ta façon, peins en direct et entends chaque trait, rejoue la peinture comme une pièce. [Voir plus bas](#nodes--la-version-modulaire).
 
 Par [neoyume](https://github.com/neoyume). Contributions bienvenues.
 
@@ -68,6 +70,8 @@ Commence par **Fichier → Modèles** : ils jouent tout de suite, sauf *MIDI imp
 - **Signaux** : temps / frame, LFO, maths, échelle, plage. Un signal est une valeur qui bouge avec la boucle. Tout curseur avec un point sur son bord en accepte un : un LFO peut faire respirer la sensibilité d'un balayage, le niveau d'un fichier MIDI peut faire pulser le zoom d'un mesh.
 - **Sortie** : boucle (synthé d'aperçu, export `.mid`), **Logic (MIDI live)**, un node par piste Logic, et **Signal → CC MIDI** pour automatiser un filtre ou un volume dans ton DAW. Le MIDI en direct nécessite Chrome ou Edge.
 - **Outils** : courbe personnalisée, trajet dessiné, reroute, attache-câbles, cadre de groupe.
+
+![Live painting dans Nodes : traits de couleur et spirale sur un calque de bruit qui bouge, une tête de lecture qui lit la peinture, les réglages du pinceau et le nuancier NY à droite](docs/screenshot-drawing.jpg)
 
 **Dessin** : peins directement dans le graphe avec un pinceau rond et une estompe (taille, opacité, dureté, pression du stylet) et le nuancier NY. Pour le **live painting**, pars de *Fichier → Modèles → Live painting* : le canvas est lu pendant que tu peins, un trait compte alors que ta main bouge encore, et une tête de lecture sur la peinture montre ce qui sonne. Chaque trait est enregistré : **Rejouer le dessin** le reconstruit sur la durée choisie (3 minutes par défaut), son compris, et on entend les boucles évoluer. *Cycles / boucle* peut aussi le reconstruire à chaque passage de la boucle. Les **calques d'affichage** montrent d'autres nodes avec la peinture, comme un bruit qui bouge avec la boucle ou une vidéo : ils sont purement visuels, la musique ne lit que ton dessin.
 

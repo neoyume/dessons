@@ -5,7 +5,9 @@
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-lightgrey.svg)](LICENSE)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-13C3FF?logo=kofi&logoColor=white)](https://ko-fi.com/neoyume)
 
-*dessin + sons* (French for "drawing + sounds") — turns an image, a video or a webcam feed into a multi-track MIDI file, exported as `.mid` or streamed live into your DAW through a virtual MIDI port. Built for making loops in Logic Pro (or any DAW). It can also render the loop as a vertical video, sound included, to post straight to social platforms.
+*dessin + sons* (French for "drawing + sounds") — turns an image, a video, a webcam feed or a live painting into a multi-track MIDI file, exported as `.mid` or streamed live into your DAW through a virtual MIDI port. Built for making loops in Logic Pro (or any DAW). It can also render the loop as a vertical video, sound included, to post straight to social platforms.
+
+**New:** [Nodes](https://neoyume.github.io/dessons/nodes.html), the modular version: wire the pipeline your own way, paint live and hear each stroke, replay the painting as a piece. [See below](#nodes-the-modular-version).
 
 By [neoyume](https://github.com/neoyume). Contributions welcome.
 
@@ -68,6 +70,8 @@ Start from **File → Templates**: they play straight away, except *Imported MID
 - **Signals**: time / frame, LFO, math, scale, range. A signal is a value that moves with the loop. Any slider with a dot on its edge accepts one: an LFO can make a scan's sensitivity breathe, a MIDI file's level can pulse a mesh's zoom.
 - **Output**: loop (preview synth, `.mid` export), **Logic (live MIDI)**, one node per Logic track, and **Signal → MIDI CC** to automate a filter or a volume in your DAW. Live MIDI needs Chrome or Edge.
 - **Tools**: custom curve, drawn path, reroute, cable clip, group frame.
+
+![Live painting in Nodes: colored strokes and a spiral over a moving noise layer, a playhead reading the painting, the brush settings and NY palette on the right](docs/screenshot-drawing.jpg)
 
 **Drawing**: paint straight into the graph with a round brush and a smudge tool (size, opacity, hardness, pen pressure) and the NY color palette. For **live painting**, start from *File → Templates → Live painting*: the canvas is read as you paint, a stroke counts while your hand is still moving, and a playhead on the painting shows what is sounding. Every stroke is recorded, so **Replay the drawing** rebuilds it over the length you choose (3 minutes by default) with the sound running, and you hear the loops evolve. *Cycles / loop* can also rebuild it on each pass of the loop. **Display layers** show other nodes with the painting, such as a noise moving with the loop or a video: they are visual only, the music reads your drawing alone.
 
