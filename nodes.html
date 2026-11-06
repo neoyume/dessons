@@ -222,6 +222,16 @@
   #addMenu button.active{background:var(--panel-2); box-shadow:inset 2px 0 0 var(--accent);}
   #menuSearch{width:100%; font-size:12px; color:var(--text); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:5px 8px; outline:none;}
   #menuSearch:focus{border-color:var(--accent);}
+  #addMenu{width:420px; max-width:calc(100vw - 16px); overflow:hidden;}
+  #addMenu .menuTabs{display:flex; flex-wrap:wrap; gap:2px; margin:6px 0; border-bottom:1px solid var(--line);}
+  #addMenu .menuTabs button{
+    width:auto; flex:none; padding:4px 7px 5px; font-size:11.5px; color:var(--text-dim);
+    border-radius:5px 5px 0 0; border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  #addMenu .menuTabs button:hover{color:var(--text); background:none;}
+  #addMenu .menuTabs button.on{color:var(--text); border-bottom-color:var(--accent); background:var(--panel-2);}
+  /* a fixed height: changing tab must not make the menu jump */
+  .menuList{height:216px; overflow:auto;}
   .menuEmpty{padding:8px; font-size:11.5px; color:var(--text-dim);}
 
   #ny-noise{
@@ -3216,6 +3226,7 @@ function startWire(e, n, p, side){
 
 /* ---- add-node menu (optionally filtered to nodes that accept a dragged wire) ---- */
 const addMenu = $('addMenu');
+let menuTab = null;     // the last tab opened, for the next time
 const plain = str=> str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 function menuEntries(wire){
   const fits = ty=>{
@@ -3248,10 +3259,22 @@ function addFromMenu(ty, wx, wy, wire){
 function showMenu(cx, cy, wire){
   addMenu.innerHTML = '';
   const [wx, wy] = toWorld(cx, cy), all = menuEntries(wire);
-  const input = document.createElement('input'), list = document.createElement('div');
+  const input = document.createElement('input'), tabs = document.createElement('div'), list = document.createElement('div');
+  const cats = [...new Set(all.map(e=> e.cat))];
+  let cat = cats.includes(menuTab) ? menuTab : cats[0];
+  tabs.className = 'menuTabs'; tabs.setAttribute('role', 'tablist');
+  list.className = 'menuList';
   input.id = 'menuSearch'; input.type = 'text'; input.placeholder = t('menuSearch'); input.autocomplete = 'off'; input.spellcheck = false;
   input.setAttribute('aria-label', t('menuSearch'));
-  addMenu.append(input, list);
+  addMenu.append(input, tabs, list);
+  const setTab = c=>{ cat = c; if(!wire) menuTab = c; input.value = ''; render(); input.focus(); };
+  cats.forEach(c=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.tabIndex = -1; b.textContent = t(c); b.dataset.cat = c; b.setAttribute('role', 'tab');
+    b.addEventListener('pointerdown', e=> e.preventDefault());    // the search field keeps the focus
+    b.addEventListener('click', ()=> setTab(c));
+    tabs.appendChild(b);
+  });
   let shown = [], active = 0;
   const mark = scroll=>{
     list.querySelectorAll('button').forEach((b, i)=>{
@@ -3261,7 +3284,12 @@ function showMenu(cx, cy, wire){
   };
   const render = ()=>{
     const q = plain(input.value).split(/\s+/).filter(Boolean);
-    shown = all.filter(e=> q.every(w=> e.words.includes(w)));
+    // a search looks through every tab
+    shown = q.length ? all.filter(e=> q.every(w=> e.words.includes(w))) : all.filter(e=> e.cat === cat);
+    tabs.querySelectorAll('button').forEach(b=>{
+      const on = !q.length && b.dataset.cat === cat;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', on);
+    });
     if(q.length){   // names that start with the search first
       const starts = e=> plain(e.label).startsWith(q[0]) ? 0 : 1;
       shown = shown.map((e, i)=> [e, i]).sort((a, b)=> starts(a[0]) - starts(b[0]) || a[1] - b[1]).map(x=> x[0]);
@@ -3269,9 +3297,7 @@ function showMenu(cx, cy, wire){
     active = 0;
     list.innerHTML = '';
     if(!shown.length){ const p = document.createElement('div'); p.className = 'menuEmpty'; p.textContent = t('menuEmpty'); list.appendChild(p); return; }
-    let cat = null;
     shown.forEach((e, i)=>{
-      if(!q.length && e.cat !== cat){ cat = e.cat; const h = document.createElement('h3'); h.textContent = t(cat); list.appendChild(h); }
       const b = document.createElement('button');
       b.type = 'button'; b.tabIndex = -1;
       b.innerHTML = '<i></i><span></span>';
@@ -3291,8 +3317,10 @@ function showMenu(cx, cy, wire){
     } else if(e.key === 'Enter'){
       e.preventDefault();
       if(shown[active]) addFromMenu(shown[active].ty, wx, wy, wire);
-    } else if(e.key === 'Tab'){
-      e.preventDefault(); hideMenu();
+    } else if(e.key === 'Tab' || ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !input.value)){
+      e.preventDefault();
+      const back = e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey);
+      setTab(cats[(cats.indexOf(cat) + (back ? -1 : 1) + cats.length) % cats.length]);
     }
   });
   render();
