@@ -183,6 +183,15 @@ test('Dupliquer garde les fils internes', ()=>{
   eq([nodes.size, links.length], [4, 2]);
 });
 
+test('L’historique garde un gros fichier une seule fois', ()=>{
+  clearGraph();
+  const n = addNode('srcMidi', 0, 0, {file:'x'.repeat(100000)});
+  const a = snapshot(); n.x = 40; const b = snapshot();
+  ok(a.length < 2000 && b.length < 2000);
+  applySnapshot(a);
+  eq(nodes.get(n.id).params.file.length, 100000);
+});
+
 /* ---- the .mid follows what's heard ---- */
 test('L’export suit un signal sur la sensibilité', async ()=>{
   clearGraph();

@@ -53,6 +53,26 @@ Aucune installation nécessaire. Deux options :
 - **Export vidéo (9:16)** : rend la boucle en clip vertical **1080×1920** avec le son du synthé d'aperçu, prêt pour TikTok / Reels / Shorts. Le média entier reste visible — letterboxé sur le fond de l'app, jamais recadré — avec les points de notes colorés et la tête de lecture qui balaie par-dessus, et un petit watermark `dessons` dans la bande du bas. Le clip dure un nombre entier de boucles, celui dont le total tombe le plus près de ~15 s, pour qu'il reboucle proprement comme le font ces plateformes. L'enregistrement se fait en temps réel : le bouton affiche donc sa progression pendant ces ~15 secondes, et les autres boutons de sortie sont désactivés le temps de l'opération puisqu'ils partagent le même moteur audio. Le fichier sort en **WebM** (VP9/Opus) : les plateformes l'acceptent à l'upload depuis un ordinateur, mais pour publier depuis une app mobile mieux vaut le convertir en MP4 — HandBrake, ou un simple import/export dans CapCut ou iMovie. Un navigateur qui enregistre nativement en MP4 produira un `.mp4` ; un navigateur sans `MediaRecorder` laisse simplement le bouton désactivé, tout le reste continue de fonctionner.
 - **Jouer dans le DAW (temps réel)** : au lieu d'exporter, envoie la boucle en direct via [Web MIDI](https://developer.mozilla.org/fr/docs/Web/API/Web_MIDI_API) vers un port MIDI virtuel. Sur macOS : ouvre *Configuration audio et MIDI* → *Fenêtre* → *Afficher les périphériques MIDI* → double-clic sur *IAC Driver* → coche *L'appareil est en ligne*. Choisis ce port dans Dessons, arme une piste d'instrument dans Logic, clique **Jouer dans le DAW** : la boucle tourne et tu peux l'enregistrer. Tous les réglages (contraste, gamme, tempo, instruments, sens de lecture, image de la webcam…) s'entendent immédiatement pendant la lecture, sans arrêter. Nécessite Chrome ou Edge — Safari ne supporte pas Web MIDI ; dans ce cas, utilise l'export `.mid`.
 
+## Nodes : la version modulaire
+
+![La page Nodes : un mesh 3D qui alimente la détection de contours et un balayage, un LFO qui pilote la sensibilité du balayage à travers Maths et Plage, un cadre de groupe autour des nodes de notes, les réglages du node sélectionné et un grand aperçu à droite](docs/screenshot-nodes.jpg)
+
+**[Ouvrir Nodes](https://neoyume.github.io/dessons/nodes.html)**, ou le bouton **Nodes** dans l'application. Le même traitement, découpé en nodes à relier sur un canvas, pour empiler, brancher et recombiner ce que la page principale fait dans un ordre fixe : deux filtres de calque à la suite, un balayage par calque avec son propre sens et son nombre de pas (polyrythmie), une gamme partagée par plusieurs balayages.
+
+Commence par **Fichier → Modèles** : ils jouent tout de suite, sauf *MIDI importé*, qui attend ton fichier.
+
+- **Sources** : image, vidéo, webcam, **mesh 3D** (formes intégrées ou ton `.obj` / `.stl`, gardé dans le navigateur), générateur (bruit, dégradé, grille, anneaux), **fichier MIDI**, micro.
+- **Retouche** : recadrage, tons, flou, inverser, miroir / rotation, mélanger, séparer et combiner RVBA. Un mesh 3D sort ses normales en RVB et sa profondeur en alpha : *Séparer RVBA* peut donc donner à chacune son balayage.
+- **Détection** : contours, sensibilité, puis bande de teinte, bande de luminosité, clé couleur, orientation, union, pour trier ce qui a été détecté.
+- **Musique** : gamme, balayage, octave, transposer en degrés, caler sur la gamme, fusionner, limiter, probabilité, écho, rythme euclidien, piste.
+- **Signaux** : temps / frame, LFO, maths, échelle, plage. Un signal est une valeur qui bouge avec la boucle. Tout curseur avec un point sur son bord en accepte un : un LFO peut faire respirer la sensibilité d'un balayage, le niveau d'un fichier MIDI peut faire pulser le zoom d'un mesh.
+- **Sortie** : boucle (synthé d'aperçu, export `.mid`), **Logic (MIDI live)**, un node par piste Logic, et **Signal → CC MIDI** pour automatiser un filtre ou un volume dans ton DAW. Le MIDI en direct nécessite Chrome ou Edge.
+- **Outils** : courbe personnalisée, trajet dessiné, reroute, attache-câbles, cadre de groupe.
+
+Le `.mid` exporté suit ce que tu entends : un mesh qui tourne ou un signal qui bouge est rejoué pas à pas. Les notes d'un `.mid` importé gardent leurs hauteurs et peuvent donc sortir de la gamme : passe-les par **Caler sur la gamme** pour les y ramener. **Caler la Boucle**, sur le node MIDI, donne à la Boucle la longueur et le tempo du fichier.
+
+Clavier : `Tab` ou `/` pour chercher un node, `Espace` pour jouer, `Cmd+Z` pour annuler, `Cmd+C` / `V` / `D` pour copier, coller, dupliquer, `G` pour grouper, `?` pour la liste complète. Les graphes se sauvent seuls dans le navigateur, et en `.json` depuis le menu **Fichier**.
+
 ## Une piste par calque dans Logic
 
 Dessons envoie chaque calque sur son propre canal MIDI (calque 1 → canal 1, calque 2 → canal 2…). Deux façons d'obtenir une piste Logic par calque :
@@ -75,7 +95,12 @@ La méthode A est le vrai temps réel multipiste mais elle est réputée caprici
 
 ```
 dessons/
-├── index.html              # l'application entière (HTML + CSS + JS, un seul fichier)
+├── index.html              # l'application principale (HTML + CSS + JS)
+├── nodes.html              # la version modulaire
+├── compose.html            # page Chanson (en pause, accessible par son URL)
+├── dessons-core.js         # code partagé par les pages
+├── fonts/                  # DotGothic16 (SIL Open Font License, voir fonts/OFL.txt)
+├── tests/                  # page de tests, sans dépendance : sers le dossier et ouvre /tests/
 ├── README.md               # doc en anglais
 ├── README.fr.md            # doc en français (ce fichier)
 ├── LICENSE                 # PolyForm Noncommercial 1.0.0

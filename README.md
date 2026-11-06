@@ -53,6 +53,26 @@ No installation needed. Two options:
 - **Export video (9:16)**: renders the loop as a vertical **1080×1920** clip with the preview synth's sound, ready for TikTok / Reels / Shorts. The whole media stays visible — letterboxed on the app's own background, never cropped — with the colored note dots and the sweeping playhead drawn over it, and a small `dessons` watermark in the bottom band. The clip lasts a whole number of loops, whichever total lands closest to ~15 s, so it repeats seamlessly the way those platforms play it. Recording happens in real time, so the button shows its progress for those ~15 seconds; the other output buttons are disabled meanwhile, since they share the same audio engine. The file comes out as **WebM** (VP9/Opus): platforms accept it when you upload from a computer, but to post from a phone app you'll want to convert it to MP4 first — HandBrake, or a plain import/export through CapCut or iMovie. A browser that records MP4 natively gets an `.mp4` instead; one with no `MediaRecorder` at all just leaves the button disabled, everything else keeps working.
 - **Play in DAW (real-time)**: instead of exporting, stream the loop live via [Web MIDI](https://developer.mozilla.org/docs/Web/API/Web_MIDI_API) to a virtual MIDI port. On macOS: open *Audio MIDI Setup* → *Window* → *Show MIDI Studio* → double-click *IAC Driver* → tick *Device is online*. Pick that port in Dessons, arm an instrument track in Logic, click **Play in DAW**: the loop runs and you can record it. Every setting (contrast, scale, tempo, instruments, playback direction, webcam frame…) is heard immediately while playing, without stopping. Requires Chrome or Edge — Safari has no Web MIDI; use the `.mid` export in that case.
 
+## Nodes: the modular version
+
+![The Nodes page: a 3D mesh feeding edge detection and a scan, an LFO driving the scan's sensitivity through Math and Range, a group frame around the note nodes, the settings of the selected node and a large preview on the right](docs/screenshot-nodes.jpg)
+
+**[Open Nodes](https://neoyume.github.io/dessons/nodes.html)**, or the **Nodes** button in the app. The same pipeline, cut into nodes you wire together on a canvas, so you can stack, branch and recombine what the main page does in a fixed order: two layer filters in a row, one scan per layer with its own direction and step count (polyrhythm), one scale shared by several scans.
+
+Start from **File → Templates**: they play straight away, except *Imported MIDI*, which waits for your file.
+
+- **Sources**: image, video, webcam, **3D mesh** (built-in shapes or your own `.obj` / `.stl`, kept in the browser), generator (noise, gradient, grid, rings), **MIDI file**, microphone.
+- **Adjust**: crop, tones, blur, invert, mirror / rotate, blend, separate and combine RGBA. A 3D mesh outputs its normals as RGB and its depth as alpha, so *Separate RGBA* can give each its own scan.
+- **Detection**: edges, sensitivity, then hue band, brightness band, color key, orientation, union, to split what was detected.
+- **Music**: scale, scan, octave, transpose by degrees, snap to scale, merge, limit, chance, echo, Euclidean rhythm, track.
+- **Signals**: time / frame, LFO, math, scale, range. A signal is a value that moves with the loop. Any slider with a dot on its edge accepts one: an LFO can make a scan's sensitivity breathe, a MIDI file's level can pulse a mesh's zoom.
+- **Output**: loop (preview synth, `.mid` export), **Logic (live MIDI)**, one node per Logic track, and **Signal → MIDI CC** to automate a filter or a volume in your DAW. Live MIDI needs Chrome or Edge.
+- **Tools**: custom curve, drawn path, reroute, cable clip, group frame.
+
+The exported `.mid` follows what you hear: a spinning mesh or a moving signal is replayed step by step. Notes from an imported `.mid` keep their own pitches, so they can leave the scale: wire them through **Snap to scale** to bring them back. Use **Match the Loop** on the MIDI node to give the Loop the file's length and tempo.
+
+Keyboard: `Tab` or `/` to search a node, `Space` to play, `Cmd+Z` to undo, `Cmd+C` / `V` / `D` to copy, paste, duplicate, `G` to group, `?` for the full list. Graphs save themselves in the browser, and as `.json` from the **File** menu.
+
 ## One track per layer in Logic
 
 Dessons sends each layer on its own MIDI channel (layer 1 → channel 1, layer 2 → channel 2…). Two ways to get one Logic track per layer:
@@ -75,7 +95,12 @@ Method A is the true real-time multitrack path but is known to be finicky (armin
 
 ```
 dessons/
-├── index.html              # the whole app (HTML + CSS + JS, single file)
+├── index.html              # the main app (HTML + CSS + JS)
+├── nodes.html              # the modular version
+├── compose.html            # song page (on hold, reachable by its URL)
+├── dessons-core.js         # code shared by the pages
+├── fonts/                  # DotGothic16 (SIL Open Font License, see fonts/OFL.txt)
+├── tests/                  # test page, no dependency: serve the folder and open /tests/
 ├── README.md               # English docs (this file)
 ├── README.fr.md            # French docs
 ├── LICENSE                 # PolyForm Noncommercial 1.0.0

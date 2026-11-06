@@ -3531,10 +3531,32 @@ document.addEventListener('visibilitychange', ()=>{
     if(videoExporting) finishVideoExport();
     if(playing) stopPlayback();
     if(grabTimer){ clearTimeout(grabTimer); grabTimer = null; }
-  } else if(!frozen && !grabTimer && (srcKind === 'video' || srcKind === 'webcam')){
-    liveLoop();
+    // a hidden tab doesn't keep the camera: released here, back when the tab returns
+    if(srcKind === 'webcam' && camStream){
+      camStream.getTracks().forEach(tr=> tr.stop());
+      camStream = null; camPaused = true;
+    }
+  } else {
+    if(camPaused){ camPaused = false; resumeCamera(); return; }
+    if(!frozen && !grabTimer && (srcKind === 'video' || srcKind === 'webcam')) liveLoop();
   }
 });
+let camPaused = false;
+async function resumeCamera(){
+  if(srcKind !== 'webcam') return;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:false });
+    if(srcKind !== 'webcam' || document.hidden){
+      stream.getTracks().forEach(tr=> tr.stop());
+      if(srcKind === 'webcam') camPaused = true;
+      return;
+    }
+    camStream = stream;
+    srcEl.srcObject = stream;
+    await srcEl.play();
+    if(!frozen && !grabTimer) liveLoop();
+  }catch(e){ removeMedia(); showSrcError(t('webcamDenied')); }
+}
 // page going away: stop playback and release the camera
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); stopSource(); });
 window.addEventListener('resize', ()=> drawPianoRoll());

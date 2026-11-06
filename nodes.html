@@ -418,6 +418,7 @@ const I18N = {
     tplPick:'Modèles', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
+    btnMidiOn:'Activer le MIDI',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
     helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['?','Cette aide']],
@@ -502,6 +503,7 @@ const I18N = {
     tplPick:'Templates', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
+    btnMidiOn:'Enable MIDI',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
     helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['?','This help']],
@@ -2320,6 +2322,7 @@ function toggleFreeze(n){
   else n.media.play().catch(()=>{});
 }
 function stopMedia(n){
+  n.camPaused = false;
   if(n.mesh){ freeMesh(n.mesh); n.mesh = null; }
   if(n.stream){ n.stream.getTracks().forEach(tr=> tr.stop()); n.stream = null; }
   if(n.media && n.media.tagName === 'VIDEO'){ n.media.pause(); n.media.removeAttribute('src'); n.media.srcObject = null; n.media.load(); }
@@ -2398,6 +2401,41 @@ async function startWebcam(n){
     ready();
   }catch(e){ stopMedia(n); alert(t('camErr')); }
   finally{ n.camStarting = false; }
+}
+// a hidden tab doesn't keep the camera or the microphone: released here, back on their own
+// when the tab returns (no new prompt once allowed), with the node as it was
+function releaseCapture(){
+  nodes.forEach(n=>{
+    if(n.type === 'srcWebcam' && n.stream){
+      if(n.frozen && n.media){    // a Crop re-reads the source: the frozen frame must outlive the stream
+        const c = document.createElement('canvas');
+        c.width = n.media.videoWidth; c.height = n.media.videoHeight;
+        c.getContext('2d').drawImage(n.media, 0, 0);
+        if(n.frame) n.frame.orig = c;
+      }
+      n.stream.getTracks().forEach(tr=> tr.stop());
+      n.stream = null; n.camPaused = true;
+    }
+    if(n.type === 'srcMic' && n.micStream){ stopMic(n); n.micPaused = true; }
+  });
+}
+async function resumeCapture(){
+  for(const n of [...nodes.values()]){
+    if(n.camPaused){
+      n.camPaused = false;
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:false});
+        if(nodes.get(n.id) !== n || !n.media || document.hidden){
+          stream.getTracks().forEach(tr=> tr.stop());
+          if(nodes.get(n.id) === n && n.media) n.camPaused = true;
+          continue;
+        }
+        n.stream = stream; n.media.srcObject = stream;
+        if(!n.frozen) await n.media.play();
+      }catch(e){ stopWebcam(n); }
+    }
+    if(n.micPaused){ n.micPaused = false; startMic(n); }
+  }
 }
 function stopWebcam(n){
   stopMedia(n);
@@ -2561,11 +2599,25 @@ function meshStore(mode, fn){
     };
   });
 }
+// the browser keeps the last few files, never one the graph on screen is using
+const MESH_KEEP = 8;
+function pruneMeshes(){
+  const used = new Set([...nodes.values()].map(n=> n.params.meshKey).filter(Boolean));
+  return meshStore('readwrite', st=>{
+    const all = [], rq = st.openCursor();
+    rq.onsuccess = ()=>{
+      const c = rq.result;
+      if(c){ all.push([c.key, c.value.at || 0]); c.continue(); return; }
+      all.sort((a, b)=> b[1] - a[1]).slice(MESH_KEEP).forEach(([key])=>{ if(!used.has(key)) st.delete(key); });
+    };
+    return rq;
+  });
+}
 async function restoreMesh(n){
   try{
-    const buf = await meshStore('readonly', st=> st.get(n.params.meshKey));
-    if(!buf || nodes.get(n.id) !== n || n.mesh) return;
-    n.mesh = parseMesh(n.params.meshName, buf);
+    const rec = await meshStore('readonly', st=> st.get(n.params.meshKey));
+    if(!rec || nodes.get(n.id) !== n || n.mesh) return;
+    n.mesh = parseMesh(n.params.meshName, rec.buf || rec);
     markDirty(n.id);
   }catch(e){ console.warn('mesh not restored', e); }
 }
@@ -2582,7 +2634,7 @@ async function loadMeshFile(n, file){
     n.mesh = mesh;
     n.params.shape = 'file'; n.params.meshName = file.name;
     n.params.meshKey = file.name + ':' + file.size;
-    meshStore('readwrite', st=> st.put(buf, n.params.meshKey)).catch(e=> console.warn('mesh not stored', e));
+    meshStore('readwrite', st=> st.put({buf, at:Date.now()}, n.params.meshKey)).then(pruneMeshes).catch(e=> console.warn('mesh not stored', e));
   }
   buildNodeEl(n); drawWires();
   markDirty(n.id); saveSoon();
@@ -2799,7 +2851,7 @@ function buildMicControls(n, body){
   const row = document.createElement('div'); row.className = 'btnRow';
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'miniBtn' + (n.micStream ? '' : ' primary'); b.textContent = t(n.micStream ? 'srcCamOff' : 'srcCamOn');
-  b.addEventListener('click', ()=>{ if(n.micStream){ stopMic(n); buildNodeEl(n); drawWires(); markDirty(n.id); } else startMic(n); });
+  b.addEventListener('click', ()=>{ n.micPaused = false; if(n.micStream){ stopMic(n); buildNodeEl(n); drawWires(); markDirty(n.id); } else startMic(n); });
   row.appendChild(b); body.appendChild(row);
 }
 async function startMic(n){
@@ -3218,6 +3270,8 @@ function renderMidiState(){
   nodes.forEach(n=>{
     if(n.type === 'ccOut' && n.el){
       const st = n.el.querySelector('.midiState'), port = midiState === 'midiReady' && portFor(n, midiOuts);
+      const on = n.el.querySelector('.ccOn');
+      if(on) on.hidden = !!midiAccess;
       if(st){
         st.querySelector('.dot').classList.toggle('on', !!(playing && port));
         st.querySelector('span').textContent = port ? port.name + ' · ' + t('chanWord') + ' ' + n.params.channel + ' · CC ' + n.params.cc : t(midiState).replace('{x}', '');
@@ -3310,7 +3364,12 @@ function buildCcControls(n, body){
   st.innerHTML = '<i class="dot"></i><span></span>';
   body.appendChild(st);
   n.onParam = ()=> renderMidiState();
-  requestAnimationFrame(()=>{ renderMidiState(); if(midiAccess) refreshPorts(); else ensureMidi(); });
+  // asked on a click, never just because a graph was opened
+  const on = document.createElement('button');
+  on.type = 'button'; on.className = 'miniBtn primary ccOn'; on.textContent = t('btnMidiOn'); on.hidden = !!midiAccess;
+  on.addEventListener('click', ()=> ensureMidi());
+  body.appendChild(on);
+  requestAnimationFrame(()=>{ renderMidiState(); if(midiAccess) refreshPorts(); });
 }
 // a signal as a controller: only when its value changes, on the Loop's clock
 function sendControllers(){
@@ -3352,7 +3411,10 @@ function playheadFrame(){
   $('tpPos').firstElementChild.style.width = (loopPosNow() % 1)*100 + '%';
   rafId = requestAnimationFrame(playheadFrame);
 }
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopPlayback(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ stopPlayback(); releaseCapture(); }
+  else resumeCapture();
+});
 // reload / close / navigate away while playing: send the note-offs now
 window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); });
 
@@ -3944,7 +4006,17 @@ function saveSoon(){
    that's still there keeps its running video, webcam or mesh. ---- */
 const history_ = [];
 let histPos = -1;
-function snapshot(){ const g = serialize(); delete g.view; return JSON.stringify(g); }
+// a media file weighs the same in every step: each one is stored once and the steps point to it
+const blobIds = new Map(), blobs = [], BLOB_REF = '\u0000blob:';
+function internBlob(str){
+  if(!blobIds.has(str)){ blobIds.set(str, blobs.length); blobs.push(str); }
+  return BLOB_REF + blobIds.get(str);
+}
+function snapshot(){
+  const g = serialize();
+  delete g.view;
+  return JSON.stringify(g, (k, v)=> (k === 'file' || k === 'img') && typeof v === 'string' && v.length > 256 ? internBlob(v) : v);
+}
 function historyCommit(){
   const s = snapshot();
   if(s === history_[histPos]) return;
@@ -3959,7 +4031,8 @@ function syncUndoButtons(){
   $('redoBtn').disabled = histPos >= history_.length - 1;
 }
 function applySnapshot(str){
-  const g = JSON.parse(str), keep = new Set(g.nodes.map(s=> s.id));
+  const g = JSON.parse(str, (k, v)=> typeof v === 'string' && v.startsWith(BLOB_REF) ? blobs[+v.slice(BLOB_REF.length)] : v);
+  const keep = new Set(g.nodes.map(s=> s.id));
   [...nodes.values()].forEach(n=>{ if(!keep.has(n.id)) removeNode(n.id, true); });
   g.nodes.forEach(s=>{
     const n = nodes.get(s.id);
