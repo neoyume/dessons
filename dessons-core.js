@@ -535,3 +535,79 @@ function notifyScenesChanged(){
 }
 
 function newSceneId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+/* ---- SMF reader (the other direction of midiFile()) ----
+   Returns notes in seconds and in beats, sorted by start, one "layer" per
+   track+channel. Throws on anything that isn't a tick-based .mid. */
+function parseMidi(buf){
+  const dv = new DataView(buf), tag = o=> String.fromCharCode(dv.getUint8(o), dv.getUint8(o+1), dv.getUint8(o+2), dv.getUint8(o+3));
+  if(tag(0) !== 'MThd') throw new Error('not a midi file');
+  const hdr = dv.getUint32(4), ntrks = dv.getUint16(10), ppq = dv.getUint16(12);
+  if(ppq & 0x8000 || !ppq) throw new Error('SMPTE timing not supported');
+  const raw = [], tempos = [], layers = new Map();
+  let o = 8 + hdr;
+  for(let tr=0; tr<ntrks && o + 8 <= buf.byteLength; tr++){
+    const isTrack = tag(o) === 'MTrk', len = dv.getUint32(o+4), end = Math.min(o + 8 + len, buf.byteLength);
+    let q = o + 8, tick = 0, status = 0, name = '';
+    o += 8 + len;
+    if(!isTrack) continue;
+    const open = new Map(), programs = new Array(16).fill(0);
+    const vlq = ()=>{ let v = 0, b; do{ b = dv.getUint8(q++); v = v*128 + (b & 0x7F); }while(b & 0x80); return v; };
+    const close = (key, at)=>{
+      const list = open.get(key);
+      if(list && list.length) list.shift().endTick = at;
+    };
+    while(q < end){
+      tick += vlq();
+      let b = dv.getUint8(q);
+      if(b === 0xFF){
+        const type = dv.getUint8(q+1); q += 2;
+        const l = vlq();
+        if(type === 0x51 && l === 3) tempos.push({tick, us:(dv.getUint8(q)<<16) | (dv.getUint8(q+1)<<8) | dv.getUint8(q+2)});
+        else if(type === 0x03 && !name) name = new TextDecoder().decode(new Uint8Array(buf, q, l)).trim();
+        q += l; continue;
+      }
+      if(b === 0xF0 || b === 0xF7){ q++; const l = vlq(); q += l; continue; }
+      if(b & 0x80){ status = b; q++; } else if(!status) throw new Error('bad running status');
+      const kind = status & 0xF0, chan = status & 15;
+      if(kind === 0xC0){ programs[chan] = dv.getUint8(q); q += 1; continue; }
+      if(kind === 0xD0){ q += 1; continue; }
+      const d1 = dv.getUint8(q), d2 = dv.getUint8(q+1); q += 2;
+      if(kind !== 0x90 && kind !== 0x80) continue;
+      const key = chan*128 + d1;
+      if(kind === 0x90 && d2 > 0){
+        const lk = tr + ':' + chan;
+        if(!layers.has(lk)) layers.set(lk, {id:layers.size, name, chan, program:programs[chan], drums:chan === 9});
+        const note = {tick, endTick:null, midi:d1, vel:d2, layer:layers.get(lk).id, prog:programs[chan], drums:chan === 9};
+        if(!open.has(key)) open.set(key, []);
+        open.get(key).push(note);
+        raw.push(note);
+      } else close(key, tick);
+    }
+    open.forEach(list=> list.forEach(nt=>{ nt.endTick = tick; }));
+  }
+  if(!raw.length) throw new Error('no notes');
+  // tempo map: each segment knows the second it starts at
+  tempos.sort((a, b)=> a.tick - b.tick);
+  const segs = [{tick:0, sec:0, us:500000}];
+  tempos.forEach(tp=>{
+    const last = segs[segs.length-1], sec = last.sec + (tp.tick - last.tick)/ppq*last.us/1e6;
+    if(tp.tick === last.tick) last.us = tp.us; else segs.push({tick:tp.tick, sec, us:tp.us});
+  });
+  const toSec = tick=>{
+    let s = segs[0];
+    for(const g of segs){ if(g.tick <= tick) s = g; else break; }
+    return s.sec + (tick - s.tick)/ppq*s.us/1e6;
+  };
+  const notes = raw.map(n=>{
+    const sec = toSec(n.tick), end = toSec(Math.max(n.endTick, n.tick + 1));
+    return {sec, dur:end - sec, beat:n.tick/ppq, beatEnd:Math.max(n.endTick, n.tick + 1)/ppq, midi:n.midi, vel:n.vel, layer:n.layer, prog:n.prog, drums:n.drums};
+  }).sort((a, b)=> a.sec - b.sec);
+  const list = [...layers.values()];
+  return {notes, layers:list, segs, ppq, duration:notes.reduce((a, n)=> Math.max(a, n.sec + n.dur), 0)};
+}
+function midiSecToBeat(m, sec){
+  let s = m.segs[0];
+  for(const g of m.segs){ if(g.sec <= sec) s = g; else break; }
+  return s.tick/m.ppq + (sec - s.sec)*1e6/s.us;
+}
