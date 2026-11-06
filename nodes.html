@@ -106,20 +106,11 @@
   #helpList dt{font-family:var(--mono); font-size:11px; color:var(--text); white-space:nowrap;}
   #helpList dd{margin:0; color:var(--text-dim);}
   #workspace{flex:1; display:flex; min-height:0; min-width:0; position:relative;}
-  #nodeSidebar{
-    flex:none; width:280px; display:flex; flex-direction:column; min-height:0;
-    border-left:1px solid var(--line); background:var(--panel);
-  }
-  #nodeSidebar[hidden]{display:none;}
-  .sideTabs{flex:none; display:flex; border-bottom:1px solid var(--line);}
-  .sideTabs button{
-    flex:1; padding:8px 6px; font-size:12px; color:var(--text-dim); background:none; border:none;
-    border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer;
-  }
-  .sideTabs button:hover{color:var(--text);}
-  .sideTabs button.on{color:var(--text); border-bottom-color:var(--accent);}
+  #nodeSidebar, #propsPanel{flex:none; display:flex; flex-direction:column; min-height:0; background:var(--panel);}
+  #nodeSidebar{width:196px; border-right:1px solid var(--line);}
+  #propsPanel{width:270px; border-left:1px solid var(--line);}
+  #nodeSidebar[hidden], #propsPanel[hidden]{display:none;}
   .sidePane{flex:1; min-height:0; overflow:auto; padding:8px 10px;}
-  .sidePane[hidden]{display:none;}
   #sideSearch{width:100%; font-size:12px; color:var(--text); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:5px 8px; outline:none; margin-bottom:4px;}
   #sideSearch:focus{border-color:var(--accent);}
   #sideList h3{margin:6px 0 2px;}
@@ -322,7 +313,8 @@
   @media (prefers-reduced-motion: reduce){ #ny-noise{opacity:0.075;} }
   @media (max-width:700px){
     header{padding:10px 12px;} .toolbar{margin-left:0;}
-    #nodeSidebar{position:absolute; right:0; top:0; bottom:0; z-index:10;}
+    #nodeSidebar, #propsPanel{position:absolute; top:0; bottom:0; z-index:10;}
+    #nodeSidebar{left:0;} #propsPanel{right:0;}
   }
 </style>
 </head>
@@ -345,6 +337,7 @@
     <button type="button" class="miniBtn" id="undoBtn" data-i18n-title="btnUndo" disabled>↶</button>
     <button type="button" class="miniBtn" id="redoBtn" data-i18n-title="btnRedo" disabled>↷</button>
     <button type="button" class="miniBtn" id="sideBtn" data-i18n="btnSidebar" aria-controls="nodeSidebar">Liste</button>
+    <button type="button" class="miniBtn" id="propsBtn" data-i18n="tabProps" aria-controls="propsPanel">Réglages</button>
     <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
     <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
     <button type="button" class="miniBtn" id="helpBtn" data-i18n-title="helpTitle" aria-controls="helpPanel">?</button>
@@ -357,19 +350,17 @@
 </header>
 
 <div id="workspace">
-  <div id="stage">
-    <div id="world"><div id="frames"></div><svg id="wires"></svg></div>
-  </div>
   <aside id="nodeSidebar">
-    <div class="sideTabs" role="tablist">
-      <button type="button" role="tab" id="tabNodes" data-i18n="tabNodes">Nodes</button>
-      <button type="button" role="tab" id="tabProps" data-i18n="tabProps">Réglages</button>
-    </div>
-    <div class="sidePane" id="paneNodes">
+    <div class="sidePane">
       <input type="text" id="sideSearch" autocomplete="off" spellcheck="false">
       <div id="sideList"></div>
     </div>
-    <div class="sidePane" id="paneProps" hidden>
+  </aside>
+  <div id="stage">
+    <div id="world"><div id="frames"></div><svg id="wires"></svg></div>
+  </div>
+  <aside id="propsPanel">
+    <div class="sidePane">
       <div class="propTitle" id="propTitle"></div>
       <div id="propBody"></div>
     </div>
@@ -426,7 +417,7 @@ const I18N = {
     tplPick:'Modèles', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnSidebar:'Liste', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
-    btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabNodes:'Nodes', tabProps:'Réglages', sideSearchPh:'Rechercher…', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
+    btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', sideSearchPh:'Rechercher…', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
     helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
@@ -504,7 +495,7 @@ const I18N = {
     tplPick:'Templates', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnSidebar:'List', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
-    btnFile:'File ▾', helpTitle:'Shortcuts', tabNodes:'Nodes', tabProps:'Settings', sideSearchPh:'Search…', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
+    btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', sideSearchPh:'Search…', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
     helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
@@ -1618,10 +1609,7 @@ function buildNodeEl(n){
   const err = document.createElement('div'); err.className = 'nodeErr'; err.hidden = true; body.appendChild(err);
   el.appendChild(body);
 
-  el.addEventListener('pointerdown', e=>{
-    selectNode(n.id, e.shiftKey);
-    if(!e.shiftKey && !def.lanes) setSideTab('props');
-  });
+  el.addEventListener('pointerdown', e=> selectNode(n.id, e.shiftKey));
   if(def.lanes) el.addEventListener('pointerdown', e=> startNodeDrag(e, n));
   if(old) old.replaceWith(el); else world.appendChild(el);
   n.el = el;
@@ -1640,7 +1628,7 @@ function portEl(n, p, side){
   return el;
 }
 
-// the same parameter can be on screen twice, on the node and in the Settings tab
+// the same parameter can be on screen twice, on the node and in the Settings panel
 function syncTwins(n, d, from){
   document.querySelectorAll('[data-param="' + n.id + ':' + d.id + '"]').forEach(el=>{
     if(el === from) return;
@@ -1824,7 +1812,6 @@ function selectNode(id, add){
   }
   nodes.forEach(m=> m.el && m.el.classList.toggle('selected', selection.has(m.id)));
   syncTransport();
-  if(id === null) setSideTab('nodes');
   renderProps(); paintPreview();
 }
 
@@ -3780,15 +3767,7 @@ function buildSidebar(){
   renderProps();
 }
 $('sideSearch').addEventListener('input', buildSidebar);
-function setSideTab(tab){
-  const props = tab === 'props';
-  $('paneNodes').hidden = props; $('paneProps').hidden = !props;
-  $('tabNodes').classList.toggle('on', !props); $('tabProps').classList.toggle('on', props);
-  $('tabNodes').setAttribute('aria-selected', !props); $('tabProps').setAttribute('aria-selected', props);
-}
-$('tabNodes').addEventListener('click', ()=> setSideTab('nodes'));
-$('tabProps').addEventListener('click', ()=> setSideTab('props'));
-// the Settings tab: the selected node's sliders, through the same paramEl() as on the node
+// the Settings panel: the selected node's sliders, through the same paramEl() as on the node
 function renderProps(){
   const n = nodes.get(selectedId), body = $('propBody');
   $('propTitle').textContent = n ? t('n_' + n.type) : '';
@@ -3800,30 +3779,32 @@ function renderProps(){
 // the selected node's thumbnail, drawn again at the panel's size
 function paintPreview(){
   const n = nodes.get(selectedId), big = $('previewCanvas');
-  const has = !!(n && n.thumb) && !sidebar.hidden;
+  const has = !!(n && n.thumb) && !$('propsPanel').hidden;
   $('sidePreview').hidden = !has;
   if(!has) return;
   const small = n.thumb;
   n.thumb = big;
   try{ drawThumb(n); } finally { n.thumb = small; }
 }
-function setSidebar(open){
-  sidebar.hidden = !open;
-  if(open) paintPreview();
-  $('sideBtn').setAttribute('aria-expanded', open);
-  $('sideBtn').classList.toggle('primary', open);
-}
-setSideTab('nodes');
-(function(){
+// each side panel opens and closes on its own, and the browser remembers
+function panelToggle(panel, btn, key){
+  const set = open=>{
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', open);
+    btn.classList.toggle('primary', open);
+    if(open) paintPreview();
+  };
   let stored = null;
-  try{ stored = localStorage.getItem('dessons.sidebar'); }catch(e){}
-  setSidebar(stored === null ? innerWidth > 700 : stored === '1');
-})();
-$('sideBtn').addEventListener('click', ()=>{
-  setSidebar(sidebar.hidden);
-  try{ localStorage.setItem('dessons.sidebar', sidebar.hidden ? '0' : '1'); }catch(e){}
-  drawWires();
-});
+  try{ stored = localStorage.getItem(key); }catch(e){}
+  set(stored === null ? innerWidth > 700 : stored === '1');
+  btn.addEventListener('click', ()=>{
+    set(panel.hidden);
+    try{ localStorage.setItem(key, panel.hidden ? '0' : '1'); }catch(e){}
+    drawWires();
+  });
+}
+panelToggle(sidebar, $('sideBtn'), 'dessons.sidebar');
+panelToggle($('propsPanel'), $('propsBtn'), 'dessons.props');
 $('addBtn').addEventListener('click', ()=>{
   if(!addMenu.hidden){ hideMenu(); return; }
   const r = $('addBtn').getBoundingClientRect();
