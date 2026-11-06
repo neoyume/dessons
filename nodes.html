@@ -73,6 +73,38 @@
   .miniBtn.on{background:#e5484d; border-color:#e5484d; color:#fff;}
 
   /* ---- canvas ---- */
+  .fileWrap{position:relative;}
+  #fileMenu{
+    position:absolute; left:0; top:calc(100% + 6px); z-index:25; width:230px; padding:6px;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  #fileMenu[hidden]{display:none;}
+  #fileMenu h3{margin:8px 6px 4px; font-size:10px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-dim); font-weight:600;}
+  #fileMenu button{
+    display:block; width:100%; text-align:left; background:none; border:none; color:var(--text);
+    font-size:12px; padding:5px 8px; border-radius:5px; cursor:pointer;
+  }
+  #fileMenu button:hover, #fileMenu button:focus-visible{background:var(--panel-2); outline:none;}
+  #transport{
+    flex:none; display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; padding:8px 14px;
+    border-top:1px solid var(--line); background:var(--panel);
+  }
+  #tpPlay{min-width:96px;}
+  .tpField{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
+  .tpField input{width:54px; font-family:var(--mono); font-size:11px; color:var(--accent); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:3px 5px;}
+  .tpField input:disabled{opacity:.4;}
+  #tpPos{flex:1 1 120px; min-width:80px; height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
+  #tpPos i{display:block; height:100%; width:0; background:var(--accent);}
+  #helpPanel{
+    position:fixed; right:18px; top:64px; z-index:26; width:min(380px, calc(100vw - 32px)); max-height:calc(100vh - 90px); overflow:auto; padding:12px 14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:9px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  #helpPanel[hidden]{display:none;}
+  .helpTop{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .helpTop h2{margin:0; font-size:14px; font-weight:400; color:var(--accent);}
+  #helpList{display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin:0; font-size:12px;}
+  #helpList dt{font-family:var(--mono); font-size:11px; color:var(--text); white-space:nowrap;}
+  #helpList dd{margin:0; color:var(--text-dim);}
   #workspace{flex:1; display:flex; min-height:0; min-width:0; position:relative;}
   #nodeSidebar{
     flex:none; width:196px; overflow:auto; padding:8px; border-left:1px solid var(--line); background:var(--panel);
@@ -116,7 +148,6 @@
   .frameDel:hover{color:#ff8a8e;}
   .frameGrip{position:absolute; right:0; bottom:0; width:18px; height:18px; pointer-events:auto; cursor:nwse-resize; border-right:2px solid var(--accent-dim); border-bottom:2px solid var(--accent-dim); border-radius:0 0 10px 0;}
   .marquee{position:absolute; border:1px dashed var(--accent); background:rgba(0,255,0,.06); pointer-events:none;}
-  .stageHint{position:absolute; left:14px; bottom:12px; font-size:11px; color:var(--text-dim); pointer-events:none; line-height:1.6; max-width:calc(100% - 28px);}
 
   /* ---- nodes ---- */
   .node{
@@ -269,6 +300,16 @@
 <header>
   <h1><a href="index.html">Dessons</a><span class="sub">Nodes</span></h1>
   <a class="backLink" href="index.html" data-i18n="backToWorkshop">← Atelier</a>
+  <div class="fileWrap">
+    <button type="button" class="miniBtn" id="fileBtn" data-i18n="btnFile" aria-haspopup="true" aria-expanded="false" aria-controls="fileMenu">Fichier ▾</button>
+    <div id="fileMenu" hidden>
+      <button type="button" id="newBtn" data-i18n="btnNew">Nouveau</button>
+      <button type="button" id="openBtn" data-i18n="btnOpen">⬇ Ouvrir .json</button>
+      <button type="button" id="saveBtn" data-i18n="btnSave">⬆ Sauver .json</button>
+      <h3 data-i18n="tplPick">Modèles</h3>
+      <div id="tplList"></div>
+    </div>
+  </div>
   <div class="toolbar">
     <button type="button" class="miniBtn primary" id="addBtn" data-i18n="btnAdd">+ Node</button>
     <button type="button" class="miniBtn" id="undoBtn" data-i18n-title="btnUndo" disabled>↶</button>
@@ -276,10 +317,7 @@
     <button type="button" class="miniBtn" id="sideBtn" data-i18n="btnSidebar" aria-controls="nodeSidebar">Liste</button>
     <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
     <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
-    <button type="button" class="miniBtn" id="newBtn" data-i18n="btnNew">Nouveau</button>
-    <select class="miniBtn" id="tplSel" aria-label="Modèles"></select>
-    <button type="button" class="miniBtn" id="saveBtn" data-i18n="btnSave">⬆ Sauver .json</button>
-    <button type="button" class="miniBtn" id="openBtn" data-i18n="btnOpen">⬇ Ouvrir .json</button>
+    <button type="button" class="miniBtn" id="helpBtn" data-i18n-title="helpTitle" aria-controls="helpPanel">?</button>
     <input type="file" id="graphInput" accept="application/json,.json" hidden>
   </div>
   <div class="langToggle" id="langToggle">
@@ -291,9 +329,20 @@
 <div id="workspace">
   <div id="stage">
     <div id="world"><div id="frames"></div><svg id="wires"></svg></div>
-    <div class="stageHint" data-i18n="stageHint"></div>
   </div>
   <aside id="nodeSidebar"></aside>
+</div>
+<div id="transport">
+  <button type="button" class="miniBtn primary" id="tpPlay"></button>
+  <label class="tpField"><span data-i18n="p_tempo">Tempo</span><input type="number" id="tpTempo" min="40" max="200" step="1"></label>
+  <label class="tpField"><span data-i18n="p_bars">Mesures</span><input type="number" id="tpBars" min="1" max="64" step="1"></label>
+  <div id="tpPos" aria-hidden="true"><i></i></div>
+  <button type="button" class="miniBtn" id="tpExport" data-i18n="btnExport">Exporter</button>
+  <button type="button" class="miniBtn" id="tpLogic"></button>
+</div>
+<div id="helpPanel" hidden role="dialog" aria-labelledby="helpHead">
+  <div class="helpTop"><h2 id="helpHead" data-i18n="helpTitle">Raccourcis</h2><button type="button" class="nodeDel" id="helpClose" aria-label="×">×</button></div>
+  <dl id="helpList"></dl>
 </div>
 <div id="addMenu" hidden></div>
 <input type="file" id="mediaInput" hidden>
@@ -330,10 +379,11 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Atelier',
     catTools:'Outils', n_reroute:'Reroute', n_cableClip:'Attache-câbles', n_frame:'Cadre de groupe', t_any:'libre',
-    tplPick:'Modèles…', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
+    tplPick:'Modèles', tpl_starter:'Deux calques', tpl_spin:'Mesh qui tourne', tpl_breathe:'Sensibilité qui respire', tpl_rhythm:'Polyrythmie', tpl_midi:'MIDI importé', tpl_logic:'Vers Logic avec automation',
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnSidebar:'Liste', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
-    stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic ou Tab : ajouter un node · Double-clic sur un fil : reroute · Maj+glisser : sélectionner · G : grouper · Suppr : effacer · Déposer une image, une vidéo, un .obj / .stl ou un .mid ici',
+    btnFile:'Fichier ▾', helpTitle:'Raccourcis',
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -407,10 +457,11 @@ const I18N = {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Workshop',
     catTools:'Tools', n_reroute:'Reroute', n_cableClip:'Cable clip', n_frame:'Group frame', t_any:'free',
-    tplPick:'Templates…', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
+    tplPick:'Templates', tpl_starter:'Two layers', tpl_spin:'Spinning mesh', tpl_breathe:'Breathing sensitivity', tpl_rhythm:'Polyrhythm', tpl_midi:'Imported MIDI', tpl_logic:'To Logic with automation',
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnSidebar:'List', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
-    stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click or Tab: add a node · Double-click a wire: reroute · Shift+drag: select · G: group · Delete: remove · Drop an image, a video, an .obj / .stl or a .mid here',
+    btnFile:'File ▾', helpTitle:'Shortcuts',
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -502,6 +553,8 @@ function setLang(lang){
   nodes.forEach(n => buildNodeEl(n));
   buildSidebar();
   buildTemplateMenu();
+  buildHelp();
+  syncTransport();
   drawWires();
   scheduleRun(true);
 }
@@ -1431,6 +1484,7 @@ function scheduleRun(all){
     runQueued = false;
     nodes.forEach(n=> evalNode(n));
     nodes.forEach(n=>{ if(n.thumbDirty){ drawThumb(n); updateSummary(n); n.thumbDirty = false; } });
+    syncTransport();
   });
 }
 
@@ -1676,6 +1730,7 @@ function selectNode(id, add){
     selectedId = id;
   }
   nodes.forEach(m=> m.el && m.el.classList.toggle('selected', selection.has(m.id)));
+  syncTransport();
 }
 
 /* ============================================================
@@ -2651,12 +2706,13 @@ function buildLoopControls(n, body){
   play.addEventListener('click', ()=> togglePlay(n));
   const exp = document.createElement('button');
   exp.type = 'button'; exp.className = 'miniBtn'; exp.textContent = t('btnExport');
-  exp.addEventListener('click', ()=>{
-    const L = bakeSpin(n);
-    if(L && L.tracks.length) downloadBlob(new Blob([buildLoopMidi(L)], {type:'audio/midi'}), 'dessons-nodes.mid');
-  });
+  exp.addEventListener('click', ()=> exportLoop(n));
   row.append(play, exp);
   body.appendChild(row);
+}
+function exportLoop(n){
+  const L = bakeSpin(n);
+  if(L && L.tracks.length) downloadBlob(new Blob([buildLoopMidi(L)], {type:'audio/midi'}), 'dessons-nodes.mid');
 }
 
 // one track per wired Track node, in wiring order; same tick math as the
@@ -2827,6 +2883,7 @@ function refreshLoopButtons(){
     b.textContent = t(on ? (midi ? 'btnStopDaw' : 'btnStop') : (midi ? 'btnPlayDaw' : 'btnPlay'));
     b.classList.toggle('on', on);
   });
+  syncTransport();
 }
 function scheduler(){
   const L = currentLoop();     // re-read every tick: edits are heard live
@@ -3121,6 +3178,7 @@ function playheadFrame(){
   if(!playing) return;
   const n = nodes.get(playingLoopId);
   if(n) drawLoopThumb(n);
+  $('tpPos').firstElementChild.style.width = (loopPosNow() % 1)*100 + '%';
   rafId = requestAnimationFrame(playheadFrame);
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopPlayback(); });
@@ -3516,8 +3574,15 @@ function hideMenu(){
 }
 document.addEventListener('pointerdown', e=>{ if(!addMenu.hidden && !addMenu.contains(e.target) && e.target.id !== 'addBtn') hideMenu(); });
 document.addEventListener('keydown', e=>{
-  if(e.key === 'Escape'){ hideMenu(); return; }
+  if(e.key === 'Escape'){ hideMenu(); closeFileMenu(); toggleHelp(false); return; }
   if(e.target.closest('input, select, textarea')) return;
+  if(e.key === '?'){ e.preventDefault(); toggleHelp($('helpPanel').hidden); return; }
+  if(e.key === ' ' && !e.target.closest('button')){
+    e.preventDefault();
+    const n = transportLoop();
+    if(n) togglePlay(n);
+    return;
+  }
   const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); return; }
   if(cmd && key === 'y'){ e.preventDefault(); redo(); return; }
@@ -3863,15 +3928,74 @@ const TEMPLATES = {
   }
 };
 function buildTemplateMenu(){
-  const sel = $('tplSel');
-  sel.innerHTML = '';
-  sel.appendChild(new Option(t('tplPick'), ''));
-  Object.keys(TEMPLATES).forEach(k=> sel.appendChild(new Option(t('tpl_' + k), k)));
+  const list = $('tplList');
+  list.innerHTML = '';
+  Object.keys(TEMPLATES).forEach(k=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = t('tpl_' + k);
+    b.addEventListener('click', ()=>{ closeFileMenu(); if(confirm(t('confirmNew'))){ TEMPLATES[k](); saveSoon(); } });
+    list.appendChild(b);
+  });
 }
-$('tplSel').addEventListener('change', e=>{
-  const k = e.target.value;
-  e.target.value = '';
-  if(k && confirm(t('confirmNew'))){ TEMPLATES[k](); saveSoon(); }
+function closeFileMenu(){ $('fileMenu').hidden = true; $('fileBtn').setAttribute('aria-expanded', 'false'); }
+$('fileBtn').addEventListener('click', ()=>{
+  const open = $('fileMenu').hidden;
+  $('fileMenu').hidden = !open;
+  $('fileBtn').setAttribute('aria-expanded', open);
+});
+document.addEventListener('pointerdown', e=>{ if(!e.target.closest('.fileWrap')) closeFileMenu(); });
+['newBtn', 'openBtn', 'saveBtn'].forEach(id=> $(id).addEventListener('click', closeFileMenu));
+
+function buildHelp(){
+  const list = $('helpList');
+  list.innerHTML = '';
+  t('helpRows').forEach(([k, what])=>{
+    const dt = document.createElement('dt'), dd = document.createElement('dd');
+    dt.textContent = k; dd.textContent = what;
+    list.append(dt, dd);
+  });
+}
+function toggleHelp(open){ $('helpPanel').hidden = !open; }
+$('helpBtn').addEventListener('click', ()=> toggleHelp($('helpPanel').hidden));
+$('helpClose').addEventListener('click', ()=> toggleHelp(false));
+document.addEventListener('pointerdown', e=>{ if(!e.target.closest('#helpPanel, #helpBtn')) toggleHelp(false); });
+
+/* ---- transport: the Loop being played, else the selected one, else the first ---- */
+function transportLoop(){
+  const sel = nodes.get(selectedId);
+  return nodes.get(playingLoopId) || (sel && sel.type === 'loop' ? sel : null) || [...nodes.values()].find(n=> n.type === 'loop') || null;
+}
+function transportLogic(loop){
+  const outs = [...nodes.values()].filter(n=> n.type === 'midiOut');
+  return outs.find(n=> loop && midiLoopOf(n) === loop.id) || outs[0] || null;
+}
+function syncTransport(){
+  const loop = transportLoop(), logic = transportLogic(loop);
+  const synth = playing && sink === 'synth', daw = playing && sink === 'midi';
+  const play = $('tpPlay'), out = $('tpLogic');
+  play.textContent = t(synth ? 'btnStop' : 'btnPlay');
+  play.classList.toggle('on', synth);
+  play.disabled = !loop || !audioSupported();
+  out.textContent = t(daw ? 'btnStopDaw' : 'btnPlayDaw');
+  out.classList.toggle('on', daw);
+  out.disabled = !logic;
+  $('tpExport').disabled = !loop;
+  [['tpTempo', 'tempo'], ['tpBars', 'bars']].forEach(([id, key])=>{
+    const f = $(id);
+    f.disabled = !loop;
+    if(document.activeElement !== f) f.value = loop ? loop.params[key] : '';
+  });
+  if(!playing) $('tpPos').firstElementChild.style.width = '0';
+}
+$('tpPlay').addEventListener('click', ()=>{ const n = transportLoop(); if(n) togglePlay(n); });   // synchronous: iOS
+$('tpLogic').addEventListener('click', ()=>{ const n = transportLogic(transportLoop()); if(n) toggleMidi(n); });
+$('tpExport').addEventListener('click', ()=>{ const n = transportLoop(); if(n) exportLoop(n); });
+[['tpTempo', 'tempo', 40, 200], ['tpBars', 'bars', 1, 64]].forEach(([id, key, lo, hi])=>{
+  $(id).addEventListener('change', e=>{
+    const n = transportLoop(), v = parseInt(e.target.value);
+    if(n && !isNaN(v)){ n.params[key] = clamp(v, lo, hi); buildNodeEl(n); drawWires(); markDirty(n.id); saveSoon(); }
+    e.target.value = n ? n.params[key] : '';
+  });
 });
 
 $('newBtn').addEventListener('click', ()=>{ if(confirm(t('confirmNew'))){ defaultGraph(); saveSoon(); } });
