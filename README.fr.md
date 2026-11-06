@@ -61,13 +61,15 @@ Aucune installation nécessaire. Deux options :
 
 Commence par **Fichier → Modèles** : ils jouent tout de suite, sauf *MIDI importé*, qui attend ton fichier.
 
-- **Sources** : image, vidéo, webcam, **mesh 3D** (formes intégrées ou ton `.obj` / `.stl`, gardé dans le navigateur), générateur (bruit, dégradé, grille, anneaux), **fichier MIDI**, micro.
+- **Sources** : image, **dessin**, vidéo, webcam, **mesh 3D** (formes intégrées ou ton `.obj` / `.stl`, gardé dans le navigateur), générateur (bruit, dégradé, grille, anneaux), **fichier MIDI**, micro.
 - **Retouche** : recadrage, tons, flou, inverser, miroir / rotation, mélanger, séparer et combiner RVBA. Un mesh 3D sort ses normales en RVB et sa profondeur en alpha : *Séparer RVBA* peut donc donner à chacune son balayage.
 - **Détection** : contours, sensibilité, puis bande de teinte, bande de luminosité, clé couleur, orientation, union, pour trier ce qui a été détecté.
 - **Musique** : gamme, balayage, octave, transposer en degrés, caler sur la gamme, fusionner, limiter, probabilité, écho, rythme euclidien, piste.
 - **Signaux** : temps / frame, LFO, maths, échelle, plage. Un signal est une valeur qui bouge avec la boucle. Tout curseur avec un point sur son bord en accepte un : un LFO peut faire respirer la sensibilité d'un balayage, le niveau d'un fichier MIDI peut faire pulser le zoom d'un mesh.
 - **Sortie** : boucle (synthé d'aperçu, export `.mid`), **Logic (MIDI live)**, un node par piste Logic, et **Signal → CC MIDI** pour automatiser un filtre ou un volume dans ton DAW. Le MIDI en direct nécessite Chrome ou Edge.
 - **Outils** : courbe personnalisée, trajet dessiné, reroute, attache-câbles, cadre de groupe.
+
+**Dessin** : peins directement dans le graphe avec un pinceau rond (taille, opacité, dureté, pression du stylet) et le nuancier NY. Chaque trait est enregistré : l'image peut se reconstruire à chaque passage de la boucle, et la musique suit le geste. Mets *Cycles / boucle* à 0 pour garder le dessin fini, ou pilote *Avancement* avec un signal.
 
 Le `.mid` exporté suit ce que tu entends : un mesh qui tourne ou un signal qui bouge est rejoué pas à pas. Les notes d'un `.mid` importé gardent leurs hauteurs et peuvent donc sortir de la gamme : passe-les par **Caler sur la gamme** pour les y ramener. **Caler la Boucle**, sur le node MIDI, donne à la Boucle la longueur et le tempo du fichier.
 

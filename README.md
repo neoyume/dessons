@@ -61,13 +61,15 @@ No installation needed. Two options:
 
 Start from **File → Templates**: they play straight away, except *Imported MIDI*, which waits for your file.
 
-- **Sources**: image, video, webcam, **3D mesh** (built-in shapes or your own `.obj` / `.stl`, kept in the browser), generator (noise, gradient, grid, rings), **MIDI file**, microphone.
+- **Sources**: image, **drawing**, video, webcam, **3D mesh** (built-in shapes or your own `.obj` / `.stl`, kept in the browser), generator (noise, gradient, grid, rings), **MIDI file**, microphone.
 - **Adjust**: crop, tones, blur, invert, mirror / rotate, blend, separate and combine RGBA. A 3D mesh outputs its normals as RGB and its depth as alpha, so *Separate RGBA* can give each its own scan.
 - **Detection**: edges, sensitivity, then hue band, brightness band, color key, orientation, union, to split what was detected.
 - **Music**: scale, scan, octave, transpose by degrees, snap to scale, merge, limit, chance, echo, Euclidean rhythm, track.
 - **Signals**: time / frame, LFO, math, scale, range. A signal is a value that moves with the loop. Any slider with a dot on its edge accepts one: an LFO can make a scan's sensitivity breathe, a MIDI file's level can pulse a mesh's zoom.
 - **Output**: loop (preview synth, `.mid` export), **Logic (live MIDI)**, one node per Logic track, and **Signal → MIDI CC** to automate a filter or a volume in your DAW. Live MIDI needs Chrome or Edge.
 - **Tools**: custom curve, drawn path, reroute, cable clip, group frame.
+
+**Drawing**: paint straight into the graph with a round brush (size, opacity, hardness, pen pressure) and the NY color palette. Every stroke is recorded, so the picture can rebuild itself during each pass of the loop, and the music follows the gesture. Set *Cycles / loop* to 0 to keep the finished drawing, or drive *Progress* with a signal.
 
 The exported `.mid` follows what you hear: a spinning mesh or a moving signal is replayed step by step. Notes from an imported `.mid` keep their own pitches, so they can leave the scale: wire them through **Snap to scale** to bring them back. Use **Match the Loop** on the MIDI node to give the Loop the file's length and tempo.
 

@@ -110,6 +110,17 @@
   #helpList{display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin:0; font-size:12px;}
   #helpList dt{font-family:var(--mono); font-size:11px; color:var(--text); white-space:nowrap;}
   #helpList dd{margin:0; color:var(--text-dim);}
+  #drawEditor{position:absolute; inset:0; z-index:15; display:flex; background:var(--bg); min-height:0;}
+  #drawEditor[hidden]{display:none;}
+  .drawArea{flex:1; min-width:0; display:flex; align-items:center; justify-content:center; padding:14px; position:relative; overflow:hidden;}
+  #drawCanvas{height:100%; max-width:100%; aspect-ratio:1; touch-action:none; cursor:none; border-radius:4px; box-shadow:0 6px 24px rgba(0,0,0,.45);}
+  .brushRing{position:fixed; z-index:16; pointer-events:none; border:1px solid #fff; outline:1px solid #000; border-radius:50%; transform:translate(-50%,-50%);}
+  .drawTools{flex:none; width:270px; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; background:var(--panel); border-left:1px solid var(--line);}
+  .drawTools .prm{grid-template-columns:96px 1fr auto;}
+  .nyGrid{display:grid; grid-template-columns:repeat(9, 1fr); gap:3px;}
+  .nyGrid button{aspect-ratio:1; padding:0; border:1px solid rgba(255,255,255,.18); border-radius:4px; cursor:pointer;}
+  .nyGrid button.on{outline:2px solid var(--accent); outline-offset:1px;}
+  .nyName{font-family:var(--mono); font-size:11px; color:var(--text-dim);}
   #workspace{flex:1; display:flex; min-height:0; min-width:0; position:relative;}
   #propsPanel{flex:none; display:flex; flex-direction:column; min-height:0; width:270px; background:var(--panel); border-left:1px solid var(--line);}
   #propsPanel[hidden]{display:none;}
@@ -419,9 +430,12 @@ const I18N = {
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
     btnMidiOn:'Activer le MIDI',
+    n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Partir d’un dessin',
+    brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
+    drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
-    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['?','Cette aide']],
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -504,9 +518,12 @@ const I18N = {
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
     btnMidiOn:'Enable MIDI',
+    n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Start from a drawing',
+    brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
+    drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
-    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['?','This help']],
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -873,6 +890,32 @@ const NODE_DEFS = {
     params:[{id:'gain', label:'p_gain', kind:'range', min:50, max:800, step:10, def:200, fmt:v=>v+'%'}],
     note:'micHint',
     compute:(p, inp, n)=> ({sig: n.micStream ? {at:()=> clamp((n.level || 0)*p.gain/100, 0, 1)} : null})
+  },
+  // a painting kept as its strokes, in the order they were made, so it can be replayed:
+  // with cycles on, the picture builds up during each pass of the Loop
+  srcDraw: {
+    cat:'catSource', custom:'draw', thumb:'image', outputs:[{id:'image', type:'image'}],
+    params:[
+      {id:'strokes', kind:'hidden', def:[]},
+      {id:'bg', kind:'hidden', def:'#FFFFFF'},
+      {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
+      {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1}
+    ],
+    clean:o=>{
+      const hex = v=> typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+      if(!hex(o.bg)) delete o.bg;
+      o.strokes = !Array.isArray(o.strokes) ? [] : o.strokes.filter(st=> isPlain(st) && hex(st.c) && typeof st.pts === 'string' && /^[0-9,]*$/.test(st.pts))
+        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts}));
+    },
+    compute:(p, inp, n)=>{
+      n.lastPhase = meshPhase();
+      const live = p.turns && (playing || meshPhaseOverride !== null);
+      const prog = live ? (p.turns*n.lastPhase) % 1 : clamp(p.reveal/100, 0, 1);
+      n.drawCache = n.drawCache || {};
+      const cv = drawAt(n.drawCache, MAXDIM, p.strokes, p.bg, prog);
+      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data}};
+    },
+    summary:n=> t('drawSum').replace('{n}', n.params.strokes.length)
   },
   srcGen: {
     cat:'catSource', thumb:'image', outputs:[{id:'image', type:'image'}],
@@ -1414,7 +1457,7 @@ function modParams(def, p, inp){
   return q;
 }
 const ADD_MENU = [
-  ['catSource', ['srcImage', 'srcVideo', 'srcWebcam', 'srcMesh', 'srcGen', 'srcMidi', 'srcMic']],
+  ['catSource', ['srcImage', 'srcDraw', 'srcVideo', 'srcWebcam', 'srcMesh', 'srcGen', 'srcMidi', 'srcMic']],
   ['catImage', ['crop', 'tone', 'blur', 'invert', 'flip', 'blend', 'rgbaSplit', 'rgbaCombine']],
   ['catAnalysis', ['edges', 'sens', 'hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
   ['catMusic', ['scale', 'scan', 'octave', 'degree', 'snapScale', 'merge', 'limit', 'chance', 'echo', 'euclid', 'track']],
@@ -1475,6 +1518,7 @@ function removeNode(id, plain){
   if(!n) return;
   if(isSource(n)) stopMedia(n);
   if(n.type === 'srcMic') stopMic(n);
+  if(drawEd && drawEd.n === n) closeDrawEditor();
   if(playingLoopId === id) stopPlayback();
   const downstream = links.filter(l=> l.from === id).map(l=> l.to);
   // deleting a wire tool closes the gap instead of cutting the wire
@@ -1672,6 +1716,7 @@ function buildNodeEl(n){
   if(def.custom === 'source') buildSourceControls(n, body);
   if(def.custom === 'midiFile') buildMidiFileControls(n, body);
   if(def.custom === 'mic') buildMicControls(n, body);
+  if(def.custom === 'draw') buildDrawControls(n, body);
   if(def.custom === 'cc') buildCcControls(n, body);
   (def.params || []).forEach(d=>{ if(d.kind !== 'hidden') body.appendChild(paramEl(n, d)); });
   if(def.thumb){
@@ -2453,7 +2498,7 @@ setInterval(()=>{
   if(document.hidden) return;
   nodes.forEach(n=>{
     if((n.type === 'srcVideo' || n.type === 'srcWebcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
-    else if((n.type === 'srcMesh' || n.type === 'srcGen') && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
+    else if((n.type === 'srcMesh' || n.type === 'srcGen' || n.type === 'srcDraw') && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
     else if(n.type === 'srcMic') readMic(n);
     else if(NODE_DEFS[n.type].sigSource && (playing || n.sigLive) && drivesSignal(n)){
       n.sigLive = playing;        // one last pass when the Loop stops, back to position 0
@@ -2718,7 +2763,7 @@ function meshPhase(){
 const drivesSignal = n=> links.some(l=> l.from === n.id && outputDef(n, l.fromPort).type === 'signal');
 function bakeSpin(loopNode){
   const base = evalNode(loopNode)._loop;
-  const spin = [...nodes.values()].filter(m=> ((m.type === 'srcMesh' || m.type === 'srcGen') && m.params.turns) || (NODE_DEFS[m.type].sigSource && drivesSignal(m)));
+  const spin = [...nodes.values()].filter(m=> ((m.type === 'srcMesh' || m.type === 'srcGen' || m.type === 'srcDraw') && m.params.turns) || (NODE_DEFS[m.type].sigSource && drivesSignal(m)));
   if(!base || !spin.length) return base;
   const seen = new Map();
   const tracksAt = phase=>{
@@ -2844,6 +2889,296 @@ function drawMidiRoll(n){
     ctx.fillStyle = TRACK_COLORS[x.layer % TRACK_COLORS.length];
     ctx.fillRect(x.step/o.steps*W, H - (x.midi - o.lo + 1)*H/span, Math.max(1, x.len/o.steps*W), h);
   });
+}
+
+/* ============================================================
+   Drawing node. A stroke = its colour and brush settings, and its points as text
+   ("x,y,pressure,..." in 1/10000ths of the canvas and 1/100ths) so it saves small
+   and is drawn again at any size, whole or up to any point.
+   ============================================================ */
+const NY_PALETTE = [
+  ['black','#231F20'],['nori','#3E4927'],['deepemerald','#003D3D'],
+  ['deepbluepurple','#3A318D'],['murasaki','#662E93'],['deepfuschia','#8D2863'],['momiji','#77181C'],['choco','#7E3B2F'],['gold','#B99A35'],['delaforet','#006935'],['deepkappa','#015E54'],['navyblue','#072B47'],
+  ['bluepurple','#5244CD'],['umeboshi','#9D298C'],['fuschia','#E6267A'],['rouge','#E72728'],['kinkan','#F29325'],['lemon','#FCEF28'],['melonsoda','#00FF00'],['kappa','#149387'],['blue','#2AABE2'],
+  ['fuji','#D5CFFF'],['lightvender','#DFD6EB'],['coral','#ED7D9A'],['momo','#FDD0B1'],['yeast','#F2D87A'],['lime','#DBE000'],['applegreen','#86BE45'],['aqua','#86FBDB'],['ramune','#00FFFF'],
+  ['white','#FFFFFF'],['sakura','#FCE3EE'],['lightlime','#FAF7BE'],['lightmatcha','#E8FFC9'],['lightaqua','#CFFFF0'],['lightblue','#C9E8F4']
+];
+const DRAW_RES = 1024;
+const decoded = new WeakMap();
+function strokePoints(st){
+  if(!decoded.has(st)){
+    const v = st.pts ? st.pts.split(',') : [], out = new Float32Array(v.length - v.length % 3);
+    for(let i=0;i<out.length;i+=3){ out[i] = v[i]/10000; out[i+1] = v[i+1]/10000; out[i+2] = v[i+2]/100; }
+    decoded.set(st, out);
+  }
+  return decoded.get(st);
+}
+// the round brush: one tip per (colour, hardness), scaled at each stamp
+const brushTips = new Map();
+function brushTip(color, hard){
+  const key = color + Math.round(hard*20);
+  if(brushTips.has(key)) return brushTips.get(key);
+  const c = document.createElement('canvas'), S = 128, x = c.getContext('2d'), [r, g, b] = hexToRgb(color);
+  c.width = c.height = S;
+  const grad = x.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
+  grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
+  grad.addColorStop(Math.min(0.97, hard), `rgba(${r},${g},${b},1)`);
+  grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  x.fillStyle = grad; x.fillRect(0, 0, S, S);
+  brushTips.set(key, c);
+  return c;
+}
+// walks from the last point to this one, leaving a stamp every fraction of the brush
+function stampTo(ctx, S, st, state, x, y, p){
+  const tip = brushTip(st.c, st.h), base = Math.max(0.4, st.s/DRAW_RES*S/2), flow = 0.3 + 0.7*st.h;
+  const stamp = (sx, sy, sp)=>{
+    const k = 1 - st.r*(1 - sp), rad = Math.max(0.35, base*k);    // pressure thins the line and lightens it
+    ctx.globalAlpha = flow*k;
+    ctx.drawImage(tip, sx*S - rad, sy*S - rad, rad*2, rad*2);
+  };
+  if(!state.started){ state.started = true; stamp(x, y, p); state.x = x; state.y = y; state.p = p; state.left = 0; return; }
+  // spaced on the brush as pressed, not at full size: a light touch stays a line, not beads
+  const dist = Math.hypot(x - state.x, y - state.y)*S, step = Math.max(0.5, base*(1 - st.r*(1 - Math.min(p, state.p)))*0.2);
+  let at = step - state.left;
+  for(; at <= dist; at += step){
+    const u = at/dist;
+    stamp(state.x + (x - state.x)*u, state.y + (y - state.y)*u, state.p + (p - state.p)*u);
+  }
+  state.left = dist - (at - step);
+  state.x = x; state.y = y; state.p = p;
+}
+const strokeLayers = new Map();
+function strokeLayer(S){
+  if(!strokeLayers.has(S)){ const c = document.createElement('canvas'); c.width = c.height = S; strokeLayers.set(S, c); }
+  return strokeLayers.get(S);
+}
+// a stroke is built on its own layer, then laid down at its opacity: crossing
+// itself doesn't darken it, like a real pass of the brush
+function commitStroke(ctx, S, st, limit){
+  const pts = strokePoints(st), layer = strokeLayer(S), lc = layer.getContext('2d'), state = {}, n = limit == null ? pts.length/3 : limit;
+  lc.clearRect(0, 0, S, S);
+  for(let i=0;i<n;i++) stampTo(lc, S, st, state, pts[i*3], pts[i*3+1], pts[i*3+2]);
+  lc.globalAlpha = 1;
+  ctx.globalAlpha = st.o;
+  ctx.drawImage(layer, 0, 0);
+  ctx.globalAlpha = 1;
+}
+// the picture at a point of the replay (0..1, by points drawn). Finished strokes
+// stay on a cached base: going forward only adds what's new
+function drawAt(cache, S, strokes, bg, prog){
+  if(!cache.out || cache.S !== S){
+    cache.base = document.createElement('canvas'); cache.out = document.createElement('canvas');
+    cache.base.width = cache.base.height = cache.out.width = cache.out.height = S;
+    cache.bctx = cache.base.getContext('2d'); cache.octx = cache.out.getContext('2d', {willReadFrequently:S <= MAXDIM});
+    cache.S = S; cache.strokes = null;
+  }
+  let total = 0;
+  strokes.forEach(st=>{ total += strokePoints(st).length/3; });
+  let left = Math.round(clamp(prog, 0, 1)*total), i = 0;
+  while(i < strokes.length && left >= strokePoints(strokes[i]).length/3 && (left > 0 || !strokePoints(strokes[i]).length)){ left -= strokePoints(strokes[i]).length/3; i++; }
+  if(cache.strokes !== strokes || cache.len !== strokes.length || cache.bg !== bg || i < cache.done){
+    cache.strokes = strokes; cache.len = strokes.length; cache.bg = bg; cache.done = 0;
+    cache.bctx.globalAlpha = 1; cache.bctx.fillStyle = bg; cache.bctx.fillRect(0, 0, S, S);
+  }
+  for(; cache.done < i; cache.done++) commitStroke(cache.bctx, S, strokes[cache.done]);
+  cache.octx.globalAlpha = 1;
+  cache.octx.drawImage(cache.base, 0, 0);
+  if(left > 0 && i < strokes.length) commitStroke(cache.octx, S, strokes[i], left);
+  return cache.out;
+}
+function buildDrawControls(n, body){
+  const row = document.createElement('div'); row.className = 'btnRow';
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'miniBtn primary'; b.textContent = t('btnDraw');
+  b.addEventListener('click', ()=> openDrawEditor(n));
+  row.appendChild(b); body.appendChild(row);
+}
+
+let drawEd = null;      // {n, cv, ctx, cache, cur, state, redo, ring, replay}
+let brush = {size:28, opacity:100, hard:75, press:60, color:'#231F20'};
+try{ brush = Object.assign(brush, JSON.parse(localStorage.getItem('dessons.brush') || '{}')); }catch(e){}
+const saveBrush = ()=>{ try{ localStorage.setItem('dessons.brush', JSON.stringify(brush)); }catch(e){} };
+function drawChanged(){
+  const n = drawEd.n;
+  n.drawCache = null;
+  markDirty(n.id); saveSoon();
+  syncDrawButtons();
+}
+function refreshDrawEditor(){
+  const d = drawEd;
+  d.ctx.drawImage(drawAt(d.cache, DRAW_RES, d.n.params.strokes, d.n.params.bg, 1), 0, 0);
+  syncDrawButtons();
+}
+function syncDrawButtons(){
+  const d = drawEd;
+  d.undo.disabled = !d.n.params.strokes.length; d.clear.disabled = d.undo.disabled; d.replayBtn.disabled = d.undo.disabled;
+  d.redoBtn.disabled = !d.redo.length;
+}
+function ringSize(){
+  const d = drawEd;
+  const px = brush.size/DRAW_RES*d.cv.getBoundingClientRect().width;
+  d.ring.style.width = d.ring.style.height = Math.max(3, px) + 'px';
+}
+function drawPoint(e){
+  const r = drawEd.cv.getBoundingClientRect();
+  // a mouse has no pressure to give: only a pen's counts
+  return [clamp((e.clientX - r.left)/r.width, 0, 1), clamp((e.clientY - r.top)/r.height, 0, 1), e.pointerType === 'pen' ? clamp(e.pressure, 0.02, 1) : 1];
+}
+function drawPaintView(){
+  const d = drawEd;
+  if(!d) return;
+  d.raf = 0;
+  d.ctx.globalAlpha = 1;
+  d.ctx.drawImage(d.cache.out, 0, 0);
+  if(d.cur){
+    d.ctx.globalAlpha = d.cur.st.o;
+    d.ctx.drawImage(strokeLayer(DRAW_RES), 0, 0);
+    d.ctx.globalAlpha = 1;
+  }
+}
+function drawAdd(e){
+  const d = drawEd, [x, y, p] = drawPoint(e);
+  d.cur.pts.push(Math.round(x*10000), Math.round(y*10000), Math.round(p*100));
+  const lc = strokeLayer(DRAW_RES).getContext('2d');
+  stampTo(lc, DRAW_RES, d.cur.st, d.cur.state, x, y, p);
+  lc.globalAlpha = 1;
+  if(!d.raf) d.raf = requestAnimationFrame(drawPaintView);
+}
+function stopReplay(){ if(drawEd && drawEd.replay){ cancelAnimationFrame(drawEd.replay); drawEd.replay = 0; refreshDrawEditor(); } }
+function replayDrawing(){
+  const d = drawEd, t0 = performance.now(), ms = clamp(d.n.params.strokes.length*220, 1500, 8000), cache = {};
+  stopReplay();
+  const frame = now=>{
+    if(!drawEd || !d.replay) return;
+    const u = Math.min(1, (now - t0)/ms);
+    d.ctx.drawImage(drawAt(cache, DRAW_RES, d.n.params.strokes, d.n.params.bg, u), 0, 0);
+    if(u < 1) d.replay = requestAnimationFrame(frame); else d.replay = 0;
+  };
+  d.replay = requestAnimationFrame(frame);
+}
+function drawUndo(){
+  const d = drawEd, st = d.n.params.strokes;
+  if(!st.length) return;
+  stopReplay();
+  d.redo.push(st[st.length - 1]);
+  d.n.params.strokes = st.slice(0, -1);
+  drawChanged(); refreshDrawEditor();
+}
+function drawRedo(){
+  const d = drawEd;
+  if(!d.redo.length) return;
+  stopReplay();
+  d.n.params.strokes = d.n.params.strokes.concat([d.redo.pop()]);
+  drawChanged(); refreshDrawEditor();
+}
+function drawKey(e){
+  const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
+  if(e.key === 'Escape'){ closeDrawEditor(); return true; }
+  if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
+  if(!e.target.closest('input') && (e.key === '[' || e.key === ']')){
+    brush.size = clamp(Math.round(brush.size*(e.key === ']' ? 1.2 : 1/1.2)), 1, 300);
+    const f = $('brSize'); if(f){ f.value = brush.size; f.refresh(); }
+    ringSize(); saveBrush();
+    return true;
+  }
+  return e.key !== ' ';     // the canvas shortcuts stay off, except play / stop
+}
+function brushSlider(id, label, min, max, key, fmt){
+  const row = document.createElement('label'); row.className = 'prm';
+  const lab = document.createElement('span'), input = document.createElement('input'), val = document.createElement('span');
+  lab.textContent = t(label); val.className = 'v';
+  input.type = 'range'; input.id = id; input.min = min; input.max = max; input.step = 1; input.value = brush[key];
+  input.refresh = ()=>{ val.textContent = fmt(brush[key]); };
+  input.refresh();
+  input.addEventListener('input', ()=>{ brush[key] = +input.value; input.refresh(); if(key === 'size') ringSize(); saveBrush(); });
+  row.append(lab, input, val);
+  return row;
+}
+function openDrawEditor(n){
+  closeDrawEditor();
+  const box = document.createElement('div'); box.id = 'drawEditor';
+  const area = document.createElement('div'); area.className = 'drawArea';
+  const cv = document.createElement('canvas'); cv.id = 'drawCanvas'; cv.width = cv.height = DRAW_RES;
+  area.appendChild(cv);
+  const tools = document.createElement('div'); tools.className = 'drawTools';
+  const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
+  const pct = v=> v + '%';
+  tools.append(brushSlider('brSize', 'brSize', 1, 300, 'size', v=> v), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
+    brushSlider('brHard', 'brHard', 0, 100, 'hard', pct), brushSlider('brPress', 'brPress', 0, 100, 'press', pct));
+  const name = document.createElement('div'); name.className = 'nyName';
+  const grid = document.createElement('div'); grid.className = 'nyGrid';
+  const showName = ()=>{ const c = NY_PALETTE.find(x=> x[1].toLowerCase() === brush.color.toLowerCase()); name.textContent = c ? 'NY_' + c[0] : brush.color; };
+  NY_PALETTE.forEach(([nm, hex])=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.title = 'NY_' + nm; b.setAttribute('aria-label', 'NY_' + nm); b.style.background = hex;
+    b.classList.toggle('on', hex.toLowerCase() === brush.color.toLowerCase());
+    b.addEventListener('click', ()=>{
+      brush.color = hex; saveBrush(); showName();
+      grid.querySelectorAll('button').forEach(x=> x.classList.toggle('on', x === b));
+    });
+    grid.appendChild(b);
+  });
+  showName();
+  tools.append(name, grid);
+  const btn = (label, fn, primary)=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn' + (primary ? ' primary' : ''); b.textContent = t(label);
+    b.addEventListener('click', fn);
+    return b;
+  };
+  const undo = btn('drUndo', drawUndo), redoBtn = btn('drRedo', drawRedo);
+  const replayBtn = btn('drReplay', replayDrawing);
+  const clear = btn('drClear', ()=>{
+    if(!confirm(t('drConfirm'))) return;
+    stopReplay();
+    drawEd.redo = []; n.params.strokes = [];
+    drawChanged(); refreshDrawEditor();
+  });
+  const bgBtn = btn('drBg', ()=>{ stopReplay(); n.params.bg = brush.color; drawChanged(); refreshDrawEditor(); });
+  const row1 = document.createElement('div'), row2 = document.createElement('div');
+  row1.className = row2.className = 'btnRow';
+  row1.append(undo, redoBtn); row2.append(bgBtn, clear);
+  tools.append(row1, row2, replayBtn, btn('drDone', closeDrawEditor, true));
+  box.append(area, tools);
+  $('workspace').appendChild(box);
+  document.body.appendChild(ring);
+  drawEd = {n, cv, ctx:cv.getContext('2d'), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0};
+  refreshDrawEditor();
+  ringSize();
+  cv.addEventListener('pointerenter', ()=>{ ring.hidden = false; ringSize(); });
+  cv.addEventListener('pointerleave', ()=>{ if(!drawEd.cur) ring.hidden = true; });
+  cv.addEventListener('pointerdown', e=>{
+    if(e.button) return;
+    e.preventDefault();
+    stopReplay();
+    cv.setPointerCapture(e.pointerId);
+    const lc = strokeLayer(DRAW_RES).getContext('2d');
+    lc.clearRect(0, 0, DRAW_RES, DRAW_RES);
+    drawEd.cur = {st:{c:brush.color, s:brush.size, o:brush.opacity/100, h:brush.hard/100, r:brush.press/100, pts:''}, pts:[], state:{}};
+    drawAdd(e);
+  });
+  cv.addEventListener('pointermove', e=>{
+    ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px';
+    if(!drawEd.cur) return;
+    // a pen sends more points than frames: the ones between two frames are in here
+    (e.getCoalescedEvents && e.getCoalescedEvents().length ? e.getCoalescedEvents() : [e]).forEach(drawAdd);
+  });
+  const end = ()=>{
+    const d = drawEd;
+    if(!d || !d.cur) return;
+    d.cur.st.pts = d.cur.pts.join(',');
+    n.params.strokes = n.params.strokes.concat([d.cur.st]);
+    d.cur = null; d.redo = [];
+    drawChanged(); refreshDrawEditor();
+  };
+  cv.addEventListener('pointerup', end);
+  cv.addEventListener('pointercancel', end);
+}
+function closeDrawEditor(){
+  if(!drawEd) return;
+  if(drawEd.replay) cancelAnimationFrame(drawEd.replay);
+  drawEd.box.remove(); drawEd.ring.remove();
+  drawEd = null;
 }
 
 /* ---- Microphone: an analyser on the mic, never connected to the speakers ---- */
@@ -3807,6 +4142,7 @@ function hideMenu(){
 }
 document.addEventListener('pointerdown', e=>{ if(!addMenu.hidden && !addMenu.contains(e.target) && e.target.id !== 'addBtn') hideMenu(); });
 document.addEventListener('keydown', e=>{
+  if(drawEd && drawKey(e)) return;
   if(e.key === 'Escape'){ hideMenu(); closeFileMenu(); closeCatMenus(); toggleHelp(false); return; }
   if(e.target.closest('input, select, textarea')) return;
   if(e.key === '?'){ e.preventDefault(); toggleHelp($('helpPanel').hidden); return; }
@@ -4015,7 +4351,7 @@ function internBlob(str){
 function snapshot(){
   const g = serialize();
   delete g.view;
-  return JSON.stringify(g, (k, v)=> (k === 'file' || k === 'img') && typeof v === 'string' && v.length > 256 ? internBlob(v) : v);
+  return JSON.stringify(g, (k, v)=> (k === 'file' || k === 'img' || k === 'pts') && typeof v === 'string' && v.length > 256 ? internBlob(v) : v);
 }
 function historyCommit(){
   const s = snapshot();
@@ -4057,6 +4393,7 @@ function applySnapshot(str){
   scheduleRun(true);
   requestAnimationFrame(drawWires);
   renderProps();
+  if(drawEd) refreshDrawEditor();
   history_[histPos] = snapshot();     // a restored node comes back last in the list: same graph, different text
   syncUndoButtons();
   clearTimeout(saveTimer);
@@ -4103,6 +4440,7 @@ function pasteAtPointer(){
 }
 function clearGraph(){
   stopPlayback();
+  closeDrawEditor();
   nodes.forEach(n=>{ if(isSource(n)) stopMedia(n); if(n.type === 'srcMic') stopMic(n); if(n.el) n.el.remove(); });
   nodes.clear(); links = []; selectedId = null; selection.clear();
   frames.forEach(f=> f.el.remove()); frames = [];
@@ -4127,6 +4465,7 @@ function cleanParams(type, raw){
     }
   });
   if(typeof out.img !== 'string' || !out.img.startsWith('data:image/')) delete out.img;    // never a remote URL
+  if(def.clean) def.clean(out);
   if(def.lanes && !(Array.isArray(out.lanes) && out.lanes.length && out.lanes.length <= 64
       && out.lanes.every(ty=> ty === null || (typeof ty === 'string' && own(TYPE_VAR, ty) && ty !== 'any')))) delete out.lanes;
   return out;
@@ -4254,6 +4593,14 @@ const TEMPLATES = {
     const file = addNode('srcMidi', 0, 60), scale = addNode('scale', 0, 400);
     const snap = addNode('snapScale', 300, 60), tr = addNode('track', 560, 60), loop = addNode('loop', 820, 60);
     wired(file,'notes', snap,'notes'); wired(scale,'scale', snap,'scale'); wired(snap,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
+    finishGraph();
+  },
+  draw(){
+    clearGraph();
+    const draw = addNode('srcDraw', 0, 60), edges = addNode('edges', 260, 60), scale = addNode('scale', 260, 340);
+    const scan = addNode('scan', 520, 60, {steps:16, thresh:40}), tr = addNode('track', 780, 60, {program:'11'}), loop = addNode('loop', 1040, 60);
+    wired(draw,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(scale,'scale', scan,'scale');
+    wired(scan,'notes', tr,'notes'); wired(tr,'track', loop,'tracks');
     finishGraph();
   },
   logic(){

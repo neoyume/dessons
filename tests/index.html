@@ -192,6 +192,40 @@ test('L’historique garde un gros fichier une seule fois', ()=>{
   eq(nodes.get(n.id).params.file.length, 100000);
 });
 
+/* ---- drawing ---- */
+test('Dessin : un trait se rejoue point par point', ()=>{
+  const line = (y, c)=> ({c, s:60, o:1, h:1, r:0, pts:Array.from({length:50}, (_, i)=> [1000 + i*160, y, 100]).flat().join(',')});
+  const st = [line(3000, '#000000'), line(7000, '#000000')], px = (cv, x, y)=> cv.getContext('2d').getImageData(x, y, 1, 1).data[0];
+  const a = {}, at = u=> { const c = drawAt(a, 200, st, '#FFFFFF', u); return [px(c, 180, 60) < 80, px(c, 180, 140) < 80, px(c, 30, 60) < 80]; };
+  eq(at(0), [false, false, false]);
+  eq(at(.25), [false, false, true]);    // first stroke half done
+  eq(at(.5), [true, false, true]);
+  eq(at(1), [true, true, true]);
+  eq(at(.25), [false, false, true]);    // and back
+});
+test('Dessin : la pression affine le trait', ()=>{
+  const mk = p=> ({c:'#000000', s:100, o:1, h:1, r:1, pts:Array.from({length:30}, (_, i)=> [1000 + i*250, 5000, p]).flat().join(',')});
+  const w = st=>{ const c = drawAt({}, 200, [st], '#FFFFFF', 1), d = c.getContext('2d').getImageData(100, 0, 1, 200).data; let n = 0; for(let i=0;i<200;i++) if(d[i*4] < 200) n++; return n; };
+  ok(w(mk(100)) > w(mk(25))*2);
+});
+test('Dessin : l’opacité ne s’accumule pas dans un même trait', ()=>{
+  const st = {c:'#000000', s:60, o:.5, h:1, r:0, pts:[5000,5000,100, 5000,5000,100, 5100,5000,100, 4900,5000,100, 5000,5000,100].join(',')};
+  const v = drawAt({}, 200, [st], '#FFFFFF', 1).getContext('2d').getImageData(100, 100, 1, 1).data[0];
+  ok(Math.abs(v - 128) < 6, v);
+});
+test('Dessin : rejeté si piégé', ()=>{
+  loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
+  const p = nodes.get('n1').params;
+  eq([p.bg, p.strokes.length, p.strokes[0].s, p.strokes[0].o, p.strokes[0].h, p.strokes[0].r], ['#FFFFFF', 1, 400, 1, 0, 0]);
+});
+test('Dessin : l’historique garde les traits une seule fois', ()=>{
+  clearGraph();
+  const pts = Array(3000).fill('1000,1000,50').join(','), n = addNode('srcDraw', 0, 0, {strokes:[{c:'#000000', s:10, o:1, h:1, r:0, pts}]});
+  ok(snapshot().length < 2000);
+  applySnapshot(snapshot());
+  eq(nodes.get(n.id).params.strokes[0].pts.length, pts.length);
+});
+
 /* ---- the .mid follows what's heard ---- */
 test('L’export suit un signal sur la sensibilité', async ()=>{
   clearGraph();
