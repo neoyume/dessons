@@ -277,6 +277,7 @@ const I18N = {
     p_part:'Piste', p_repeats:'Boucles', midiAll:'Toutes', p_lo:'Bas', p_hi:'Haut', p_passBars:'Mesures par passage',
     srcPickMidi:'Charger un .mid', midiFileErr:'Fichier MIDI illisible.', midiSum:'{n} notes · {s} s', midiDrums:'Batterie dessinée, pas jouée.', midiEmpty:'Charge un .mid ou dépose-le ici.',
     btnClipExport:'Exporter la vidéo', clipRec:'Enregistrement {x}', clipNoRec:'Export vidéo indisponible dans ce navigateur.',
+    clipNoInput:'Rien à jouer : branche un fil midi, pistes ou notes.', clipNoNotes:'Aucune note pour l’instant : charge une source, ou baisse la sensibilité du Balayage.',
     n_rgbaSplit:'Séparer RVBA', n_rgbaCombine:'Combiner RVBA',
     ch_r:'R', ch_g:'V', ch_b:'B', ch_a:'A', rgbaHint:'Entrée libre : R, V, B à 0, A à 255. Contours ne lit pas l’alpha.',
     n_invert:'Inverser', n_blur:'Flou', n_tone:'Tons', n_edges:'Contours',
@@ -342,6 +343,7 @@ const I18N = {
     p_part:'Track', p_repeats:'Loops', midiAll:'All', p_lo:'Low', p_hi:'High', p_passBars:'Bars per pass',
     srcPickMidi:'Load a .mid', midiFileErr:'Unreadable MIDI file.', midiSum:'{n} notes · {s} s', midiDrums:'Drums are drawn, not played.', midiEmpty:'Load a .mid or drop it here.',
     btnClipExport:'Export the video', clipRec:'Recording {x}', clipNoRec:'Video export unavailable in this browser.',
+    clipNoInput:'Nothing to play: plug in a midi, tracks or notes wire.', clipNoNotes:'No notes yet: load a source, or lower the Scan\'s sensitivity.',
     n_rgbaSplit:'Separate RGBA', n_rgbaCombine:'Combine RGBA',
     ch_r:'R', ch_g:'G', ch_b:'B', ch_a:'A', rgbaHint:'Free input: R, G, B at 0, A at 255. Edges doesn’t read alpha.',
     n_invert:'Invert', n_blur:'Blur', n_tone:'Tones', n_edges:'Edges',
@@ -554,6 +556,10 @@ const NODE_DEFS = {
         lo:notes.reduce((a, x)=> x.drums ? a : Math.min(a, x.midi), 127), hi:notes.reduce((a, x)=> x.drums ? a : Math.max(a, x.midi), 0),
         duration:Math.max(file.duration, loops.length ? p.repeats*loopBeats*spb : 0) + 1.2    // room for the release and reverb tail
       }};
+    },
+    summary:n=>{
+      if(n.out && n.out._clip) return '';
+      return t(links.some(l=> l.to === n.id && l.toPort !== 'image') ? 'clipNoNotes' : 'clipNoInput');
     }
   },
   // each channel leaves as a grey image, so every image node can work on it alone
@@ -1368,6 +1374,7 @@ function drawThumb(n){
     drawMidiRoll(n);
   } else if(kind === 'clip'){
     const C = n.out._clip;
+    syncClipButtons(n);
     if(!C){ emptyThumb(c); return; }
     paintClip(sizeThumb(c, 9, 16), C, clipState && clipState.id === n.id ? clipTime() : 0);
   } else if(kind === 'rgba'){
@@ -2244,14 +2251,21 @@ function buildClipControls(n, body){
   const live = clipState && clipState.id === n.id;
   const play = document.createElement('button');
   play.type = 'button'; play.className = 'miniBtn primary clipPlay' + (live && !clipState.rec ? ' on' : ''); play.textContent = t(live && !clipState.rec ? 'btnStop' : 'btnPlay');
-  play.disabled = !audioSupported() || !!(live && clipState.rec);
   play.addEventListener('click', ()=>{ if(clipState && clipState.id === n.id) stopClip(); else startClip(n, false); });
   const rec = document.createElement('button');
   rec.type = 'button'; rec.className = 'miniBtn clipRec' + (live && clipState.rec ? ' on' : ''); rec.textContent = t('btnClipExport');
-  rec.disabled = !clipExportSupported();
-  if(rec.disabled) rec.title = t('clipNoRec');
+  if(!clipExportSupported()) rec.title = t('clipNoRec');
   rec.addEventListener('click', ()=>{ if(clipState && clipState.id === n.id && clipState.rec) stopClip(); else startClip(n, true); });
   row.append(play, rec); body.appendChild(row);
+  syncClipButtons(n, play, rec);
+}
+// nothing to play = visibly nothing to click; a running clip can always be stopped
+function syncClipButtons(n, play, rec){
+  play = play || n.el.querySelector('.clipPlay'); rec = rec || n.el.querySelector('.clipRec');
+  if(!play || !rec) return;
+  const live = clipState && clipState.id === n.id, has = !!(n.out && n.out._clip);
+  play.disabled = !audioSupported() || !!(live && clipState.rec) || (!has && !live);
+  rec.disabled = !clipExportSupported() || (!has && !live);
 }
 // synchronous from the click to the first voice, like togglePlay() (iOS)
 function startClip(n, record){
@@ -2272,7 +2286,11 @@ function startClip(n, record){
     const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(m=> MediaRecorder.isTypeSupported(m));
     const opts = {videoBitsPerSecond:8000000, audioBitsPerSecond:128000};
     if(mime) opts.mimeType = mime;
-    st.rec = new MediaRecorder(st.stream, opts);
+    try{ st.rec = new MediaRecorder(st.stream, opts); }
+    catch(e){
+      try{ st.rec = new MediaRecorder(st.stream); }     // let the browser pick what it supports
+      catch(e2){ st.stream.getVideoTracks().forEach(tr=> tr.stop()); alert(t('clipNoRec')); return; }
+    }
     st.rec.ondataavailable = e=>{ if(e.data && e.data.size) st.chunks.push(e.data); };
     // a recorder takes its time to get going: the music waits for it, or the
     // video would open partway into the piece
@@ -2280,8 +2298,9 @@ function startClip(n, record){
     st.rec.onstart = ()=>{ st.t0 = performance.now() + 100; };
     st.rec.onstop = ()=>{
       st.stream.getVideoTracks().forEach(tr=> tr.stop());   // the audio track belongs to clipTap, reused next time
-      const blob = new Blob(st.chunks, {type:'video/webm'});
-      if(blob.size) downloadBlob(blob, 'dessons-midi-9x16.webm');
+      const type = st.rec.mimeType || 'video/webm';
+      const blob = new Blob(st.chunks, {type:type.split(';')[0]});
+      if(blob.size) downloadBlob(blob, 'dessons-midi-9x16.' + (/mp4/i.test(type) ? 'mp4' : 'webm'));
     };
     st.rec.start();
   }
