@@ -83,6 +83,20 @@
   #wires{position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible; pointer-events:none;}
   #wires path{fill:none; stroke-width:2.2; opacity:.85;}
   #wires path.draft{stroke-dasharray:6 5; opacity:1;}
+  #wires path.hit{stroke:transparent; stroke-width:14; opacity:1; pointer-events:stroke;}
+  #frames{position:absolute; left:0; top:0;}
+  .frame{position:absolute; border:1px dashed var(--accent-dim); border-radius:10px; background:rgba(0,255,0,.035); pointer-events:none;}
+  .frameHead{
+    display:flex; align-items:center; gap:6px; padding:5px 8px 5px 12px; pointer-events:auto; cursor:grab;
+    font-size:14px; color:var(--accent); border-radius:10px 10px 0 0; background:rgba(0,255,0,.07);
+  }
+  .frameHead:active{cursor:grabbing;}
+  .frameTitle{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .frameEdit{flex:1; min-width:0; font-size:14px; color:var(--text); background:var(--panel); border:1px solid var(--accent-dim); border-radius:4px; padding:1px 4px;}
+  .frameDel{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; line-height:1; padding:0 2px;}
+  .frameDel:hover{color:#ff8a8e;}
+  .frameGrip{position:absolute; right:0; bottom:0; width:18px; height:18px; pointer-events:auto; cursor:nwse-resize; border-right:2px solid var(--accent-dim); border-bottom:2px solid var(--accent-dim); border-radius:0 0 10px 0;}
+  .marquee{position:absolute; border:1px dashed var(--accent); background:rgba(0,255,0,.06); pointer-events:none;}
   .stageHint{position:absolute; left:14px; bottom:12px; font-size:11px; color:var(--text-dim); pointer-events:none; line-height:1.6; max-width:calc(100% - 28px);}
 
   /* ---- nodes ---- */
@@ -104,6 +118,14 @@
   .nodeHead .title{flex:1; font-size:12.5px; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .nodeDel{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; line-height:1; padding:0 2px;}
   .nodeDel:hover{color:#ff8a8e;}
+  /* wire tools: no title, no body, the whole thing is the handle */
+  .node.lanes{width:20px; border-radius:7px; cursor:grab; background:var(--panel-2);}
+  .node.lanes.reroute{width:12px; border-radius:6px;}
+  .node.lanes:active{cursor:grabbing;}
+  .node.lanes .nodeHead, .node.lanes .nodeBody{display:none;}
+  .node.lanes .ports{padding:3px 0; gap:0;}
+  .node.lanes .port{padding:0; width:0;}
+  .node.lanes .port span{display:none;}
   .ports{display:flex; justify-content:space-between; gap:8px; padding:6px 0 2px;}
   .ports .col{display:flex; flex-direction:column; gap:5px; min-width:0;}
   .ports .col.out{align-items:flex-end;}
@@ -121,7 +143,7 @@
   body.wiring .port.in:not(.compatible) .dot{opacity:.3;}
   body.wiring.rev .port.out:not(.compatible) .dot{opacity:.3;}
   .ty-image{color:var(--t-image);} .ty-field{color:var(--t-field);} .ty-scale{color:var(--t-scale);}
-  .ty-notes{color:var(--t-notes);} .ty-track{color:var(--t-track);} .ty-path{color:var(--t-path);} .ty-curve{color:var(--t-curve);} .ty-midi{color:var(--t-midi);} .ty-signal{color:var(--t-signal);}
+  .ty-notes{color:var(--t-notes);} .ty-track{color:var(--t-track);} .ty-path{color:var(--t-path);} .ty-curve{color:var(--t-curve);} .ty-midi{color:var(--t-midi);} .ty-signal{color:var(--t-signal);} .ty-any{color:var(--text-dim);}
   .port span{color:var(--text-dim);}
 
   .nodeBody{padding:4px 10px 10px; display:flex; flex-direction:column; gap:7px;}
@@ -197,6 +219,10 @@
   }
   #addMenu button:hover, #addMenu button:focus{background:var(--panel-2); outline:none;}
   #addMenu button i{width:8px; height:8px; border-radius:2px; flex:none;}
+  #addMenu button.active{background:var(--panel-2); box-shadow:inset 2px 0 0 var(--accent);}
+  #menuSearch{width:100%; font-size:12px; color:var(--text); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:5px 8px; outline:none;}
+  #menuSearch:focus{border-color:var(--accent);}
+  .menuEmpty{padding:8px; font-size:11.5px; color:var(--text-dim);}
 
   #ny-noise{
     position:fixed; inset:0; width:100%; height:100%;
@@ -213,6 +239,7 @@
   <a class="backLink" href="index.html" data-i18n="backToWorkshop">← Atelier</a>
   <div class="toolbar">
     <button type="button" class="miniBtn primary" id="addBtn" data-i18n="btnAdd">+ Node</button>
+    <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
     <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
     <button type="button" class="miniBtn" id="newBtn" data-i18n="btnNew">Nouveau</button>
     <button type="button" class="miniBtn" id="saveBtn" data-i18n="btnSave">⬆ Sauver .json</button>
@@ -226,7 +253,7 @@
 </header>
 
 <div id="stage">
-  <div id="world"><svg id="wires"></svg></div>
+  <div id="world"><div id="frames"></div><svg id="wires"></svg></div>
   <div class="stageHint" data-i18n="stageHint"></div>
 </div>
 <div id="addMenu" hidden></div>
@@ -263,8 +290,10 @@ const I18N = {
   fr: {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Atelier',
+    catTools:'Organisation', n_reroute:'Reroute', n_cableClip:'Attache-câbles', n_frame:'Cadre de groupe', t_any:'libre',
+    btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
-    stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic : ajouter un node · Tirer un fil d\'une sortie vers une entrée · Suppr : effacer le node sélectionné · Déposer une image, une vidéo, un .obj / .stl ou un .mid ici',
+    stageHint:'Glisser le fond : déplacer · Pincer / ctrl+molette : zoom · Double-clic ou Tab : ajouter un node · Double-clic sur un fil : reroute · Maj+glisser : sélectionner · G : grouper · Suppr : effacer · Déposer une image, une vidéo, un .obj / .stl ou un .mid ici',
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -329,8 +358,10 @@ const I18N = {
   en: {
     docTitle:'Dessons · Nodes',
     backToWorkshop:'← Workshop',
+    catTools:'Layout', n_reroute:'Reroute', n_cableClip:'Cable clip', n_frame:'Group frame', t_any:'free',
+    btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
-    stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click: add a node · Drag a wire from an output to an input · Delete: remove the selected node · Drop an image, a video, an .obj / .stl or a .mid here',
+    stageHint:'Drag the background: pan · Pinch / ctrl+wheel: zoom · Double-click or Tab: add a node · Double-click a wire: reroute · Shift+drag: select · G: group · Delete: remove · Drop an image, a video, an .obj / .stl or a .mid here',
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -417,10 +448,10 @@ function setLang(lang){
 document.querySelectorAll('#langToggle button').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)));
 
 /* ---- small shared helpers ---- */
-const TYPE_VAR = {image:'--t-image', field:'--t-field', scale:'--t-scale', notes:'--t-notes', track:'--t-track', path:'--t-path', curve:'--t-curve', midi:'--t-midi', signal:'--t-signal'};
+const TYPE_VAR = {image:'--t-image', field:'--t-field', scale:'--t-scale', notes:'--t-notes', track:'--t-track', path:'--t-path', curve:'--t-curve', midi:'--t-midi', signal:'--t-signal', any:'--text-dim'};
 const typeColor = ty => getComputedStyle(document.documentElement).getPropertyValue(TYPE_VAR[ty]).trim() || '#fff';
 const LAVENDER = '#b4a7ff';   // curve and path: Music nodes that feed a Scan's optional inputs
-const CAT_COLOR = {catSource:'#0000ff', catImage:'#4dd9c9', catAnalysis:'#00ff00', catLayers:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2'};
+const CAT_COLOR = {catSource:'#0000ff', catImage:'#4dd9c9', catAnalysis:'#00ff00', catLayers:'#00ff00', catMusic:'#ffd84d', catOut:'#ff5fd2', catTools:'#9fbcb9'};
 const DIR_KEYS = ['lr','rl','tb','bt','tlbr','brtl','trbl','bltr'];
 const DIR_LABELS = {lr:'→', rl:'←', tb:'↓', bt:'↑', tlbr:'↘', brtl:'↖', trbl:'↙', bltr:'↗'};
 const CURVE_KEYS = ['linear','accel','decel','pulse','swing'];
@@ -511,6 +542,11 @@ const NODE_DEFS = {
         + (notes.some(x=> x.drums) ? ' · ' + t('midiDrums') : '');
     }
   },
+  // wire tools: each lane takes the type of its first wire. A reroute is one lane; a cable
+  // clip grows a free lane as soon as the last one is taken. Lanes are independent wires,
+  // two ends of one chain can share a clip: see wireSource() and reachesPort().
+  reroute: {cat:'catTools', lanes:'one', params:[{id:'lanes', kind:'hidden', def:[null]}], compute:()=> ({})},
+  cableClip: {cat:'catTools', lanes:'grow', params:[{id:'lanes', kind:'hidden', def:[null]}], compute:()=> ({})},
   // squeezes a 0..1 signal into a smaller range: a parameter takes the whole of its slider's span otherwise
   sigRange: {
     cat:'catMusic', inputs:[{id:'in', type:'signal', label:'in_signal'}], outputs:[{id:'out', type:'signal', label:'in_signal'}],
@@ -960,7 +996,8 @@ const ADD_MENU = [
   ['catAnalysis', ['edges', 'sens']],
   ['catLayers', ['hueBand', 'lumaBand', 'colorKey', 'orient', 'union']],
   ['catMusic', ['scale', 'scan', 'curve', 'path', 'octave', 'limit', 'sigRange']],
-  ['catOut', ['track', 'loop', 'midiOut', 'clip']]
+  ['catOut', ['track', 'loop', 'midiOut', 'clip']],
+  ['catTools', ['reroute', 'cableClip', 'frame']]
 ];
 
 // layer nodes: copy of the field with mask narrowed to pixels passing test
@@ -982,6 +1019,8 @@ const nodes = new Map();        // id -> {id, type, x, y, params, el, out, dirty
 let links = [];                 // {from, fromPort, to, toPort}
 let view = {x:40, y:30, z:0.85};
 let selectedId = null;
+const selection = new Set();
+let frames = [];                // {id, x, y, w, h, title}: drawn behind the wires
 let nextId = 1;
 const stage = $('stage'), world = $('world'), wiresSvg = $('wires');
 
@@ -1014,43 +1053,103 @@ function removeNode(id){
   if(clipState && clipState.id === id) stopClip();
   if(playingLoopId === id) stopPlayback();
   const downstream = links.filter(l=> l.from === id).map(l=> l.to);
-  links = links.filter(l=> l.from !== id && l.to !== id);
+  // deleting a wire tool closes the gap instead of cutting the wire
+  const bridges = !NODE_DEFS[n.type].lanes ? [] : links.filter(l=> l.from === id).flatMap(o=>{
+    const i = links.find(l=> l.to === id && l.toPort === 'i' + o.fromPort.slice(1));
+    return i ? [{from:i.from, fromPort:i.fromPort, to:o.to, toPort:o.toPort}] : [];
+  });
+  links = links.filter(l=> l.from !== id && l.to !== id).concat(bridges);
   n.el.remove();
   nodes.delete(id);
+  selection.delete(id);
   if(selectedId === id) selectedId = null;
+  syncLanes();
   downstream.forEach(markDirty);
   refreshLinkedPorts(); drawWires(); saveSoon();
 }
 
-function inputDef(n, portId){ return (NODE_DEFS[n.type].inputs || []).find(p=> p.id === portId); }
-function outputDef(n, portId){ return (NODE_DEFS[n.type].outputs || []).find(p=> p.id === portId); }
+function portsIn(n){
+  const def = NODE_DEFS[n.type];
+  return def.lanes ? n.params.lanes.map((ty, i)=> ({id:'i' + i, type:ty || 'any', lane:true})) : (def.inputs || []);
+}
+function portsOut(n){
+  const def = NODE_DEFS[n.type];
+  return def.lanes ? n.params.lanes.map((ty, i)=> ({id:'o' + i, type:ty || 'any', lane:true})) : (def.outputs || []);
+}
+function inputDef(n, portId){ return portsIn(n).find(p=> p.id === portId); }
+function outputDef(n, portId){ return portsOut(n).find(p=> p.id === portId); }
+// a free lane fits anything, except another free lane: there'd be no type to take
+const typesFit = (a, b)=> a === b ? a !== 'any' : (a === 'any' || b === 'any');
+function adoptLane(n, portId, type){
+  if(NODE_DEFS[n.type].lanes) n.params.lanes[parseInt(portId.slice(1))] = type;
+}
+// frees unplugged lanes and rebuilds the nodes whose lanes changed
+let wireHeld = false;
+function syncLanes(){
+  if(wireHeld) return;      // never rebuild a port while the pointer is captured on it
+  nodes.forEach(n=>{
+    const def = NODE_DEFS[n.type];
+    if(!def.lanes) return;
+    const L = n.params.lanes.map((ty, i)=> links.some(l=> (l.to === n.id && l.toPort === 'i' + i) || (l.from === n.id && l.fromPort === 'o' + i)) ? ty : null);
+    if(def.lanes === 'grow'){
+      while(L.length > 1 && L[L.length-1] === null && L[L.length-2] === null) L.pop();
+      if(L[L.length-1] !== null) L.push(null);
+    }
+    n.params.lanes = L;
+    if(JSON.stringify(L) !== n.laneKey) buildNodeEl(n);
+  });
+}
 
 // true if `target` can be reached by following wires downstream from `start`
-function reaches(start, target){
-  const seen = new Set(), stack = [start];
+// would plugging from -> to close a loop? Walks wire by wire: inside a wire tool
+// only the lane the wire came in by counts, the others are other wires
+function reachesPort(toNode, toPort, fromNode, fromPort){
+  const stack = [[toNode, toPort]], seen = new Set();
   while(stack.length){
-    const id = stack.pop();
-    if(id === target) return true;
-    if(seen.has(id)) continue;
-    seen.add(id);
-    links.forEach(l=>{ if(l.from === id) stack.push(l.to); });
+    const [id, port] = stack.pop(), key = id + '|' + port;
+    if(seen.has(key)) continue;
+    seen.add(key);
+    const n = nodes.get(id), lane = n && NODE_DEFS[n.type].lanes;
+    if(id === fromNode && (!lane || port.slice(1) === fromPort.slice(1))) return true;
+    links.forEach(l=>{
+      if(l.from === id && (!lane || l.fromPort.slice(1) === port.slice(1))) stack.push([l.to, l.toPort]);
+    });
   }
   return false;
+}
+// the real output behind a wire, through any wire tools; null if the chain is open
+function wireSource(l){
+  for(let hops=0; l && hops<1000; hops++){
+    const n = nodes.get(l.from);
+    if(!n) return null;
+    if(!NODE_DEFS[n.type].lanes) return l;
+    const port = 'i' + l.fromPort.slice(1);
+    l = links.find(x=> x.to === n.id && x.toPort === port);
+  }
+  return null;
+}
+function wireValue(l){
+  const s = wireSource(l);
+  return s ? evalNode(nodes.get(s.from))[s.fromPort] : null;
 }
 function connect(from, fromPort, to, toPort){
   const a = nodes.get(from), b = nodes.get(to);
   if(!a || !b || from === to) return false;
   const od = outputDef(a, fromPort), id = inputDef(b, toPort);
-  if(!od || !id || od.type !== id.type) return false;
-  if(reaches(to, from)){ alert(t('cycleErr')); return false; }
+  if(!od || !id || !typesFit(od.type, id.type)) return false;
+  if(reachesPort(to, toPort, from, fromPort)){ alert(t('cycleErr')); return false; }
   if(links.some(l=> l.from === from && l.fromPort === fromPort && l.to === to && l.toPort === toPort)) return false;
   if(!id.multi) links = links.filter(l=> !(l.to === to && l.toPort === toPort));
   links.push({from, fromPort, to, toPort});
+  const type = od.type === 'any' ? id.type : od.type;
+  adoptLane(a, fromPort, type); adoptLane(b, toPort, type);
+  syncLanes();
   markDirty(to); refreshLinkedPorts(); drawWires(); saveSoon();
   return true;
 }
 function disconnect(link){
   links = links.filter(l=> l !== link);
+  syncLanes();
   markDirty(link.to); refreshLinkedPorts(); drawWires(); saveSoon();
 }
 
@@ -1073,12 +1172,10 @@ function evalNode(n){
   if(!n.dirty) return n.out;
   n.dirty = false;            // set first: a cycle (shouldn't exist) can't recurse forever
   const def = NODE_DEFS[n.type], inp = {};
-  (def.inputs || []).forEach(port=>{
+  if(def.lanes) return n.out;   // wire tools hold no value: wireSource() goes straight through them
+  portsIn(n).forEach(port=>{
     // multi inputs keep wiring order (it's the track -> channel order)
-    const vals = links.filter(l=> l.to === n.id && l.toPort === port.id).map(l=>{
-      const src = nodes.get(l.from);
-      return src ? evalNode(src)[l.fromPort] : null;
-    });
+    const vals = links.filter(l=> l.to === n.id && l.toPort === port.id).map(wireValue);
     inp[port.id] = port.multi ? vals.filter(Boolean) : (vals[0] || null);
   });
   try{ n.out = def.compute(modParams(def, n.params, inp), inp, n) || {}; n.error = null; }
@@ -1106,7 +1203,8 @@ function buildNodeEl(n){
   const def = NODE_DEFS[n.type];
   const old = n.el;
   const el = document.createElement('div');
-  el.className = 'node' + (def.wide ? ' wide' : '') + (def.cat === 'catSource' ? ' source' : '') + (selectedId === n.id ? ' selected' : '');
+  el.className = 'node' + (def.wide ? ' wide' : '') + (def.cat === 'catSource' ? ' source' : '') + (def.lanes ? ' lanes' + (def.lanes === 'one' ? ' reroute' : '') : '') + (selection.has(n.id) ? ' selected' : '');
+  if(def.lanes){ el.title = t('n_' + n.type); n.laneKey = JSON.stringify(n.params.lanes); }
   el.dataset.id = n.id;
   el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
 
@@ -1123,8 +1221,8 @@ function buildNodeEl(n){
   ports.className = 'ports';
   const colIn = document.createElement('div'), colOut = document.createElement('div');
   colIn.className = 'col in'; colOut.className = 'col out';
-  (def.inputs || []).forEach(p=> colIn.appendChild(portEl(n, p, 'in')));
-  (def.outputs || []).forEach(p=> colOut.appendChild(portEl(n, p, 'out')));
+  portsIn(n).forEach(p=> colIn.appendChild(portEl(n, p, 'in')));
+  portsOut(n).forEach(p=> colOut.appendChild(portEl(n, p, 'out')));
   ports.append(colIn, colOut);
   el.appendChild(ports);
 
@@ -1152,7 +1250,8 @@ function buildNodeEl(n){
   const err = document.createElement('div'); err.className = 'nodeErr'; err.hidden = true; body.appendChild(err);
   el.appendChild(body);
 
-  el.addEventListener('pointerdown', ()=> selectNode(n.id));
+  el.addEventListener('pointerdown', e=> selectNode(n.id, e.shiftKey));
+  if(def.lanes) el.addEventListener('pointerdown', e=> startNodeDrag(e, n));
   if(old) old.replaceWith(el); else world.appendChild(el);
   n.el = el;
   n.thumbDirty = true;
@@ -1164,7 +1263,7 @@ function portEl(n, p, side){
   el.className = 'port ' + side + ' ty-' + p.type + (p.opt ? ' opt' : '');
   el.dataset.node = n.id; el.dataset.port = p.id; el.dataset.type = p.type; el.dataset.side = side;
   el.innerHTML = '<i class="dot"></i><span></span>';
-  el.querySelector('span').textContent = p.label ? t(p.label) : t('t_' + p.type);
+  el.querySelector('span').textContent = p.lane ? '' : p.label ? t(p.label) : t('t_' + p.type);
   el.title = t('t_' + p.type);
   el.querySelector('.dot').addEventListener('pointerdown', e=> startWire(e, n, p, side));
   return el;
@@ -1326,9 +1425,18 @@ function refreshLinkedPorts(){
   });
 }
 
-function selectNode(id){
-  selectedId = id;
-  nodes.forEach(m=> m.el && m.el.classList.toggle('selected', m.id === id));
+// add = shift: toggles one node. A plain click on a selected node keeps the
+// group, so it can be dragged; a click on the background clears it.
+function selectNode(id, add){
+  if(id === null){ selection.clear(); selectedId = null; }
+  else if(add){
+    if(selection.has(id)) selection.delete(id); else selection.add(id);
+    selectedId = selection.has(id) ? id : ([...selection].pop() || null);
+  } else {
+    if(!selection.has(id)){ selection.clear(); selection.add(id); }
+    selectedId = id;
+  }
+  nodes.forEach(m=> m.el && m.el.classList.toggle('selected', selection.has(m.id)));
 }
 
 /* ============================================================
@@ -2722,8 +2830,8 @@ function midiVoices(){
   const out = [];
   nodes.forEach(n=>{
     if(n.type !== 'midiOut' || midiLoopOf(n) !== playingLoopId) return;
-    const src = midiSourceOf(n), from = src && nodes.get(src.from);
-    const tr = from && evalNode(from)[src.fromPort];
+    const src = midiSourceOf(n);
+    const tr = src && wireValue(src);
     const port = portFor(n, midiOuts);
     if(tr && port) out.push({tr, target:{n, port, chan:(n.params.channel - 1) & 15}});
   });
@@ -2856,9 +2964,33 @@ function toWorld(cx, cy){
   const r = stage.getBoundingClientRect();
   return [(cx - r.left - view.x)/view.z, (cy - r.top - view.y)/view.z];
 }
+const isBackground = e=> e.target === stage || e.target === world || e.target === wiresSvg || e.target.classList.contains('hit');
+let lastPointer = null;
+stage.addEventListener('pointermove', e=>{ lastPointer = [e.clientX, e.clientY]; });
+function startMarquee(e){
+  const [ax, ay] = toWorld(e.clientX, e.clientY), box = document.createElement('div');
+  box.className = 'marquee';
+  $('frames').appendChild(box);
+  stage.setPointerCapture(e.pointerId);
+  let r = {x:ax, y:ay, w:0, h:0};
+  const move = ev=>{
+    const [bx, by] = toWorld(ev.clientX, ev.clientY);
+    r = {x:Math.min(ax, bx), y:Math.min(ay, by), w:Math.abs(bx - ax), h:Math.abs(by - ay)};
+    Object.assign(box.style, {left:r.x + 'px', top:r.y + 'px', width:r.w + 'px', height:r.h + 'px'});
+  };
+  const up = ()=>{
+    stage.removeEventListener('pointermove', move); stage.removeEventListener('pointerup', up);
+    box.remove();
+    nodes.forEach(n=>{
+      if(n.x < r.x + r.w && n.x + n.el.offsetWidth > r.x && n.y < r.y + r.h && n.y + n.el.offsetHeight > r.y && !selection.has(n.id)) selectNode(n.id, true);
+    });
+  };
+  stage.addEventListener('pointermove', move); stage.addEventListener('pointerup', up);
+}
 stage.addEventListener('pointerdown', e=>{
-  if(e.target !== stage && e.target !== world && e.target !== wiresSvg) return;
+  if(!isBackground(e)) return;
   hideMenu();
+  if(e.shiftKey){ startMarquee(e); return; }
   selectNode(null);
   const sx = e.clientX, sy = e.clientY, vx = view.x, vy = view.y;
   stage.setPointerCapture(e.pointerId);
@@ -2884,23 +3016,127 @@ stage.addEventListener('wheel', e=>{
   applyView(); saveSoon();
 }, {passive:false});
 stage.addEventListener('dblclick', e=>{
-  if(e.target !== stage && e.target !== world) return;
+  if(!isBackground(e)) return;
+  // the pan's pointer capture retargets this event to the stage: ask what's really under the pointer
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  if(under && under.classList.contains('hit')){ insertReroute(+under.dataset.i, e.clientX, e.clientY); return; }
   showMenu(e.clientX, e.clientY);
 });
 stage.addEventListener('contextmenu', e=>{
-  if(e.target !== stage && e.target !== world) return;
+  if(!isBackground(e)) return;
   e.preventDefault(); showMenu(e.clientX, e.clientY);
 });
+// a reroute on an existing wire: the link stays where it is in the list, so the
+// order of a multi input doesn't change
+function insertReroute(i, cx, cy){
+  const l = links[i];
+  if(!l) return;
+  const type = outputDef(nodes.get(l.from), l.fromPort).type, [wx, wy] = toWorld(cx, cy);
+  const n = addNode('reroute', Math.round(wx - 6), Math.round(wy - 11), {lanes:[type]});
+  links[i] = {from:n.id, fromPort:'o0', to:l.to, toPort:l.toPort};
+  links.push({from:l.from, fromPort:l.fromPort, to:n.id, toPort:'i0'});
+  buildNodeEl(n);
+  selectNode(n.id);
+  markDirty(n.id); refreshLinkedPorts();
+  requestAnimationFrame(drawWires);
+  saveSoon();
+}
+
+/* ---- group frames: nodes whose centre is inside move with the frame ---- */
+function buildFrameEl(f){
+  const el = f.el || document.createElement('div');
+  el.className = 'frame';
+  el.innerHTML = '<div class="frameHead"><span class="frameTitle"></span><button type="button" class="frameDel" aria-label="×">×</button></div><div class="frameGrip"></div>';
+  Object.assign(el.style, {left:f.x + 'px', top:f.y + 'px', width:f.w + 'px', height:f.h + 'px'});
+  const head = el.querySelector('.frameHead'), title = el.querySelector('.frameTitle');
+  title.textContent = f.title;
+  el.querySelector('.frameDel').addEventListener('click', ()=> removeFrame(f));
+  head.addEventListener('pointerdown', e=>{ if(!e.target.closest('button, input')) startFrameDrag(e, f); });
+  title.addEventListener('dblclick', e=>{ e.stopPropagation(); editFrameTitle(f); });
+  el.querySelector('.frameGrip').addEventListener('pointerdown', e=> startFrameResize(e, f));
+  if(!f.el) $('frames').appendChild(el);
+  f.el = el;
+}
+function createFrame(x, y, w, h){
+  const f = {id:'f' + (nextId++), x:Math.round(x), y:Math.round(y), w:Math.round(w), h:Math.round(h), title:t('frameTitle')};
+  frames.push(f);
+  buildFrameEl(f);
+  saveSoon();
+  return f;
+}
+function removeFrame(f){
+  frames = frames.filter(m=> m !== f);
+  f.el.remove();
+  saveSoon();
+}
+function groupSelection(){
+  const list = [...selection].map(id=> nodes.get(id)).filter(Boolean);
+  if(!list.length){
+    const r = stage.getBoundingClientRect(), [wx, wy] = toWorld(r.left + r.width/2, r.top + r.height/2);
+    return createFrame(wx - 200, wy - 140, 400, 280);
+  }
+  const pad = 26, top = 46;
+  const x0 = Math.min(...list.map(n=> n.x)), y0 = Math.min(...list.map(n=> n.y));
+  const x1 = Math.max(...list.map(n=> n.x + n.el.offsetWidth)), y1 = Math.max(...list.map(n=> n.y + n.el.offsetHeight));
+  return createFrame(x0 - pad, y0 - top, x1 - x0 + pad*2, y1 - y0 + top + pad);
+}
+function startFrameDrag(e, f){
+  e.preventDefault();
+  const head = e.currentTarget, sx = e.clientX, sy = e.clientY, fx = f.x, fy = f.y;
+  const inside = [...nodes.values()].filter(n=>{
+    const cx = n.x + n.el.offsetWidth/2, cy = n.y + n.el.offsetHeight/2;
+    return cx > f.x && cx < f.x + f.w && cy > f.y && cy < f.y + f.h;
+  }).map(n=> [n, n.x, n.y]);
+  head.setPointerCapture(e.pointerId);
+  const move = ev=>{
+    const dx = Math.round((ev.clientX - sx)/view.z), dy = Math.round((ev.clientY - sy)/view.z);
+    f.x = fx + dx; f.y = fy + dy;
+    f.el.style.left = f.x + 'px'; f.el.style.top = f.y + 'px';
+    inside.forEach(([n, ox, oy])=>{ n.x = ox + dx; n.y = oy + dy; n.el.style.left = n.x + 'px'; n.el.style.top = n.y + 'px'; });
+    drawWires();
+  };
+  const up = ()=>{ head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); saveSoon(); };
+  head.addEventListener('pointermove', move); head.addEventListener('pointerup', up);
+}
+function startFrameResize(e, f){
+  e.preventDefault(); e.stopPropagation();
+  const grip = e.currentTarget, sx = e.clientX, sy = e.clientY, w = f.w, h = f.h;
+  grip.setPointerCapture(e.pointerId);
+  const move = ev=>{
+    f.w = Math.max(120, Math.round(w + (ev.clientX - sx)/view.z)); f.h = Math.max(80, Math.round(h + (ev.clientY - sy)/view.z));
+    f.el.style.width = f.w + 'px'; f.el.style.height = f.h + 'px';
+  };
+  const up = ()=>{ grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); saveSoon(); };
+  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up);
+}
+function editFrameTitle(f){
+  const title = f.el.querySelector('.frameTitle'), input = document.createElement('input');
+  input.className = 'frameEdit'; input.value = f.title;
+  title.replaceWith(input);
+  input.focus(); input.select();
+  let done = false;
+  const finish = keep=>{
+    if(done) return;
+    done = true;
+    if(keep && input.value.trim()) f.title = input.value.trim();
+    buildFrameEl(f); saveSoon();
+  };
+  input.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key === 'Enter') finish(true); if(e.key === 'Escape') finish(false); });
+  input.addEventListener('blur', ()=> finish(true));
+}
 
 function startNodeDrag(e, n){
   if(e.target.closest('button')) return;
   e.preventDefault();
-  selectNode(n.id);
-  const sx = e.clientX, sy = e.clientY, ox = n.x, oy = n.y, head = e.currentTarget;
+  const sx = e.clientX, sy = e.clientY, head = e.currentTarget;
   head.setPointerCapture(e.pointerId);
+  let group = null;     // read on the first move: the node's own pointerdown updates the selection after this one
   const move = ev=>{
-    n.x = Math.round(ox + (ev.clientX - sx)/view.z); n.y = Math.round(oy + (ev.clientY - sy)/view.z);
-    n.el.style.left = n.x + 'px'; n.el.style.top = n.y + 'px';
+    if(!group) group = (selection.has(n.id) ? [...selection].map(id=> nodes.get(id)) : [n]).map(m=> [m, m.x, m.y]);
+    group.forEach(([m, ox, oy])=>{
+      m.x = Math.round(ox + (ev.clientX - sx)/view.z); m.y = Math.round(oy + (ev.clientY - sy)/view.z);
+      m.el.style.left = m.x + 'px'; m.el.style.top = m.y + 'px';
+    });
     drawWires();
   };
   const up = ()=>{ head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); saveSoon(); };
@@ -2922,10 +3158,13 @@ function wirePath(a, b){
 let draft = null;   // {fromNode, fromPort, type, pos:[x,y]} while dragging a new wire; {toNode, toPort, ...} when pulled from an empty input
 function drawWires(){
   let html = '';
-  links.forEach(l=>{
+  links.forEach((l, i)=>{
     const a = portPos(l.from, l.fromPort, 'out'), b = portPos(l.to, l.toPort, 'in');
     const od = nodes.get(l.from) && outputDef(nodes.get(l.from), l.fromPort);
-    if(a && b && od) html += `<path d="${wirePath(a, b)}" stroke="${typeColor(od.type)}"/>`;
+    if(a && b && od){
+      const d = wirePath(a, b);
+      html += `<path d="${d}" stroke="${typeColor(od.type)}"/><path class="hit" data-i="${i}" d="${d}"/>`;
+    }
   });
   if(draft){
     const a = draft.toNode ? draft.pos : portPos(draft.fromNode, draft.fromPort, 'out');
@@ -2942,6 +3181,7 @@ function startWire(e, n, p, side){
     // grabbing a plugged input picks its wire up (last one for multi inputs)
     const existing = links.filter(l=> l.to === n.id && l.toPort === p.id).pop();
     if(existing){
+      wireHeld = true;
       disconnect(existing);
       draft = {fromNode:existing.from, fromPort:existing.fromPort, type:p.type, pos:toWorld(e.clientX, e.clientY)};
     } else draft = {toNode:n.id, toPort:p.id, type:p.type, pos:toWorld(e.clientX, e.clientY)};
@@ -2952,7 +3192,7 @@ function startWire(e, n, p, side){
   const rev = !!draft.toNode, wanted = rev ? 'out' : 'in', own = rev ? draft.toNode : draft.fromNode;
   document.body.classList.toggle('rev', rev);
   document.querySelectorAll('.port').forEach(pe=> pe.classList.toggle('compatible',
-    pe.dataset.side === wanted && pe.dataset.type === draft.type && pe.dataset.node !== own));
+    pe.dataset.side === wanted && typesFit(pe.dataset.type, draft.type) && pe.dataset.node !== own));
   const target = e.target;
   target.setPointerCapture(e.pointerId);
   const move = ev=>{ draft.pos = toWorld(ev.clientX, ev.clientY); drawWires(); };
@@ -2960,13 +3200,15 @@ function startWire(e, n, p, side){
     target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', up);
     document.body.classList.remove('wiring');
     const d = draft; draft = null;
+    wireHeld = false;
     const hit = document.elementFromPoint(ev.clientX, ev.clientY);
     const pe = hit && hit.closest('.port.' + wanted);
-    if(pe && pe.dataset.type === d.type){
+    if(pe && typesFit(pe.dataset.type, d.type)){
       if(rev) connect(pe.dataset.node, pe.dataset.port, d.toNode, d.toPort);
       else connect(d.fromNode, d.fromPort, pe.dataset.node, pe.dataset.port);
     }
     else if(!hit || !hit.closest('.node')) showMenu(ev.clientX, ev.clientY, d);   // dropped on empty canvas: add a node that takes it
+    syncLanes();
     drawWires();
   };
   target.addEventListener('pointermove', move); target.addEventListener('pointerup', up);
@@ -2974,48 +3216,111 @@ function startWire(e, n, p, side){
 
 /* ---- add-node menu (optionally filtered to nodes that accept a dragged wire) ---- */
 const addMenu = $('addMenu');
+const plain = str=> str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function menuEntries(wire){
+  const fits = ty=>{
+    if(!wire) return true;
+    if(ty === 'frame') return false;
+    const def = NODE_DEFS[ty];
+    if(def.lanes) return wire.type !== 'any';
+    return ((wire.toNode ? def.outputs : def.inputs) || []).some(p=> typesFit(p.type, wire.type));
+  };
+  return ADD_MENU.flatMap(([cat, types])=> types.filter(fits).map(ty=> ({
+    ty, cat, label:t('n_' + ty), color:(NODE_DEFS[ty] && NODE_DEFS[ty].color) || CAT_COLOR[cat],
+    // both languages: a name you remember works whatever the interface is set to
+    words:plain([I18N.fr['n_' + ty], I18N.en['n_' + ty], I18N.fr[cat], I18N.en[cat], ty].join(' '))
+  })));
+}
+function addFromMenu(ty, wx, wy, wire){
+  hideMenu();
+  if(ty === 'frame'){ createFrame(wx, wy, 400, 280); return; }
+  const n = addNode(ty, wire && wire.toNode ? wx - 216 : wx, wy - 20);
+  selectNode(n.id);
+  if(wire){
+    const port = (wire.toNode ? portsOut(n) : portsIn(n)).find(p=> typesFit(p.type, wire.type));
+    if(wire.toNode) connect(n.id, port.id, wire.toNode, wire.toPort);
+    else connect(wire.fromNode, wire.fromPort, n.id, port.id);
+  }
+  markDirty(n.id); saveSoon();
+  requestAnimationFrame(drawWires);
+}
+// the search field keeps the focus: type to filter, arrows to move, Enter to add, Escape to leave
 function showMenu(cx, cy, wire){
   addMenu.innerHTML = '';
-  const [wx, wy] = toWorld(cx, cy);
-  ADD_MENU.forEach(([cat, types])=>{
-    const side = wire && wire.toNode ? 'outputs' : 'inputs';
-    const ok = types.filter(ty=> !wire || (NODE_DEFS[ty][side] || []).some(p=> p.type === wire.type));
-    if(!ok.length) return;
-    const h = document.createElement('h3'); h.textContent = t(cat); addMenu.appendChild(h);
-    ok.forEach(ty=>{
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.innerHTML = '<i></i><span></span>';
-      b.querySelector('i').style.background = NODE_DEFS[ty].color || CAT_COLOR[cat];
-      b.querySelector('span').textContent = t('n_' + ty);
-      b.addEventListener('click', ()=>{
-        hideMenu();
-        const n = addNode(ty, wire && wire.toNode ? wx - 216 : wx, wy - 20);
-        selectNode(n.id);
-        if(wire){
-          const port = NODE_DEFS[ty][side].find(p=> p.type === wire.type);
-          if(wire.toNode) connect(n.id, port.id, wire.toNode, wire.toPort);
-          else connect(wire.fromNode, wire.fromPort, n.id, port.id);
-        }
-        markDirty(n.id); drawWires(); saveSoon();
-      });
-      addMenu.appendChild(b);
+  const [wx, wy] = toWorld(cx, cy), all = menuEntries(wire);
+  const input = document.createElement('input'), list = document.createElement('div');
+  input.id = 'menuSearch'; input.type = 'text'; input.placeholder = t('menuSearch'); input.autocomplete = 'off'; input.spellcheck = false;
+  input.setAttribute('aria-label', t('menuSearch'));
+  addMenu.append(input, list);
+  let shown = [], active = 0;
+  const mark = scroll=>{
+    list.querySelectorAll('button').forEach((b, i)=>{
+      b.classList.toggle('active', i === active);
+      if(i === active && scroll) b.scrollIntoView({block:'nearest'});
     });
+  };
+  const render = ()=>{
+    const q = plain(input.value).split(/\s+/).filter(Boolean);
+    shown = all.filter(e=> q.every(w=> e.words.includes(w)));
+    if(q.length){   // names that start with the search first
+      const starts = e=> plain(e.label).startsWith(q[0]) ? 0 : 1;
+      shown = shown.map((e, i)=> [e, i]).sort((a, b)=> starts(a[0]) - starts(b[0]) || a[1] - b[1]).map(x=> x[0]);
+    }
+    active = 0;
+    list.innerHTML = '';
+    if(!shown.length){ const p = document.createElement('div'); p.className = 'menuEmpty'; p.textContent = t('menuEmpty'); list.appendChild(p); return; }
+    let cat = null;
+    shown.forEach((e, i)=>{
+      if(!q.length && e.cat !== cat){ cat = e.cat; const h = document.createElement('h3'); h.textContent = t(cat); list.appendChild(h); }
+      const b = document.createElement('button');
+      b.type = 'button'; b.tabIndex = -1;
+      b.innerHTML = '<i></i><span></span>';
+      b.querySelector('i').style.background = e.color;
+      b.querySelector('span').textContent = e.label;
+      b.addEventListener('pointermove', ()=>{ if(active !== i){ active = i; mark(false); } });
+      b.addEventListener('click', ()=> addFromMenu(e.ty, wx, wy, wire));
+      list.appendChild(b);
+    });
+    mark(false);
+  };
+  input.addEventListener('input', render);
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      if(shown.length){ active = (active + (e.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length; mark(true); }
+    } else if(e.key === 'Enter'){
+      e.preventDefault();
+      if(shown[active]) addFromMenu(shown[active].ty, wx, wy, wire);
+    } else if(e.key === 'Tab'){
+      e.preventDefault(); hideMenu();
+    }
   });
+  render();
   addMenu.hidden = false;
   const r = addMenu.getBoundingClientRect();
-  addMenu.style.left = Math.min(cx, innerWidth - r.width - 8) + 'px';
-  addMenu.style.top = Math.min(cy, innerHeight - r.height - 8) + 'px';
-  const first = addMenu.querySelector('button'); if(first) first.focus();
+  addMenu.style.left = Math.max(8, Math.min(cx, innerWidth - r.width - 8)) + 'px';
+  addMenu.style.top = Math.max(8, Math.min(cy, innerHeight - r.height - 8)) + 'px';
+  input.focus();
 }
-function hideMenu(){ addMenu.hidden = true; }
+function hideMenu(){
+  if(document.activeElement && document.activeElement.id === 'menuSearch') document.activeElement.blur();
+  addMenu.hidden = true;
+}
 document.addEventListener('pointerdown', e=>{ if(!addMenu.hidden && !addMenu.contains(e.target) && e.target.id !== 'addBtn') hideMenu(); });
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape'){ hideMenu(); return; }
-  if((e.key === 'Delete' || e.key === 'Backspace') && selectedId && !e.target.closest('input, select, textarea')){
-    e.preventDefault(); removeNode(selectedId);
+  if(e.target.closest('input, select, textarea')) return;
+  if((e.key === 'Delete' || e.key === 'Backspace') && selection.size){
+    e.preventDefault(); [...selection].forEach(removeNode);
+  } else if((e.key === 'g' || e.key === 'G') && !e.metaKey && !e.ctrlKey){
+    e.preventDefault(); groupSelection();
+  } else if(addMenu.hidden && (e.key === '/' || (e.key === 'Tab' && document.activeElement === document.body))){
+    e.preventDefault();
+    const r = stage.getBoundingClientRect(), at = lastPointer || [r.left + r.width/2, r.top + r.height/2];
+    showMenu(at[0], at[1]);
   }
 });
+$('frameBtn').addEventListener('click', groupSelection);
 $('addBtn').addEventListener('click', ()=>{
   if(!addMenu.hidden){ hideMenu(); return; }
   const r = $('addBtn').getBoundingClientRect();
@@ -3045,7 +3350,8 @@ function serialize(){
   return {
     app:'dessons-nodes', v:1,
     nodes:[...nodes.values()].map(n=> ({id:n.id, type:n.type, x:n.x, y:n.y, params:n.params})),
-    links, view
+    links, view,
+    frames:frames.map(({id, x, y, w, h, title})=> ({id, x, y, w, h, title}))
   };
 }
 let saveTimer = null;
@@ -3059,7 +3365,8 @@ function saveSoon(){
 function clearGraph(){
   stopPlayback();
   nodes.forEach(n=>{ if(isSource(n)) stopMedia(n); n.el.remove(); });
-  nodes.clear(); links = []; selectedId = null;
+  nodes.clear(); links = []; selectedId = null; selection.clear();
+  frames.forEach(f=> f.el.remove()); frames = [];
 }
 function loadGraph(g){
   if(!g || g.app !== 'dessons-nodes' || !Array.isArray(g.nodes)) throw new Error('bad graph');
@@ -3072,6 +3379,9 @@ function loadGraph(g){
   links = (g.links || []).filter(l=> nodes.has(l.from) && nodes.has(l.to)
     && outputDef(nodes.get(l.from), l.fromPort) && inputDef(nodes.get(l.to), l.toPort));
   if(g.view) view = g.view;
+  (g.frames || []).forEach(f=>{ const m = Object.assign({}, f); frames.push(m); buildFrameEl(m); });
+  nextId = Math.max(nextId, 1 + Math.max(0, ...frames.map(f=> parseInt(f.id.slice(1)) || 0)));
+  syncLanes();
   applyView(); refreshLinkedPorts();
   requestAnimationFrame(drawWires);     // ports have their layout one frame later
   nodes.forEach(n=> n.dirty = true);
