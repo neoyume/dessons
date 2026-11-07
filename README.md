@@ -71,9 +71,26 @@ Start from **File → Templates**: they play straight away, except *Imported MID
 - **Output**: loop (preview synth, `.mid` export), **Logic (live MIDI)**, one node per Logic track, and **Signal → MIDI CC** to automate a filter or a volume in your DAW. Live MIDI needs Chrome or Edge.
 - **Tools**: custom curve, drawn path, reroute, cable clip, group frame.
 
+### Drawing and live painting
+
+The **Drawing** node is a whole instrument: paint, and the painting plays. It has Edges and Scan built in, so its **notes** output goes straight to a Track or to Logic. Its **image** output feeds any other chain, for instance a hue band per color so that each color gets its own instrument.
+
 ![Live painting in Nodes: colored strokes and a spiral over a moving noise layer, a playhead reading the painting, the brush settings and NY palette on the right](docs/screenshot-drawing.jpg)
 
-**Drawing**: paint straight into the graph on transparent paper with a round brush, a smudge tool, an eraser and an eyedropper (size, opacity, hardness, pen pressure) and the NY color palette. The node has Edges and Scan built in: its **notes** output goes straight to a Track, and its **image** output feeds any other chain, for instance a hue band per color. For **live painting**, start from *File → Templates → Live painting*: the canvas is read as you paint, a stroke counts while your hand is still moving, and a playhead on the painting shows what is sounding. *Memory* keeps the music on your latest strokes while the painting stays whole. Every stroke is recorded, so **Replay the drawing** rebuilds it over the length you choose (3 minutes by default) with the sound running, and you hear the loops evolve. *Cycles / loop* can also rebuild it on each pass of the loop. **Pixel** mode paints square cells on a visible grid, from 8×8 to 128×128, and the grid becomes the score: each painted cell is exactly one note, a column is a step, a row is a pitch of the scale. Through the image output, a hue band before a scan sends a color to its own instrument. Start from *File → Templates → Pixel art*. **Display layers** show other nodes with the painting, such as a noise moving with the loop or a video: they are visual only, the music reads your drawing alone.
+Start from *File → Templates → Live painting* or *Pixel art*, then click **Draw**.
+
+- **Tools**: round brush (size, opacity, hardness, pen pressure), smudge, eraser, eyedropper. Keys `B`, `S`, `E`, `I`; `[` and `]` for the size; `Alt`+click to pick a color without changing tool.
+- **Colors**: the NY palette, or anything picked from the screen. A new drawing starts on transparent paper; *Set as background* fills it.
+- **Heard as you paint**: press play and paint. A stroke counts while your hand is still moving, and a playhead on the painting shows what is sounding.
+- **Reading**: direction, steps and sensitivity are on the painting screen. A very soft brush needs a high sensitivity.
+- **Memory**: a full painting ends up filling the grid, and a new stroke has nothing left to add. *Memory* keeps the music on your latest strokes while the painting stays whole. *Live painting* starts at 8 strokes.
+- **Pixel** (`P`): square cells on a visible grid, from 8×8 to 128×128. The grid becomes the score: each painted cell is exactly one note, a column is a step, a row is a degree of the scale. Sensitivity and memory don't apply.
+- **Display layers**: other nodes shown behind the painting, such as a noise moving with the loop or a video. They are visual only: the music reads your drawing alone.
+- **Replay**: every stroke is recorded, point by point. **Replay the drawing** rebuilds the painting over the length you choose (3 minutes by default) with the sound running, and you hear the loops evolve. *Cycles / loop* rebuilds it on each pass of the loop instead.
+
+The `.json` from **File → Save** keeps the whole drawing and its steps. It doesn't keep the real timing of your gesture: the replay runs at an even pace.
+
+### Good to know
 
 The exported `.mid` follows what you hear: a spinning mesh or a moving signal is replayed step by step. Notes from an imported `.mid` keep their own pitches, so they can leave the scale: wire them through **Snap to scale** to bring them back. Use **Match the Loop** on the MIDI node to give the Loop the file's length and tempo.
 

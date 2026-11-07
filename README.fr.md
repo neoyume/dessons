@@ -71,9 +71,26 @@ Commence par **Fichier → Modèles** : ils jouent tout de suite, sauf *MIDI imp
 - **Sortie** : boucle (synthé d'aperçu, export `.mid`), **Logic (MIDI live)**, un node par piste Logic, et **Signal → CC MIDI** pour automatiser un filtre ou un volume dans ton DAW. Le MIDI en direct nécessite Chrome ou Edge.
 - **Outils** : courbe personnalisée, trajet dessiné, reroute, attache-câbles, cadre de groupe.
 
+### Dessin et live painting
+
+Le node **Dessin** est un instrument complet : tu peins, et la peinture joue. Contours et Balayage y sont intégrés : sa sortie **notes** va directement vers une Piste ou vers Logic. Sa sortie **image** alimente n'importe quelle autre chaîne, par exemple une bande de teinte par couleur, pour donner à chaque couleur son instrument.
+
 ![Live painting dans Nodes : traits de couleur et spirale sur un calque de bruit qui bouge, une tête de lecture qui lit la peinture, les réglages du pinceau et le nuancier NY à droite](docs/screenshot-drawing.jpg)
 
-**Dessin** : peins directement dans le graphe sur un fond transparent avec un pinceau rond, une estompe, une gomme et une pipette (taille, opacité, dureté, pression du stylet) et le nuancier NY. Le node contient Contours et Balayage : sa sortie **notes** va directement vers une Piste, et sa sortie **image** alimente n'importe quelle autre chaîne, par exemple une bande de teinte par couleur. Pour le **live painting**, pars de *Fichier → Modèles → Live painting* : le canvas est lu pendant que tu peins, un trait compte alors que ta main bouge encore, et une tête de lecture sur la peinture montre ce qui sonne. *Mémoire* garde la musique sur tes derniers traits, la peinture restant entière. Chaque trait est enregistré : **Rejouer le dessin** le reconstruit sur la durée choisie (3 minutes par défaut), son compris, et on entend les boucles évoluer. *Cycles / boucle* peut aussi le reconstruire à chaque passage de la boucle. Le mode **Pixel** peint des cases carrées sur une grille visible, de 8×8 à 128×128, et la grille devient la partition : chaque case peinte est exactement une note, une colonne est un pas, une ligne est une hauteur de la gamme. Par la sortie image, une bande de teinte avant un balayage envoie une couleur vers son instrument. Pars de *Fichier → Modèles → Pixel art*. Les **calques d'affichage** montrent d'autres nodes avec la peinture, comme un bruit qui bouge avec la boucle ou une vidéo : ils sont purement visuels, la musique ne lit que ton dessin.
+Pars de *Fichier → Modèles → Live painting* ou *Pixel art*, puis clique sur **Dessiner**.
+
+- **Outils** : pinceau rond (taille, opacité, dureté, pression du stylet), estompe, gomme, pipette. Touches `B`, `S`, `E`, `I` ; `[` et `]` pour la taille ; `Alt`+clic pour prélever une couleur sans changer d'outil.
+- **Couleurs** : le nuancier NY, ou tout ce que tu prélèves à l'écran. Un nouveau dessin démarre sur un fond transparent ; *Mettre en fond* le remplit.
+- **Entendu pendant que tu peins** : lance la lecture et peins. Un trait compte alors que ta main bouge encore, et une tête de lecture sur la peinture montre ce qui sonne.
+- **Lecture** : le sens, les pas et la sensibilité sont dans l'écran de dessin. Un pinceau très doux demande une sensibilité haute.
+- **Mémoire** : une peinture chargée finit par remplir la grille, et un nouveau trait n'a plus rien à ajouter. *Mémoire* garde la musique sur tes derniers traits, la peinture restant entière. *Live painting* démarre à 8 traits.
+- **Pixel** (`P`) : des cases carrées sur une grille visible, de 8×8 à 128×128. La grille devient la partition : chaque case peinte est exactement une note, une colonne est un pas, une ligne est un degré de la gamme. Sensibilité et mémoire ne s'appliquent pas.
+- **Calques d'affichage** : d'autres nodes affichés derrière la peinture, comme un bruit qui bouge avec la boucle ou une vidéo. Ils sont purement visuels : la musique ne lit que ton dessin.
+- **Replay** : chaque trait est enregistré, point par point. **Rejouer le dessin** reconstruit la peinture sur la durée choisie (3 minutes par défaut), son compris, et on entend les boucles évoluer. *Cycles / boucle* la reconstruit plutôt à chaque passage de la boucle.
+
+Le `.json` de **Fichier → Sauver** garde tout le dessin et ses étapes. Il ne garde pas le temps réel de ton geste : le replay avance à vitesse régulière.
+
+### À savoir
 
 Le `.mid` exporté suit ce que tu entends : un mesh qui tourne ou un signal qui bouge est rejoué pas à pas. Les notes d'un `.mid` importé gardent leurs hauteurs et peuvent donc sortir de la gamme : passe-les par **Caler sur la gamme** pour les y ramener. **Caler la Boucle**, sur le node MIDI, donne à la Boucle la longueur et le tempo du fichier.
 

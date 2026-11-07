@@ -483,7 +483,7 @@ const I18N = {
     versionRestore:'Restaurer', versionConfirm:'Remplacer le graphe actuel par cette version ? Il sera gardé dans les versions.', versionNone:'Aucune version pour l’instant.',
     versionSum:'{n} nodes · {s} traits', autoFilePick:'Choisir un fichier…', autoFileOff:'Fichier sur le disque : aucun', autoFileOn:'Écrit dans {x}', autoFileStop:'Arrêter', autoFileResume:'Reconnecter', autoFileLost:'Fichier auto à reconnecter',
     savedAt:'Sauvé {x}', savedFile:'Sauvé {x} · {f}',
-    n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer le dessin', replayStop:'Arrêter', replayEnd:'Terminé',
+    drawHint:'Sortie notes vers une Piste. Sens, pas et sensibilité sont dans Dessiner.', n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer le dessin', replayStop:'Arrêter', replayEnd:'Terminé',
     drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
     viaPixel:'une note par case', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grille', pxSize:'Taille (cases)', pxShow:'Afficher la grille',
@@ -562,8 +562,8 @@ const I18N = {
     n_crop:'Recadrage', n_sens:'Sensibilité', n_curve:'Courbe perso.', n_path:'Trajet dessiné',
     t_path:'trajet', t_curve:'courbe', p_seed:'Partir de', seedNone:'—',
     cropHint:'Glisse sur l\'aperçu pour cadrer · double-clic : image entière.',
-    curveHint:'Glisse les 3 poignées. Branche-la sur l\'entrée « courbe » d\'un Balayage.',
-    pathHint:'Dessine le trajet sur l\'aperçu. Branche-le sur l\'entrée « trajet » d\'un Balayage : il remplace le sens.',
+    curveHint:'Glisse les 3 poignées. Branche-la sur l\'entrée « courbe » d\'un Balayage ou d\'un Dessin.',
+    pathHint:'Dessine le trajet sur l\'aperçu. Branche-le sur l\'entrée « trajet » d\'un Balayage ou d\'un Dessin : il remplace le sens.',
     btnAuto:'Auto (Otsu)', sensPass:'{x} % des pixels passent',
     viaSens:'sensibilité réglée par le node', viaPath:'sens : trajet dessiné', viaCurve:'courbe personnalisée',
     p_octRange:'Plage d\'octaves'
@@ -580,7 +580,7 @@ const I18N = {
     versionRestore:'Restore', versionConfirm:'Replace the current graph with this version? It will be kept in the versions.', versionNone:'No version yet.',
     versionSum:'{n} nodes · {s} strokes', autoFilePick:'Choose a file…', autoFileOff:'File on disk: none', autoFileOn:'Writing to {x}', autoFileStop:'Stop', autoFileResume:'Reconnect', autoFileLost:'Auto file needs reconnecting',
     savedAt:'Saved {x}', savedFile:'Saved {x} · {f}',
-    n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay the drawing', replayStop:'Stop', replayEnd:'Finished',
+    drawHint:'Notes output to a Track. Direction, steps and sensitivity are in Draw.', n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay the drawing', replayStop:'Stop', replayEnd:'Finished',
     drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
     viaPixel:'one note per cell', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grid', pxSize:'Size (cells)', pxShow:'Show the grid',
@@ -659,8 +659,8 @@ const I18N = {
     n_crop:'Crop', n_sens:'Sensitivity', n_curve:'Custom curve', n_path:'Drawn path',
     t_path:'path', t_curve:'curve', p_seed:'Start from', seedNone:'—',
     cropHint:'Drag on the preview to frame · double-click: whole image.',
-    curveHint:'Drag the 3 handles. Wire it into a Scan\'s "curve" input.',
-    pathHint:'Draw the path on the preview. Wire it into a Scan\'s "path" input: it replaces the direction.',
+    curveHint:'Drag the 3 handles. Wire it into the "curve" input of a Scan or a Drawing.',
+    pathHint:'Draw the path on the preview. Wire it into the "path" input of a Scan or a Drawing: it replaces the direction.',
     btnAuto:'Auto (Otsu)', sensPass:'{x} % of pixels pass',
     viaSens:'sensitivity set by node', viaPath:'direction: drawn path', viaCurve:'custom curve',
     p_octRange:'Octave range'
@@ -1094,7 +1094,7 @@ const NODE_DEFS = {
   // a painting kept as its strokes, in the order they were made, so it can be replayed:
   // with cycles on, the picture builds up during each pass of the Loop
   srcDraw: {
-    cat:'catSource', custom:'draw', thumb:'image',
+    cat:'catSource', custom:'draw', thumb:'image', note:'drawHint',
     inputs:[{id:'scale', type:'scale', opt:true}, {id:'curve', type:'curve', opt:true}, {id:'path', type:'path', opt:true}],
     outputs:[{id:'notes', type:'notes'}, {id:'image', type:'image'}],
     params:[
