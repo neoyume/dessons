@@ -383,6 +383,53 @@ test('Dessin : un résidu de gomme ne remplit pas la grille', ()=>{
   d.params.strokes = [st('#000000', .9)]; markDirty(d.id);
   ok(evalNode(s).notes.notes.length > 4, 'un vrai trait sonne toujours');
 });
+test('Dessin : un trait compte autant dans un dessin chargé', ()=>{
+  clearGraph();
+  const ln = (c, y, sz = 30, h = .9)=> ({c, s:sz, o:1, h, r:0, pts:Array.from({length:30}, (_, i)=> [1500 + i*240, y, 100]).flat().join(',')});
+  const d = addNode('srcDraw', 0, 0, {turns:0}), e = addNode('edges', 200, 0), s = addNode('scan', 400, 0, {thresh:60, steps:16});
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
+  const added = (base, st)=>{
+    d.params.strokes = base; markDirty(d.id);
+    const before = new Set(evalNode(s).notes.notes.map(n=> n.step + ':' + n.midi));
+    d.params.strokes = base.concat([st]); markDirty(d.id);
+    return evalNode(s).notes.notes.filter(n=> !before.has(n.step + ':' + n.midi)).length;
+  };
+  ok(added([], ln('#000000', 5000)) >= 8, 'un trait droit sur toile vide');
+  const some = [ln('#E6267A', 3500, 200), ln('#FCEF28', 6500, 200)];
+  ok(added(some, ln('#00FFFF', 5000, 200)) >= 4, 'un trait sur de la peinture');
+  ok(added([], ln('#000000', 5000, 120, .15)) >= 4, 'un pinceau très doux');
+});
+test('Mémoire : un nouveau trait s’entend même si la grille est pleine', ()=>{
+  clearGraph();
+  const ln = (c, y)=> ({c, s:70, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [500 + i*310, y, 100]).flat().join(',')});
+  const many = Array.from({length:40}, (_, i)=> ln(['#E6267A', '#231F20', '#FCEF28', '#149387'][i % 4], 300 + (i*2371) % 9400));
+  const d = addNode('srcDraw', 0, 0, {turns:0, memory:6, strokes:many}), e = addNode('edges', 200, 0), s = addNode('scan', 400, 0, {thresh:60, steps:16});
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
+  const set = ()=> new Set(evalNode(s).notes.notes.map(n=> n.step + ':' + n.midi)), a = set();
+  d.params.strokes = many.concat([ln('#00FFFF', 9000)]); markDirty(d.id);
+  const b = set(); let added = 0; b.forEach(k=>{ if(!a.has(k)) added++; });
+  ok(added >= 4, 'ajoutées : ' + added);
+  d.params.memory = 0; markDirty(d.id);
+  ok(set().size > b.size, 'sans mémoire, tout compte');
+  eq(recentStrokes(many, 1, 6).length, 6);
+  eq(recentStrokes(many, 0, 6).length, 0);
+});
+test('Dessin : deux couleurs de même clarté se voient', ()=>{
+  clearGraph();
+  const big = {c:'#E72728', s:900, o:1, h:1, r:0, pts:'5000,5000,100'}, spot = {c:'#2F7F2F', s:200, o:1, h:1, r:0, pts:'5000,5000,100'};
+  const d = addNode('srcDraw', 0, 0, {turns:0, strokes:[big, spot]}), e = addNode('edges', 200, 0);
+  connect(d.id, 'image', e.id, 'image');
+  const f = evalNode(e).field, x = Math.round(.4*260);
+  ok(Math.max(...f.edge.slice(130*260 + 90, 130*260 + 110)) > 60, 'contour entre deux teintes');
+});
+test('Dessin : les autres images gardent leur contour', ()=>{
+  clearGraph();
+  const g = addNode('srcGen', 0, 0, {kind:'noise', detail:6}), e = addNode('edges', 200, 0);
+  connect(g.id, 'image', e.id, 'image');
+  const f = evalNode(e).field, im = evalNode(g).image, px = 100*260 + 100, lum = i=> .299*im.data[i*4] + .587*im.data[i*4+1] + .114*im.data[i*4+2];
+  ok(Math.abs(f.edge[px] - (Math.abs(lum(px + 1) - lum(px)) + Math.abs(lum(px + 260) - lum(px)))) < .001);
+  eq(f.drawn, false);
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;

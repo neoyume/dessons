@@ -487,7 +487,7 @@ const I18N = {
     drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
     viaPixel:'une note par case', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grille', pxSize:'Taille (cases)', pxShow:'Afficher la grille',
-    toolErase:'Gomme', drNoBg:'Fond transparent', drNotes:'Ce dessin : {a} notes · Boucle : {b}',
+    p_memory:'Mémoire (traits)', memAll:'tout', toolErase:'Gomme', drNoBg:'Fond transparent', drNotes:'Ce dessin : {a} notes · Boucle : {b}',
     toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
@@ -584,7 +584,7 @@ const I18N = {
     drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
     viaPixel:'one note per cell', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grid', pxSize:'Size (cells)', pxShow:'Show the grid',
-    toolErase:'Eraser', drNoBg:'Transparent background', drNotes:'This drawing: {a} notes · Loop: {b}',
+    p_memory:'Memory (strokes)', memAll:'all', toolErase:'Eraser', drNoBg:'Transparent background', drNotes:'This drawing: {a} notes · Loop: {b}',
     toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
@@ -997,6 +997,7 @@ const NODE_DEFS = {
       {id:'grid', kind:'hidden', def:0},
       {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
       {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1},
+      {id:'memory', label:'p_memory', kind:'range', min:0, max:64, step:1, def:0, fmt:v=> v || t('memAll')},
       {id:'replayMin', label:'p_replayMin', kind:'range', min:0.5, max:20, step:0.5, def:3, fmt:v=> v + ' min'}
     ],
     clean:o=>{
@@ -1014,7 +1015,11 @@ const NODE_DEFS = {
       const live = p.turns && (playing || baking);
       const prog = replay ? replayPos() : live ? (p.turns*n.lastPhase) % 1 : clamp(p.reveal/100, 0, 1);
       n.drawCache = n.drawCache || {};
-      const cv = drawAt(n.drawCache, MAXDIM, p.strokes, p.bg, prog);
+      // memory: the music reads only the latest strokes, the painting on screen stays whole.
+      // A grid has a limited number of cells: once a full painting has filled them all, a new
+      // stroke has nothing left to add. Pixel mode reads every cell, so it keeps everything.
+      const recent = p.memory && !p.grid ? recentStrokes(p.strokes, prog, p.memory) : null;
+      const cv = recent ? drawAt(n.drawCache, MAXDIM, recent, p.bg, 1) : drawAt(n.drawCache, MAXDIM, p.strokes, p.bg, prog);
       // the stroke being painted counts already: it's read while the hand is still moving
       if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive, null, p.bg);
       const clear = p.bg === 'transparent';
@@ -1273,6 +1278,10 @@ const NODE_DEFS = {
       // a drawing on transparent paper: where the paint starts is an edge, whatever its
       // colour (a black stroke has the same brightness as the empty pixels around it)
       const al = image.alpha ? Float32Array.from({length:N}, (_, i)=> data[i*4 + 3]) : null;
+      // a drawing also compares real colours, or two paints of the same brightness would
+      // be one to the other; and over 3 pixels, so that a soft brush still has an edge
+      const STRIDE = 3, chans = !image.drawn ? [] : [0, 1, 2].map(c=> Float32Array.from({length:N}, (_, i)=> data[i*4 + c]));
+      if(al && image.drawn) chans.push(al);
       const edge = new Float32Array(N), angle = new Float32Array(N);
       let maxEdge = 1;
       for(let y=0;y<h;y++){
@@ -1287,10 +1296,10 @@ const NODE_DEFS = {
             gy = y<h-1 ? lum[px+w]-lum[px] : 0;
             m = Math.abs(gx) + Math.abs(gy);
           }
-          if(al){
-            let ax, ay, ma;
-            if(p.method === 'sobel'){ [ax, ay] = sobelAt(al, w, h, x, y); ma = Math.sqrt(ax*ax + ay*ay); }
-            else { ax = x<w-1 ? al[px+1]-al[px] : 0; ay = y<h-1 ? al[px+w]-al[px] : 0; ma = Math.abs(ax) + Math.abs(ay); }
+          for(const ch of chans){
+            const ax = x<w-STRIDE ? ch[px+STRIDE]-ch[px] : 0, ay = y<h-STRIDE ? ch[px+w*STRIDE]-ch[px] : 0;
+            // the larger of the two: a straight edge counts as much as a corner
+            const ma = Math.max(Math.abs(ax), Math.abs(ay));
             if(ma > m){ m = ma; gx = ax; gy = ay; }
           }
           edge[px] = m; angle[px] = Math.atan2(gy, gx);
@@ -1300,8 +1309,9 @@ const NODE_DEFS = {
       const mask = new Uint8Array(N).fill(1);
       if(al) for(let px=0; px<N; px++){
         if(al[px]) continue;
-        // empty paper isn't a colour. An edge lands one pixel before the paint: it keeps the paint's colour
-        const nb = al[px+1] ? px + 1 : al[px+w] ? px + w : -1;
+        // empty paper isn't a colour. An edge lands just before the paint: it keeps the paint's colour
+        let nb = -1;
+        for(let k=1; k<=STRIDE && nb < 0; k++){ if(al[px+k]) nb = px + k; else if(al[px+w*k]) nb = px + w*k; }
         if(nb < 0){ mask[px] = 0; continue; }
         hue[px] = hue[nb]; sat[px] = sat[nb];
       }
@@ -1444,14 +1454,16 @@ const NODE_DEFS = {
       }
       // a Sensitivity node upstream sets the threshold, else this node's slider
       const thresh = field.thresh != null ? field.thresh : p.thresh;
-      const cutoff = (1 - thresh/100) * field.maxEdge, notes = [];
+      // a drawing has a fixed scale: relative to its strongest edge, the threshold would climb
+      // as the painting fills up, and new strokes would stop being heard
+      const scaleTop = field.drawn ? 255 : field.maxEdge, cutoff = (1 - thresh/100) * scaleTop, notes = [];
       if(pitches.length){
         for(let ti=0; ti<steps; ti++) for(let pi=0; pi<rows; pi++){
           const ci = ti*rows+pi, v = best[ci];
           // the threshold is relative to the strongest edge: on an almost empty drawing, what's
           // left by an eraser would be that strongest edge and fill the grid with notes
           if(v >= cutoff && v > (field.drawn ? 12 : 2)){
-            const nt = {step:ti, midi:pitches[pi], row:pi, vel:Math.round(clamp(40 + 87*(v/field.maxEdge), 40, 127))};
+            const nt = {step:ti, midi:pitches[pi], row:pi, vel:Math.round(clamp(40 + 87*(v/scaleTop), 40, 127))};
             if(cen && cen.n[ci]){ nt.px = cen.sx[ci]/cen.n[ci]; nt.py = cen.sy[ci]/cen.n[ci]; }
             notes.push(nt);
           }
@@ -3160,6 +3172,13 @@ function commitStroke(ctx, S, st, limit, bg){
 }
 // the picture at a point of the replay (0..1, by points drawn). Finished strokes
 // stay on a cached base: going forward only adds what's new
+function recentStrokes(strokes, prog, count){
+  let total = 0;
+  strokes.forEach(st=>{ total += strokePoints(st).length/3; });
+  let left = Math.round(clamp(prog, 0, 1)*total), i = 0;
+  while(i < strokes.length && left > 0){ left -= strokePoints(strokes[i]).length/3; i++; }
+  return strokes.slice(Math.max(0, i - count), i);
+}
 function drawAt(cache, S, strokes, bg, prog){
   if(!cache.out || cache.S !== S){
     cache.base = document.createElement('canvas'); cache.out = document.createElement('canvas');
@@ -3670,6 +3689,7 @@ function openDrawEditor(n, watch){
   const count = document.createElement('div'); count.className = 'nodeNote';
   tools.appendChild(count);
   buildDirPicker(n, tools);
+  tools.appendChild(paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'memory'), true));
   buildLayerList(n, tools);
   tools.append(row1, row2, clear, replayBtn, btn('drDone', closeDrawEditor, true));
   const time = document.createElement('div'), bar = document.createElement('div');
@@ -5294,9 +5314,9 @@ const TEMPLATES = {
     finishGraph();
   },
   // live painting: the whole canvas is read, so each stroke is heard as it's made
-  draw(){ drawTemplate({turns:0, reveal:100}, {steps:16, thresh:40}); },
+  draw(){ drawTemplate({turns:0, reveal:100, memory:16}, {steps:16, thresh:60}); },
   // pixel art: the grid is the score, a painted cell is a note
-  pixel(){ drawTemplate({turns:0, reveal:100, grid:16}, {steps:16, thresh:40}); },
+  pixel(){ drawTemplate({turns:0, reveal:100, grid:16}, {steps:16, thresh:60}); },
   logic(){
     clearGraph();
     const gen = addNode('srcGen', 0, 60, {kind:'noise', detail:10}), edges = addNode('edges', 260, 60);
