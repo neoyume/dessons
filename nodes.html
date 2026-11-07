@@ -583,7 +583,7 @@ const I18N = {
     startTitle:'Pour commencer', startHint:'Ou ajoute un node : barre du haut, Tab, ou double-clic sur le fond. ? affiche les raccourcis.', zoomReset:'Revenir à 100 %',
     tplDesc_draw:'Peins, chaque trait s’entend tout de suite.', tplDesc_pixel:'Une case peinte, une note.', tplDesc_starter:'Une image, deux balayages, deux instruments.', tplDesc_spin:'Un objet 3D qui tourne joue la boucle.', tplDesc_breathe:'Un LFO fait varier la densité des notes.', tplDesc_rhythm:'Deux balayages de longueurs différentes.', tplDesc_midi:'Un fichier .mid recalé sur une gamme.', tplDesc_logic:'Notes et CC envoyés en direct à Logic.',
     pageSum:'page {a}/{b}', pageN:'Page {n}', pageAdd:'Nouvelle page (N)', pageCopy:'Dupliquer la page', pageLeft:'Avancer la page', pageRight:'Reculer la page', pageDel:'Supprimer la page', pageOnion:'Pelure', pageConfirm:'Supprimer cette page et ses traits ?',
-    p_pageChain:'Enchaîner les pages', p_pageLoops:'Boucles par page', drExportReplay:'Exporter le replay en .mid', tpl_flip:'Flipbook', tplDesc_flip:'Quatre pages, une par boucle.',
+    p_pageChain:'Enchaîner les pages', p_pageLoops:'Boucles par page', drExportReplay:'Exporter le replay en .mid', drExportVideo:'Exporter le replay en vidéo', drVideoTip:'Filmée en temps réel : elle dure le temps du replay.', drVideoRec:'Filmé en temps réel : garde cet onglet au premier plan. Arrêter garde ce qui est déjà filmé.', drVideoNo:'Ce navigateur ne sait pas enregistrer de vidéo.', tpl_flip:'Flipbook', tplDesc_flip:'Quatre pages, une par boucle.',
     secVoices:'Instruments', secAnim:'Animation', voiceSuggest:'Instruments suggérés', voiceSuggestTitle:'Un instrument pour chaque couleur sans le sien, d’après Kandinsky. Modifiable ensuite.', voiceMain:'Piste principale', voiceNone:'Peins : chaque couleur utilisée apparaît ici.', voiceHint:'Un instrument, une piste, pour toutes ses couleurs. Clique sur une pastille pour l’envoyer ailleurs.', voiceMove:'changer d’instrument', voiceSteps:'Pas du dessin', voiceDir:'Sens du dessin',
     pxSquare:'Remettre des cases carrées', pxRows:'Hauteurs', pxRowsSame:'Comme la grille', pxRowsScale:'la gamme', p_perStep:'Notes par pas', p_lightOct:'Octave selon la clarté', p_hold:'Notes tenues', p_read:'Lecture', readScan:'Balayage', readGesture:'Ordre du geste', p_trace:'dernier trait',
     brSound:'Pinceau sonore', mirrorX:'Miroir gauche-droite : un palindrome', mirrorY:'Miroir haut-bas : la mélodie inversée', repOff:'Pas de répétition', repTitle:'Répéter le trait sur la largeur',
@@ -690,7 +690,7 @@ const I18N = {
     startTitle:'Getting started', startHint:'Or add a node: top bar, Tab, or double-click the background. ? shows the shortcuts.', zoomReset:'Back to 100%',
     tplDesc_draw:'Paint, and hear each stroke straight away.', tplDesc_pixel:'One painted cell, one note.', tplDesc_starter:'One image, two scans, two instruments.', tplDesc_spin:'A spinning 3D object plays the loop.', tplDesc_breathe:'An LFO changes how dense the notes are.', tplDesc_rhythm:'Two scans of different lengths.', tplDesc_midi:'A .mid file snapped to a scale.', tplDesc_logic:'Notes and CC sent live to Logic.',
     pageSum:'page {a}/{b}', pageN:'Page {n}', pageAdd:'New page (N)', pageCopy:'Duplicate the page', pageLeft:'Move the page earlier', pageRight:'Move the page later', pageDel:'Delete the page', pageOnion:'Onion skin', pageConfirm:'Delete this page and its strokes?',
-    p_pageChain:'Chain the pages', p_pageLoops:'Loops per page', drExportReplay:'Export the replay as .mid', tpl_flip:'Flipbook', tplDesc_flip:'Four pages, one per loop.',
+    p_pageChain:'Chain the pages', p_pageLoops:'Loops per page', drExportReplay:'Export the replay as .mid', drExportVideo:'Export the replay as video', drVideoTip:'Filmed in real time: it lasts as long as the replay.', drVideoRec:'Filmed in real time: keep this tab in front. Stop keeps what has been filmed so far.', drVideoNo:'This browser can’t record video.', tpl_flip:'Flipbook', tplDesc_flip:'Four pages, one per loop.',
     secVoices:'Instruments', secAnim:'Animation', voiceSuggest:'Suggested instruments', voiceSuggestTitle:'An instrument for each color without one, after Kandinsky. You can change them afterwards.', voiceMain:'Main track', voiceNone:'Paint: each colour used appears here.', voiceHint:'One instrument, one track, for all its colors. Click a swatch to send it elsewhere.', voiceMove:'change instrument', voiceSteps:'Drawing’s steps', voiceDir:'Drawing’s direction',
     pxSquare:'Back to square cells', pxRows:'Pitches', pxRowsSame:'Same as the grid', pxRowsScale:'the scale', p_perStep:'Notes per step', p_lightOct:'Octave follows lightness', p_hold:'Held notes', p_read:'Reading', readScan:'Scan', readGesture:'Gesture order', p_trace:'last stroke',
     brSound:'Sounding brush', mirrorX:'Left-right mirror: a palindrome', mirrorY:'Top-bottom mirror: the melody inverted', repOff:'No repeat', repTitle:'Repeat the stroke across the width',
@@ -3720,7 +3720,7 @@ function replayFrame(){
   showDraw(d, drawAt(d.cache, DRAW_RES, r.n.params.strokes, r.n.params.bg, u));
   d.time.textContent = clock(u*r.ms/1000) + ' / ' + clock(r.ms/1000);
   d.bar.firstElementChild.style.width = u*100 + '%';
-  if(u >= 1){
+  if(u >= 1 && !replayVideo){
     // the Loop keeps playing, and the node goes back to its own settings
     d.time.textContent = t('replayEnd');
     drawReplay = null; d.replay = 0;
@@ -3728,6 +3728,106 @@ function replayFrame(){
     return;
   }
   d.replay = requestAnimationFrame(replayFrame);
+}
+
+/* ---- the replay as a video: filmed while it plays, like the workshop's loop, so it takes
+   as long as the replay. The sound is a tap on the synth's bus, the picture what the easel
+   shows, composed again on a 9:16 frame that's never in the page ---- */
+let replayVideo = null;     // {n, rec, x, box, stream, at, on, live, end, raf}
+let videoTap = null;
+const replayVideoOk = ()=> typeof MediaRecorder !== 'undefined' && typeof HTMLCanvasElement.prototype.captureStream === 'function' && audioSupported();
+function paintReplayVideo(v){
+  const d = drawEd, x = v.x, b = v.box, bg = d.n.params.bg, clear = bg === 'transparent';
+  const layers = ()=> d.layerEls.forEach(c=>{
+    const s = Math.min(b.w/c.width, b.h/c.height), w = c.width*s, h = c.height*s, mode = c.style.mixBlendMode;
+    x.globalAlpha = +c.style.opacity;
+    x.globalCompositeOperation = mode === 'normal' ? 'source-over' : mode;
+    x.drawImage(c, b.x + (b.w - w)/2, b.y + (b.h - h)/2, w, h);
+  });
+  drawVideoBackground(x);
+  x.imageSmoothingEnabled = !d.n.params.grid;
+  x.fillStyle = clear ? '#fff' : bg;       // no checkerboard in a film: transparent paper is white
+  x.fillRect(b.x, b.y, b.w, b.h);
+  if(clear) layers();
+  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  x.drawImage(d.cv, b.x, b.y, b.w, b.h);
+  if(!clear) layers();
+  x.globalAlpha = 1; x.globalCompositeOperation = 'difference';     // #drawScan's blend mode
+  x.imageSmoothingEnabled = true;
+  x.drawImage(d.scan, b.x, b.y, b.w, b.h);
+  x.globalCompositeOperation = 'source-over';
+  drawVideoWatermark(x, b);
+}
+// synchronous up to the first sound, like every play (iOS)
+function startReplayVideo(n){
+  if(replayVideo || !n.params.strokes.length || !replayVideoOk()) return;
+  stopPlayback();             // into Logic the file would be silent; and it starts on the downbeat
+  ensureAudio();
+  if(ac.state !== 'running') ac.resume().catch(()=>{});
+  if(!videoTap){
+    if(typeof ac.createMediaStreamDestination !== 'function') return;
+    videoTap = ac.createMediaStreamDestination();
+    bus.out.connect(videoTap);
+  }
+  const cv = document.createElement('canvas');
+  cv.width = VIDEO_W; cv.height = VIDEO_H;
+  let stream, rec;
+  try{
+    stream = new MediaStream([...cv.captureStream(VIDEO_FPS).getVideoTracks(), ...videoTap.stream.getAudioTracks()]);
+    // mp4 first: a long webm from MediaRecorder has no duration, and the platforms refuse it
+    const mimeType = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(m=> MediaRecorder.isTypeSupported(m));
+    rec = new MediaRecorder(stream, {videoBitsPerSecond:8000000, audioBitsPerSecond:128000, ...(mimeType ? {mimeType} : {})});
+  }catch(e){ alert(t('drVideoNo')); return; }
+  const chunks = [];
+  rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = ()=>{
+    stream.getVideoTracks().forEach(tr=> tr.stop());     // the audio track is the tap's, used again next time
+    const type = rec.mimeType || 'video/webm';
+    if(chunks.length) downloadBlob(new Blob(chunks, {type:type.split(';')[0]}), 'dessons-replay-9x16.' + (/mp4/i.test(type) ? 'mp4' : 'webm'));
+  };
+  const at = performance.now() + 60;      // the downbeat, startTransport()'s lead-in
+  startDrawReplay(n);
+  const d = drawEd, note = document.createElement('div');
+  note.className = 'nodeNote'; note.textContent = t('drVideoRec');
+  d.time.before(note);
+  replayVideo = {n, rec, stream, x:cv.getContext('2d'), box:{x:0, y:Math.round((VIDEO_H - VIDEO_W)/2), w:VIDEO_W, h:VIDEO_W}, at, on:false, live:playing, end:0, raf:0};
+  paintReplayVideo(replayVideo);
+  replayVideo.raf = requestAnimationFrame(replayVideoFrame);
+}
+function replayVideoFrame(){
+  const v = replayVideo;
+  if(!v) return;
+  if(v.live && (!playing || sink !== 'synth')){ leaveReplay(); return; }     // stopped from the transport
+  const now = performance.now();
+  paintReplayVideo(v);
+  if(!v.on && now >= v.at){
+    v.on = true;
+    drawReplay.t0 = now;        // the painting starts with the film
+    try{ v.rec.start(1000); }catch(e){ leaveReplay(); return; }
+  }
+  // finished: on to the end of the pass, so the last image stays long enough to be seen
+  if(v.on && replayPos() >= 1){
+    if(!v.end){
+      const L = currentLoop(), ms = L ? loopMsOf(L) : 2000, left = L ? (1 - loopPosNow() % 1)*ms : 0;
+      v.end = now + (left < 1500 ? left + ms : left);
+    }
+    if(now >= v.end){ leaveReplay(); return; }
+  }
+  v.raf = requestAnimationFrame(replayVideoFrame);
+}
+function endReplayVideo(){
+  const v = replayVideo;
+  replayVideo = null;
+  cancelAnimationFrame(v.raf);
+  if(v.rec.state !== 'inactive') v.rec.stop();          // -> onstop: the file, with what was filmed
+  else v.stream.getVideoTracks().forEach(tr=> tr.stop());
+}
+// out of the replay; a video goes back to the easel it was asked from, with the painting
+// already made: repainting a big drawing takes seconds
+function leaveReplay(){
+  const n = replayVideo && replayVideo.n, cache = drawEd && drawEd.cache;
+  stopPlayback(); closeDrawEditor();
+  if(n && nodes.get(n.id) === n) openDrawEditor(n, false, cache);
 }
 
 let drawEd = null;      // {n, cv, ctx, cache, cur, state, redo, ring, replay}
@@ -3861,6 +3961,7 @@ function refreshDrawEditor(){
 function syncDrawButtons(){
   const d = drawEd;
   d.undo.disabled = !d.n.params.strokes.length; d.replayBtn.disabled = d.undo.disabled;
+  d.videoBtn.disabled = d.undo.disabled || !replayVideoOk();
   const p = d.n.params;
   d.clear.disabled = d.undo.disabled && p.pages.length < 2 && !p.voices.length && p.bg === 'transparent';
   d.empty.hidden = !d.undo.disabled || d.watch;
@@ -4233,7 +4334,7 @@ function drawRedo(){
 }
 function drawKey(e){
   const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
-  if(e.key === 'Escape'){ if(drawEd.watch) stopPlayback(); closeDrawEditor(); return true; }
+  if(e.key === 'Escape'){ if(drawEd.watch) leaveReplay(); else closeDrawEditor(); return true; }
   if(!cmd && !e.target.closest('input, select') && '+=-−0'.includes(e.key)){
     e.preventDefault();
     zoomDrawAt(e.key === '0' ? 1 : drawEd.zoom.s*(e.key === '+' || e.key === '=' ? 2 : 0.5));
@@ -4599,7 +4700,7 @@ function initDrawZoom(){
   d.zoomObs.observe(stage);
   applyDrawZoom();
 }
-function openDrawEditor(n, watch){
+function openDrawEditor(n, watch, cache){
   closeDrawEditor();
   const box = document.createElement('div'); box.id = 'drawEditor';
   const area = document.createElement('div'); area.className = 'drawArea';
@@ -4804,8 +4905,10 @@ function openDrawEditor(n, watch){
   animSec.appendChild(animHint);
   readSec.insertBefore(paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'curve'), true), readRow.nextSibling);
   const expRow = document.createElement('div'); expRow.className = 'btnRow';
-  expRow.appendChild(btn('drExportReplay', ()=> exportReplay(n)));
-  readSec.appendChild(expRow);
+  const videoBtn = btn('drExportVideo', ()=> startReplayVideo(n));
+  videoBtn.title = t(replayVideoOk() ? 'drVideoTip' : 'drVideoNo');
+  expRow.append(btn('drExportReplay', ()=> exportReplay(n)), videoBtn);
+  readSec.append(paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'replayMin'), true), expRow);
   if(layerNodes(n).length) buildLayerList(n, section('layers', 'drLayers'));
   const head = document.createElement('div'), title = document.createElement('div'), foot = document.createElement('div');
   head.className = 'drawHead'; title.className = 'drawName'; title.textContent = t('n_srcDraw'); foot.className = 'drawFoot';
@@ -4822,18 +4925,19 @@ function openDrawEditor(n, watch){
     time.className = 'replayTime'; bar.className = 'replayBar'; bar.innerHTML = '<i></i>';
     bar.addEventListener('click', e=>{
       const r = bar.getBoundingClientRect();
-      if(drawReplay) drawReplay.t0 = performance.now() - clamp((e.clientX - r.left)/r.width, 0, 1)*drawReplay.ms;
+      if(drawReplay && !replayVideo) drawReplay.t0 = performance.now() - clamp((e.clientX - r.left)/r.width, 0, 1)*drawReplay.ms;
     });
-    tools.append(time, bar, btn('replayStop', ()=>{ stopPlayback(); closeDrawEditor(); }, true));
+    tools.append(time, bar, btn('replayStop', leaveReplay, true));
   }
   box.append(area, tools);
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
   document.body.classList.add('drawing');
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, empty, voiceBox, fillPalette, move, strip, onion, onionCache:{}, heard:-1, raf:0, replay:0, watch:!!watch, count, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv, frame, stageBox, zoomPct, zoomOutBtn, zoomInBtn, zoom:{s:1, x:0, y:0}};
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:cache || {}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, videoBtn, clear, box, empty, voiceBox, fillPalette, move, strip, onion, onionCache:{}, heard:-1, raf:0, replay:0, watch:!!watch, count, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv, frame, stageBox, zoomPct, zoomOutBtn, zoomInBtn, zoom:{s:1, x:0, y:0}};
   initDrawZoom();
   drawEd.scanRaf = requestAnimationFrame(drawOverlay);
-  refreshDrawEditor();
+  // the replay starts from nothing: painting the whole drawing first froze big ones for seconds
+  if(watch) syncDrawButtons(); else refreshDrawEditor();
   if(!watch){ setDrawTool(brush.tool); setDrawGrid(n.params.grid); renderPageStrip(); drawOnionSkin(); }
   else { strip.hidden = true; return; }
   syncDrawLayers();
@@ -4905,6 +5009,7 @@ function closeDrawEditor(){
   drawEd.box.remove(); drawEd.ring.remove();
   drawEd = null;
   document.body.classList.remove('drawing');
+  if(replayVideo) endReplayVideo();
 }
 
 /* ---- Microphone: an analyser on the mic, never connected to the speakers ---- */

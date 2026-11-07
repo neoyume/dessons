@@ -869,7 +869,72 @@ test('Zoom : la grille gagne en définition, sans changer à 100 %', ()=>{
   drawGridLines(); eq(drawEd.gridCv.width, 4096);
   closeDrawEditor();
 });
+test('Replay : ouvrir l’écran ne repeint pas tout le dessin', ()=>{
+  const {n} = drawing({memory:0, replayMin:1, strokes:[vln(2000), vln(5000)]});
+  startDrawReplay(n);
+  eq(drawEd.cache.done, undefined);
+  stopPlayback(); closeDrawEditor();
+});
+test('Vidéo du replay : papier, peinture et cadre 9:16', ()=>{
+  const {n} = drawing({bg:'transparent', strokes:[vln(5000)]});
+  openDrawEditor(n);
+  const cv = document.createElement('canvas'); cv.width = VIDEO_W; cv.height = VIDEO_H;
+  const x = cv.getContext('2d', {willReadFrequently:true}), v = {x, box:{x:0, y:420, w:1080, h:1080}};
+  const px = (a, b)=> [...x.getImageData(a, b, 1, 1).data].slice(0, 3);
+  paintReplayVideo(v);
+  eq(px(540, 450), [255, 255, 255]);       // transparent paper: white, no checkerboard
+  ok(px(540, 960)[0] < 80, 'le trait');
+  ok(px(540, 100)[1] < 120 && px(540, 100)[0] < 20, 'le fond de la page');
+  n.params.bg = '#FF0000'; refreshDrawEditor();
+  paintReplayVideo(v);
+  eq(px(540, 450), [255, 0, 0]);
+  closeDrawEditor();
+});
+test('Vidéo du replay : filme jusqu’au bout, garde sa dernière image, revient au chevalet', ()=>{
+  const real = {rec:window.MediaRecorder, dl:downloadBlob}, got = [];
+  let started = 0;
+  window.MediaRecorder = class {
+    static isTypeSupported(m){ return m === 'video/webm'; }
+    constructor(s, o){ this.state = 'inactive'; this.mimeType = o.mimeType; }
+    start(){ this.state = 'recording'; started++; }
+    stop(){ this.state = 'inactive'; this.ondataavailable({data:new Blob(['x'])}); this.onstop(); }
+  };
+  downloadBlob = (b, f)=> got.push(f);
+  try{
+    const {n} = drawing({memory:0, strokes:[vln(2000), vln(5000)]});
+    openDrawEditor(n);
+    startReplayVideo(n);
+    ok(drawEd.watch && replayVideo && playing && sink === 'synth');
+    replayVideo.at = 0; replayVideoFrame();
+    eq(started, 1);
+    drawReplay.t0 -= drawReplay.ms;
+    replayFrame();
+    ok(drawReplay, 'le replay tient sa dernière image');
+    replayVideoFrame();
+    ok(replayVideo.end > performance.now(), 'la fin de la passe');
+    replayVideo.end = 1; replayVideoFrame();
+    eq(got, ['dessons-replay-9x16.webm']);
+    ok(!replayVideo && !drawReplay && !playing && drawEd && !drawEd.watch);
+    // stopped from the transport: same way out, with what was filmed
+    startReplayVideo(n);
+    replayVideo.at = 0; replayVideoFrame();
+    stopPlayback(); replayVideoFrame();
+    eq(got.length, 2);
+    ok(!replayVideo && !drawEd.watch);
+    // the tab goes away: the editor closes, the file still comes out
+    startReplayVideo(n);
+    replayVideo.at = 0; replayVideoFrame();
+    stopPlayback(); closeDrawEditor();
+    eq(got.length, 3);
+    ok(!replayVideo);
+  } finally {
+    if(replayVideo) leaveReplay();
+    closeDrawEditor(); stopPlayback();
+    window.MediaRecorder = real.rec; downloadBlob = real.dl;
+  }
+});
 const markSetup = `
+  window.vln = y=> ({c:'#000000', s:60, o:1, h:1, r:0, pts:[1000, y, 100, 9000, y, 100].join(',')});
   window.markStrokes = count=>{
     const all = [];
     for(let s=0;s<count;s++){

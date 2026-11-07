@@ -607,3 +607,56 @@ function parseMidi(buf){
   const list = [...layers.values()];
   return {notes, layers:list, segs, ppq, duration:notes.reduce((a, n)=> Math.max(a, n.sec + n.dur), 0)};
 }
+
+// ---- video frame: 9:16, shared by the workshop's loop and the drawing's replay
+const VIDEO_W = 1080, VIDEO_H = 1920, VIDEO_FPS = 30;
+const VIDEO_WATERMARK_URL = 'neoyume.github.io/dessons';
+
+// The page's own backdrop (--bg plus the --glow radial), re-plotted for a 9:16
+// frame, so the letterbox bands read as the app rather than as generic black.
+function drawVideoBackground(ctx){
+  ctx.fillStyle = '#002b2a';                                     // --bg
+  ctx.fillRect(0,0,VIDEO_W,VIDEO_H);
+  const cx = VIDEO_W*0.15, cy = -VIDEO_H*0.10;                   // same origin as body's gradient
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, VIDEO_H*0.55);
+  g.addColorStop(0, 'rgba(0,74,72,1)');                         // --glow
+  g.addColorStop(1, 'rgba(0,74,72,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VIDEO_W,VIDEO_H);
+}
+
+// Watermark: these clips travel without context, so it has to be possible to
+// get back to the tool from one. Sits in the bottom letterbox band by default
+// (never over the artwork); when the media fills the frame and there is no
+// band, it falls back to an overlay on its own plate so it stays legible over
+// whatever the image happens to be there.
+function drawVideoWatermark(ctx, box){
+  const cx = VIDEO_W/2;
+  const nameSize = 52, urlSize = 27, gap = 12;
+  const nameFont = nameSize + 'px "DotGothic16", "SF Mono", monospace';
+  const urlFont  = urlSize  + 'px "DotGothic16", "SF Mono", monospace';
+  const blockH = nameSize + gap + urlSize;
+  const bandTop = box.y + box.h, bandH = VIDEO_H - bandTop;
+  const inBand = bandH >= blockH + 70;
+  const top = inBand ? bandTop + (bandH - blockH)/2 : VIDEO_H - 64 - blockH;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  if(!inBand){
+    ctx.font = nameFont; const w1 = ctx.measureText('dessons').width;
+    ctx.font = urlFont;  const w2 = ctx.measureText(VIDEO_WATERMARK_URL).width;
+    const pad = 26, bw = Math.max(w1,w2) + pad*2, bh = blockH + pad*1.6;
+    const bx = cx - bw/2, by = top - pad*0.8;
+    ctx.fillStyle = 'rgba(0,43,42,.58)';
+    if(typeof ctx.roundRect === 'function'){ ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,18); ctx.fill(); }
+    else ctx.fillRect(bx,by,bw,bh);
+  }
+  ctx.globalAlpha = 0.58;      // discreet, but not invisible after re-encoding
+  ctx.fillStyle = '#00ff00';   // --accent
+  ctx.font = nameFont;
+  ctx.fillText('dessons', cx, top);
+  ctx.font = urlFont;
+  ctx.fillText(VIDEO_WATERMARK_URL, cx, top + nameSize + gap);
+  ctx.restore();
+}

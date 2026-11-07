@@ -114,7 +114,7 @@ Pour commencer, ouvre le **Mode Dessin** (bouton dans l'atelier, ou `nodes.html?
 
 - **Pages** : un flipbook sous le dessin (`←` `→` pour naviguer, `N` pour une nouvelle page), avec pelure d'oignon. Une page tourne au début d'une boucle, jamais au milieu : elle est toujours lue en entier. Le `.mid` les met bout à bout.
 - **Animation** : le dessin se répète sur les côtés et défile ou tourne pendant la lecture, sur un cycle de plusieurs boucles. La tête lit un autre passage à chaque boucle, le `.mid` contient le cycle complet, et un interrupteur la coupe sans perdre les réglages.
-- **Replay** : chaque trait est enregistré, point par point. **Rejouer en musique** reconstruit la peinture sur la durée choisie (3 minutes par défaut), son compris. *Exporter le replay en .mid* en fait un morceau, boucle après boucle. *Cycles / boucle*, dans Réglages, la reconstruit plutôt à chaque passage.
+- **Replay** : chaque trait est enregistré, point par point. **Rejouer en musique** reconstruit la peinture sur la durée choisie (3 minutes par défaut), son compris. *Exporter le replay en vidéo* le filme en temps réel en vidéo 9:16 avec le son, depuis l'écran de Dessin. *Exporter le replay en .mid* en fait un morceau, boucle après boucle. *Cycles / boucle*, dans Réglages, la reconstruit plutôt à chaque passage.
 - **Calques d'affichage** : d'autres nodes affichés derrière la peinture, comme un bruit qui bouge avec la boucle ou une vidéo. Ils sont purement visuels : la musique ne lit que ton dessin.
 
 Le `.json` de **Fichier → Sauver** garde tout le dessin et ses étapes. Il ne garde pas le temps réel de ton geste : le replay avance à vitesse régulière.

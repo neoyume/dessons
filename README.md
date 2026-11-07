@@ -114,7 +114,7 @@ To start, open **Drawing mode** (a button in the workshop, or `nodes.html?draw`)
 
 - **Pages**: a flipbook under the drawing (`←` `→` to browse, `N` for a new page), with onion skin. A page turns at the start of a loop, never in the middle, so it is always read whole. The `.mid` plays them end to end.
 - **Animation**: the drawing repeats on its sides and scrolls or turns during playback, over a cycle of several loops. The playhead reads a different passage each loop, the `.mid` holds the whole cycle, and a switch turns it off without losing the settings.
-- **Replay**: every stroke is recorded, point by point. **Replay with music** rebuilds the painting over the length you choose (3 minutes by default), sound included. *Export the replay as .mid* turns it into a piece, loop after loop. *Cycles / loop*, in Settings, rebuilds it on each pass instead.
+- **Replay**: every stroke is recorded, point by point. **Replay with music** rebuilds the painting over the length you choose (3 minutes by default), sound included. *Export the replay as video* films it in real time as a 9:16 video with its sound, straight from the Drawing screen. *Export the replay as .mid* turns it into a piece, loop after loop. *Cycles / loop*, in Settings, rebuilds it on each pass instead.
 - **Display layers**: other nodes shown behind the painting, like noise moving with the loop or a video. They're purely visual: the music only reads your drawing.
 
 The `.json` from **File → Save** keeps the whole drawing and its steps. It doesn't keep the real timing of your gesture: the replay runs at an even pace.
