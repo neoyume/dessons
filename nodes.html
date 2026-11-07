@@ -740,6 +740,111 @@ const MATH_OPS = {
   abs:a=> Math.abs(a), sin:a=> Math.sin(a*Math.PI*2), cos:a=> Math.cos(a*Math.PI*2), floor:a=> Math.floor(a), frac:a=> a - Math.floor(a)
 };
 const PIXEL_GRIDS = [0, 8, 16, 32, 64, 128];     // 0 = the normal mode
+// shared by the Edges and Scan nodes and by the Drawing, which has both built in
+function edgesCompute(p, {image}){
+  if(!image) return {field:null};
+  const {w, h, data} = image, N = w*h;
+  const lum = new Float32Array(N), hue = new Float32Array(N), sat = new Float32Array(N);
+  for(let px=0; px<N; px++){
+    const r = data[px*4], g = data[px*4+1], b = data[px*4+2];
+    lum[px] = 0.299*r + 0.587*g + 0.114*b;
+    hue[px] = rgbToHue(r,g,b);
+    sat[px] = hsvSat(r,g,b);
+  }
+  // same two detectors as the workshop: the cheap |Δx|+|Δy| gradient,
+  // or a real Sobel. Both also keep an orientation for the Orientation node.
+  // a drawing on transparent paper: where the paint starts is an edge, whatever its
+  // colour (a black stroke has the same brightness as the empty pixels around it)
+  const al = image.alpha ? Float32Array.from({length:N}, (_, i)=> data[i*4 + 3]) : null;
+  // a drawing also compares real colours, or two paints of the same brightness would
+  // be one to the other; and over 3 pixels, so that a soft brush still has an edge
+  const STRIDE = 3, chans = !image.drawn ? [] : [0, 1, 2].map(c=> Float32Array.from({length:N}, (_, i)=> data[i*4 + c]));
+  if(al && image.drawn) chans.push(al);
+  const edge = new Float32Array(N), angle = new Float32Array(N);
+  let maxEdge = 1;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const px = y*w+x;
+      let gx, gy, m;
+      if(p.method === 'sobel'){
+        [gx, gy] = sobelAt(lum, w, h, x, y);
+        m = Math.sqrt(gx*gx + gy*gy);
+      } else {
+        gx = x<w-1 ? lum[px+1]-lum[px] : 0;
+        gy = y<h-1 ? lum[px+w]-lum[px] : 0;
+        m = Math.abs(gx) + Math.abs(gy);
+      }
+      for(const ch of chans){
+        const ax = x<w-STRIDE ? ch[px+STRIDE]-ch[px] : 0, ay = y<h-STRIDE ? ch[px+w*STRIDE]-ch[px] : 0;
+        // the larger of the two: a straight edge counts as much as a corner
+        const ma = Math.max(Math.abs(ax), Math.abs(ay));
+        if(ma > m){ m = ma; gx = ax; gy = ay; }
+      }
+      edge[px] = m; angle[px] = Math.atan2(gy, gx);
+      if(m > maxEdge) maxEdge = m;
+    }
+  }
+  const mask = new Uint8Array(N).fill(1);
+  if(al) for(let px=0; px<N; px++){
+    if(al[px]) continue;
+    // empty paper isn't a colour. An edge lands just before the paint: it keeps the paint's colour
+    let nb = -1;
+    for(let k=1; k<=STRIDE && nb < 0; k++){ if(al[px+k]) nb = px + k; else if(al[px+w*k]) nb = px + w*k; }
+    if(nb < 0){ mask[px] = 0; continue; }
+    hue[px] = hue[nb]; sat[px] = sat[nb];
+  }
+  return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask, pixel:image.pixel || null, drawn:!!image.drawn}};
+}
+// the workshop's grid: every masked pixel lands in a (time step, pitch row)
+// cell via the direction's forward mapping; a cell sounds if its strongest
+// edge clears the cutoff — relative to the whole image's maxEdge, so a
+// narrow layer keeps the same loudness it would have in the workshop.
+// A drawn path replaces the direction, like the workshop's 'path' mode:
+// τ/ρ come from a per-pixel table (cached on the node) and dots sit at the
+// centroid of the pixels that made them, since inv() of a cell center can
+// land off them where the path curls.
+function scanCompute(p, {field, scale, curve, path}, n){
+  if(!field) return {notes:null};
+  if(field.pixel) return {notes:pixelNotes(field, scale, p, curve)};
+  const pitches = scale ? scale.pitches : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh);
+  const rows = Math.max(1, pitches.length), steps = p.steps, {w, h} = field;
+  const dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
+  const lut = path ? scanPathLut(n, path.points, w, h) : null;
+  const best = new Float32Array(steps*rows);
+  const cen = lut ? {sx:new Float32Array(steps*rows), sy:new Float32Array(steps*rows), n:new Float32Array(steps*rows)} : null;
+  for(let y=0;y<h;y++){
+    const ny = y/h;
+    for(let x=0;x<w;x++){
+      const px = y*w+x;
+      if(!field.mask[px]) continue;
+      const [tau, rho] = lut ? [lut.tau[px], lut.rho[px]] : dir.fwd(x/w, ny);
+      const ti = clamp(Math.floor(tau*steps), 0, steps-1);
+      const pi = clamp(Math.floor(rho*rows), 0, rows-1);
+      const ci = ti*rows+pi;
+      if(field.edge[px] > best[ci]) best[ci] = field.edge[px];
+      if(cen){ cen.sx[ci] += (x+0.5)/w; cen.sy[ci] += (y+0.5)/h; cen.n[ci]++; }
+    }
+  }
+  // a Sensitivity node upstream sets the threshold, else this node's slider
+  const thresh = field.thresh != null ? field.thresh : p.thresh;
+  // a drawing has a fixed scale: relative to its strongest edge, the threshold would climb
+  // as the painting fills up, and new strokes would stop being heard
+  const scaleTop = field.drawn ? 255 : field.maxEdge, cutoff = (1 - thresh/100) * scaleTop, notes = [];
+  if(pitches.length){
+    for(let ti=0; ti<steps; ti++) for(let pi=0; pi<rows; pi++){
+      const ci = ti*rows+pi, v = best[ci];
+      // the threshold is relative to the strongest edge: on an almost empty drawing, what's
+      // left by an eraser would be that strongest edge and fill the grid with notes
+      if(v >= cutoff && v > (field.drawn ? 12 : 2)){
+        const nt = {step:ti, midi:pitches[pi], row:pi, vel:Math.round(clamp(40 + 87*(v/scaleTop), 40, 127))};
+        if(cen && cen.n[ci]){ nt.px = cen.sx[ci]/cen.n[ci]; nt.py = cen.sy[ci]/cen.n[ci]; }
+        notes.push(nt);
+      }
+    }
+  }
+  return {notes:{steps, curve: curve ? 'custom' : p.curve, customPts: curve ? curve.pts : null,
+                 notes, rows, field, dir:p.dir, pathModel: lut ? lut.m : null}};
+}
 const hash01 = (a, b, c)=>{
   let h = (Math.imul(a, 374761393) + Math.imul(b, 668265263) + Math.imul(c, 2246822519))|0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -989,7 +1094,9 @@ const NODE_DEFS = {
   // a painting kept as its strokes, in the order they were made, so it can be replayed:
   // with cycles on, the picture builds up during each pass of the Loop
   srcDraw: {
-    cat:'catSource', custom:'draw', thumb:'image', outputs:[{id:'image', type:'image'}],
+    cat:'catSource', custom:'draw', thumb:'image',
+    inputs:[{id:'scale', type:'scale', opt:true}, {id:'curve', type:'curve', opt:true}, {id:'path', type:'path', opt:true}],
+    outputs:[{id:'notes', type:'notes'}, {id:'image', type:'image'}],
     params:[
       {id:'strokes', kind:'hidden', def:[]},
       {id:'bg', kind:'hidden', def:'transparent'},
@@ -997,7 +1104,11 @@ const NODE_DEFS = {
       {id:'grid', kind:'hidden', def:0},
       {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
       {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1},
-      {id:'memory', label:'p_memory', kind:'range', min:0, max:64, step:1, def:0, fmt:v=> v || t('memAll')},
+      {id:'memory', label:'p_memory', kind:'range', min:0, max:64, step:1, def:0, fmt:v=> v || t('memAll'), panel:true},
+      {id:'dir', label:'p_dir', kind:'select', def:'lr', options:()=> DIR_KEYS.map(k=>[k, DIR_LABELS[k]]), panel:true},
+      {id:'steps', label:'p_steps', kind:'range', min:4, max:64, step:1, def:16, panel:true},
+      {id:'thresh', label:'p_thresh', kind:'range', min:1, max:100, step:1, def:60, fmt:v=>v+'%', panel:true},
+      {id:'curve', label:'p_curve', kind:'select', def:'linear', options:()=> CURVE_KEYS.map(k=>[k, t('curve_'+k)]), panel:true},
       {id:'replayMin', label:'p_replayMin', kind:'range', min:0.5, max:20, step:0.5, def:3, fmt:v=> v + ' min'}
     ],
     clean:o=>{
@@ -1009,7 +1120,7 @@ const NODE_DEFS = {
         .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {}), ...(st.e ? {e:1} : {}),
           ...(st.t === 'p' && PIXEL_GRIDS.includes(st.g) && st.g ? {t:'p', g:st.g, z:isNum(st.z) ? clamp(Math.round(st.z), 1, 16) : 1} : {})}));
     },
-    compute:(p, inp, n)=>{
+    compute:(p, {scale, curve, path}, n)=>{
       n.lastPhase = meshPhase();
       const baking = meshPhaseOverride !== null, replay = !baking && drawReplay && drawReplay.n === n;
       const live = p.turns && (playing || baking);
@@ -1023,7 +1134,11 @@ const NODE_DEFS = {
       // the stroke being painted counts already: it's read while the hand is still moving
       if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive, null, p.bg);
       const clear = p.bg === 'transparent';
-      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, alpha:clear, drawn:true, pixel:p.grid ? {g:p.grid, bg:clear ? null : hexToRgb(p.bg)} : null}};
+      const image = {w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, alpha:clear, drawn:true, pixel:p.grid ? {g:p.grid, bg:clear ? null : hexToRgb(p.bg)} : null};
+      // the built-in Edges + Scan, only when something listens
+      const wired = links.some(l=> l.from === n.id && l.fromPort === 'notes');
+      const notes = wired ? scanCompute(p, {field:edgesCompute({method:'gradient'}, {image}).field, scale, curve, path}, n).notes : null;
+      return {image, notes};
     },
     summary:n=> t('drawSum').replace('{n}', n.params.strokes.length)
   },
@@ -1263,60 +1378,7 @@ const NODE_DEFS = {
   edges: {
     cat:'catAnalysis', inputs:[{id:'image', type:'image'}], outputs:[{id:'field', type:'field'}], thumb:'field',
     params:[{id:'method', label:'p_method', kind:'select', def:'gradient', options:()=>[['gradient',t('m_gradient')],['sobel',t('m_sobel')]]}],
-    compute:(p, {image})=>{
-      if(!image) return {field:null};
-      const {w, h, data} = image, N = w*h;
-      const lum = new Float32Array(N), hue = new Float32Array(N), sat = new Float32Array(N);
-      for(let px=0; px<N; px++){
-        const r = data[px*4], g = data[px*4+1], b = data[px*4+2];
-        lum[px] = 0.299*r + 0.587*g + 0.114*b;
-        hue[px] = rgbToHue(r,g,b);
-        sat[px] = hsvSat(r,g,b);
-      }
-      // same two detectors as the workshop: the cheap |Δx|+|Δy| gradient,
-      // or a real Sobel. Both also keep an orientation for the Orientation node.
-      // a drawing on transparent paper: where the paint starts is an edge, whatever its
-      // colour (a black stroke has the same brightness as the empty pixels around it)
-      const al = image.alpha ? Float32Array.from({length:N}, (_, i)=> data[i*4 + 3]) : null;
-      // a drawing also compares real colours, or two paints of the same brightness would
-      // be one to the other; and over 3 pixels, so that a soft brush still has an edge
-      const STRIDE = 3, chans = !image.drawn ? [] : [0, 1, 2].map(c=> Float32Array.from({length:N}, (_, i)=> data[i*4 + c]));
-      if(al && image.drawn) chans.push(al);
-      const edge = new Float32Array(N), angle = new Float32Array(N);
-      let maxEdge = 1;
-      for(let y=0;y<h;y++){
-        for(let x=0;x<w;x++){
-          const px = y*w+x;
-          let gx, gy, m;
-          if(p.method === 'sobel'){
-            [gx, gy] = sobelAt(lum, w, h, x, y);
-            m = Math.sqrt(gx*gx + gy*gy);
-          } else {
-            gx = x<w-1 ? lum[px+1]-lum[px] : 0;
-            gy = y<h-1 ? lum[px+w]-lum[px] : 0;
-            m = Math.abs(gx) + Math.abs(gy);
-          }
-          for(const ch of chans){
-            const ax = x<w-STRIDE ? ch[px+STRIDE]-ch[px] : 0, ay = y<h-STRIDE ? ch[px+w*STRIDE]-ch[px] : 0;
-            // the larger of the two: a straight edge counts as much as a corner
-            const ma = Math.max(Math.abs(ax), Math.abs(ay));
-            if(ma > m){ m = ma; gx = ax; gy = ay; }
-          }
-          edge[px] = m; angle[px] = Math.atan2(gy, gx);
-          if(m > maxEdge) maxEdge = m;
-        }
-      }
-      const mask = new Uint8Array(N).fill(1);
-      if(al) for(let px=0; px<N; px++){
-        if(al[px]) continue;
-        // empty paper isn't a colour. An edge lands just before the paint: it keeps the paint's colour
-        let nb = -1;
-        for(let k=1; k<=STRIDE && nb < 0; k++){ if(al[px+k]) nb = px + k; else if(al[px+w*k]) nb = px + w*k; }
-        if(nb < 0){ mask[px] = 0; continue; }
-        hue[px] = hue[nb]; sat[px] = sat[nb];
-      }
-      return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask, pixel:image.pixel || null, drawn:!!image.drawn}};
-    }
+    compute:edgesCompute
   },
   // per-branch threshold: put one on each layer to tune it on its own
   sens: {
@@ -1422,56 +1484,7 @@ const NODE_DEFS = {
       {id:'thresh', label:'p_thresh', kind:'range', min:1, max:100, step:1, def:55, fmt:v=>v+'%', sig:true},
       {id:'curve', label:'p_curve', kind:'select', def:'linear', options:()=> CURVE_KEYS.map(k=>[k, t('curve_'+k)])}
     ],
-    // the workshop's grid: every masked pixel lands in a (time step, pitch row)
-    // cell via the direction's forward mapping; a cell sounds if its strongest
-    // edge clears the cutoff — relative to the whole image's maxEdge, so a
-    // narrow layer keeps the same loudness it would have in the workshop.
-    // A drawn path replaces the direction, like the workshop's 'path' mode:
-    // τ/ρ come from a per-pixel table (cached on the node) and dots sit at the
-    // centroid of the pixels that made them, since inv() of a cell center can
-    // land off them where the path curls.
-    compute:(p, {field, scale, curve, path}, n)=>{
-      if(!field) return {notes:null};
-      if(field.pixel) return {notes:pixelNotes(field, scale, p, curve)};
-      const pitches = scale ? scale.pitches : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh);
-      const rows = Math.max(1, pitches.length), steps = p.steps, {w, h} = field;
-      const dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
-      const lut = path ? scanPathLut(n, path.points, w, h) : null;
-      const best = new Float32Array(steps*rows);
-      const cen = lut ? {sx:new Float32Array(steps*rows), sy:new Float32Array(steps*rows), n:new Float32Array(steps*rows)} : null;
-      for(let y=0;y<h;y++){
-        const ny = y/h;
-        for(let x=0;x<w;x++){
-          const px = y*w+x;
-          if(!field.mask[px]) continue;
-          const [tau, rho] = lut ? [lut.tau[px], lut.rho[px]] : dir.fwd(x/w, ny);
-          const ti = clamp(Math.floor(tau*steps), 0, steps-1);
-          const pi = clamp(Math.floor(rho*rows), 0, rows-1);
-          const ci = ti*rows+pi;
-          if(field.edge[px] > best[ci]) best[ci] = field.edge[px];
-          if(cen){ cen.sx[ci] += (x+0.5)/w; cen.sy[ci] += (y+0.5)/h; cen.n[ci]++; }
-        }
-      }
-      // a Sensitivity node upstream sets the threshold, else this node's slider
-      const thresh = field.thresh != null ? field.thresh : p.thresh;
-      // a drawing has a fixed scale: relative to its strongest edge, the threshold would climb
-      // as the painting fills up, and new strokes would stop being heard
-      const scaleTop = field.drawn ? 255 : field.maxEdge, cutoff = (1 - thresh/100) * scaleTop, notes = [];
-      if(pitches.length){
-        for(let ti=0; ti<steps; ti++) for(let pi=0; pi<rows; pi++){
-          const ci = ti*rows+pi, v = best[ci];
-          // the threshold is relative to the strongest edge: on an almost empty drawing, what's
-          // left by an eraser would be that strongest edge and fill the grid with notes
-          if(v >= cutoff && v > (field.drawn ? 12 : 2)){
-            const nt = {step:ti, midi:pitches[pi], row:pi, vel:Math.round(clamp(40 + 87*(v/scaleTop), 40, 127))};
-            if(cen && cen.n[ci]){ nt.px = cen.sx[ci]/cen.n[ci]; nt.py = cen.sy[ci]/cen.n[ci]; }
-            notes.push(nt);
-          }
-        }
-      }
-      return {notes:{steps, curve: curve ? 'custom' : p.curve, customPts: curve ? curve.pts : null,
-                     notes, rows, field, dir:p.dir, pathModel: lut ? lut.m : null}};
-    },
+    compute:scanCompute,
     summary:(n)=>{
       const o = n.out && n.out.notes;
       if(!o) return '';
@@ -1855,7 +1868,7 @@ function buildNodeEl(n){
   if(def.custom === 'mic') buildMicControls(n, body);
   if(def.custom === 'draw') buildDrawControls(n, body);
   if(def.custom === 'cc') buildCcControls(n, body);
-  (def.params || []).forEach(d=>{ if(d.kind !== 'hidden') body.appendChild(paramEl(n, d)); });
+  (def.params || []).forEach(d=>{ if(d.kind !== 'hidden' && !d.panel) body.appendChild(paramEl(n, d)); });     // panel: Settings only
   if(def.thumb){
     const c = document.createElement('canvas');
     c.className = 'thumb' + (def.pick ? ' pick' : '') + (def.thumbClass ? ' ' + def.thumbClass : '');
@@ -3518,42 +3531,41 @@ function syncDrawLayers(){
   });
   d.layerEls.forEach((c, id)=>{ if(!keep.has(id)){ c.remove(); d.layerEls.delete(id); } });
 }
-// the reading direction from the painting screen: it's the Scans' own setting, set on
-// each one fed by this drawing, so the node and the screen can't disagree
+// what reads this drawing: the node itself, and any Scan still wired to its image
+const readers = n=> [n, ...scansOf(n)];
+// the notes being played from it, to show them on the painting
+const noteSources = n=> [n.out && n.out.notes, ...scansOf(n).map(s=> s.out && s.out.notes)].filter(Boolean);
+// the reading direction from the painting screen: set on all of them, so the nodes and
+// the screen can't disagree
 function buildDirPicker(n, tools){
-  const scans = scansOf(n);
-  if(!scans.length) return;
   const lab = document.createElement('div'), grid = document.createElement('div');
   lab.className = 'dirLabel'; lab.textContent = t('p_dir'); grid.className = 'dirGrid';
-  const def = NODE_DEFS.scan.params.find(d=> d.id === 'dir');
   const show = k=> grid.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.dir === k));
   DIR_KEYS.forEach(k=>{
     const b = document.createElement('button');
     b.type = 'button'; b.dataset.dir = k; b.textContent = DIR_LABELS[k]; b.setAttribute('aria-label', t('p_dir') + ' ' + DIR_LABELS[k]);
     b.addEventListener('click', ()=>{
-      scansOf(n).forEach(s=>{ s.params.dir = k; syncTwins(s, def); markDirty(s.id); });
+      readers(n).forEach(s=>{ s.params.dir = k; syncTwins(s, NODE_DEFS[s.type].params.find(d=> d.id === 'dir')); markDirty(s.id); });
       show(k); saveSoon();
     });
     grid.appendChild(b);
   });
-  show(scans[0].params.dir);
+  show(readers(n).slice(-1)[0].params.dir);
   tools.append(lab, grid);
 }
 // same for the threshold: the Scans' own slider, here where you hear what it does.
 // Pixel mode doesn't use it: every cell is a note
 function buildThreshSlider(n, tools){
-  const scans = scansOf(n);
-  if(!scans.length) return;
   const def = NODE_DEFS.scan.params.find(d=> d.id === 'thresh');
   const row = document.createElement('label'), lab = document.createElement('span'), input = document.createElement('input'), val = document.createElement('span');
   row.className = 'prm drawThresh'; val.className = 'v';
   lab.textContent = t(def.label);
-  input.type = 'range'; input.id = 'drawThresh'; input.min = def.min; input.max = def.max; input.step = def.step; input.value = scans[0].params.thresh;
+  input.type = 'range'; input.id = 'drawThresh'; input.min = def.min; input.max = def.max; input.step = def.step; input.value = readers(n).slice(-1)[0].params.thresh;
   const show = ()=>{ val.textContent = def.fmt(+input.value); };
   show();
   input.addEventListener('input', ()=>{
     show();
-    scansOf(n).forEach(s=>{ s.params.thresh = +input.value; syncTwins(s, def); markDirty(s.id); });
+    readers(n).forEach(s=>{ s.params.thresh = +input.value; syncTwins(s, NODE_DEFS[s.type].params.find(d=> d.id === 'thresh')); markDirty(s.id); });
     saveSoon();
   });
   row.append(lab, input, val);
@@ -3596,16 +3608,14 @@ function drawOverlay(){
   x.clearRect(0, 0, W, W);
   syncDrawLayers();
   // what comes from this painting, and what the Loop plays in all: other chains show here
-  const mine = scansOf(d.n).reduce((a, s)=> a + (s.out && s.out.notes ? s.out.notes.notes.length : 0), 0);
+  const mine = noteSources(d.n).reduce((a, o)=> a + o.notes.length, 0);
   const lp = loopOfDrawing(d.n), L = lp && lp.out && lp.out._loop;
   const all = L ? L.tracks.reduce((a, tr)=> a + (tr.mute ? 0 : tr.notes.length), 0) : 0;
   const text = t('drNotes').replace('{a}', mine).replace('{b}', all);
   if(d.count && d.count.textContent !== text) d.count.textContent = text;
   if(!playing) return;
   const pos = loopPosNow() % 1;
-  scansOf(d.n).forEach(s=>{
-    const o = s.out && s.out.notes;
-    if(!o) return;
+  noteSources(d.n).forEach(o=>{
     const dir = DIR_DEFS[o.dir] || DIR_DEFS.lr;
     let k = 0;
     while(k < o.steps - 1 && stepFrac(o, k + 1) <= pos) k++;
@@ -3711,6 +3721,9 @@ function openDrawEditor(n, watch){
   tools.appendChild(count);
   buildDirPicker(n, tools);
   buildThreshSlider(n, tools);
+  const stepRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'steps'), true);
+  stepRow.classList.add('drawMemory');
+  tools.appendChild(stepRow);
   const memRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'memory'), true);
   memRow.classList.add('drawMemory');
   tools.appendChild(memRow);
@@ -5285,12 +5298,11 @@ function finishGraph(){
 }
 const wired = (a, ap, b, bp)=> links.push({from:a.id, fromPort:ap, to:b.id, toPort:bp});
 // starting points that sound straight away: only the MIDI one needs a file
-function drawTemplate(drawP, scanP){
+function drawTemplate(drawP){
   clearGraph();
-  const draw = addNode('srcDraw', 0, 60, drawP), edges = addNode('edges', 260, 60), scale = addNode('scale', 260, 340);
-  const scan = addNode('scan', 520, 60, scanP), tr = addNode('track', 780, 60, {program:'11'}), loop = addNode('loop', 1040, 60), out = addNode('midiOut', 780, 420);
-  wired(draw,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(scale,'scale', scan,'scale');
-  wired(scan,'notes', tr,'notes'); wired(tr,'track', loop,'tracks'); wired(scan,'notes', out,'notes');
+  const draw = addNode('srcDraw', 0, 60, drawP), scale = addNode('scale', -280, 60);
+  const tr = addNode('track', 300, 60, {program:'11'}), loop = addNode('loop', 560, 60), out = addNode('midiOut', 300, 420);
+  wired(scale,'scale', draw,'scale'); wired(draw,'notes', tr,'notes'); wired(tr,'track', loop,'tracks'); wired(draw,'notes', out,'notes');
   finishGraph();
 }
 const TEMPLATES = {
@@ -5338,9 +5350,9 @@ const TEMPLATES = {
     finishGraph();
   },
   // live painting: the whole canvas is read, so each stroke is heard as it's made
-  draw(){ drawTemplate({turns:0, reveal:100, memory:8}, {steps:16, thresh:60}); },
+  draw(){ drawTemplate({turns:0, reveal:100, memory:8}); },
   // pixel art: the grid is the score, a painted cell is a note
-  pixel(){ drawTemplate({turns:0, reveal:100, grid:16}, {steps:16, thresh:60}); },
+  pixel(){ drawTemplate({turns:0, reveal:100, grid:16}); },
   logic(){
     clearGraph();
     const gen = addNode('srcGen', 0, 60, {kind:'noise', detail:10}), edges = addNode('edges', 260, 60);

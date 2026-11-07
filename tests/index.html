@@ -433,6 +433,38 @@ test('Dessin : les autres images gardent leur contour', ()=>{
   ok(Math.abs(f.edge[px] - (Math.abs(lum(px + 1) - lum(px)) + Math.abs(lum(px + 260) - lum(px)))) < .001);
   eq(f.drawn, false);
 });
+test('Sortie notes : identique à Contours + Balayage en externe', ()=>{
+  const ln = (c, y)=> ({c, s:60, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, y, 100]).flat().join(',')});
+  const px = {c:'#E6267A', s:1, o:1, h:1, r:0, t:'p', g:16, z:1, pts:[1562,1562,100, 4687,7812,100].join(',')};
+  [[{strokes:[ln('#231F20', 3000), ln('#E6267A', 7000)]}, 'normal'], [{grid:16, strokes:[px]}, 'pixel']].forEach(([P, name])=>{
+    clearGraph();
+    const opts = Object.assign({turns:0, thresh:60, steps:16, dir:'tb'}, P);
+    const d = addNode('srcDraw', 0, 0, opts), tr = addNode('track', 500, 0), sc = addNode('scale', 0, 300, {scale:'major'});
+    const e = addNode('edges', 200, 200), s = addNode('scan', 400, 200, {thresh:60, steps:16, dir:'tb'});
+    connect(sc.id, 'scale', d.id, 'scale'); connect(d.id, 'notes', tr.id, 'notes');
+    connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field'); connect(sc.id, 'scale', s.id, 'scale');
+    const key = o=> JSON.stringify(o.notes.map(n=> [n.step, n.midi, n.vel]));
+    ok(evalNode(d).notes.notes.length > 0, name);
+    eq(key(evalNode(d).notes), key(evalNode(s).notes));
+  });
+});
+test('Sortie notes : calculée seulement si branchée', ()=>{
+  clearGraph();
+  const d = addNode('srcDraw', 0, 0, {strokes:[{c:'#000000', s:60, o:1, h:1, r:0, pts:'1000,5000,100,9000,5000,100'}], turns:0});
+  eq(evalNode(d).notes, null);
+  ok(evalNode(d).image);
+});
+test('Modèles Dessin : un fil vers la Piste, ça sonne', ()=>{
+  ['draw', 'pixel'].forEach(k=>{
+    TEMPLATES[k]();
+    const types = [...nodes.values()].map(n=> n.type);
+    ok(!types.includes('scan') && !types.includes('edges'), k);
+    const d = [...nodes.values()].find(n=> n.type === 'srcDraw');
+    d.params.strokes = [{c:'#000000', s:90, o:1, h:1, r:0, pts:'1000,5300,100,9000,5300,100'}];
+    markDirty(d.id);
+    ok(evalNode([...nodes.values()].find(n=> n.type === 'loop'))._loop.tracks[0].notes.length > 0, k);
+  });
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;
