@@ -7,7 +7,7 @@
 
 *dessin + sons* — convertit une image, une vidéo, un flux webcam ou une peinture en direct en MIDI multi-pistes, exportable en `.mid` ou envoyé en temps réel dans ton DAW via un port MIDI virtuel. Pensé pour créer des loops dans Logic Pro (ou n'importe quel DAW). Peut aussi rendre la boucle en vidéo verticale, son compris, à poster directement sur les réseaux.
 
-**Nouveau :** [Nodes](https://neoyume.github.io/dessons/nodes.html), la version modulaire : branche le traitement à ta façon, peins en direct et entends chaque trait, donne un instrument à chaque couleur, enchaîne des pages, anime le dessin, rejoue la peinture comme une pièce. [Voir plus bas](#nodes--la-version-modulaire).
+**Nouveau :** le [mode Dessin](https://neoyume.github.io/dessons/nodes.html?draw) : peins en plein écran et entends chaque trait, donne un instrument à chaque couleur, zoome sur les détails, enchaîne des pages, anime le dessin, rejoue la peinture comme une pièce. Il fait partie de [Nodes](https://neoyume.github.io/dessons/nodes.html), la version modulaire, où tu branches le traitement à ta façon. [Voir plus bas](#dessin-et-live-painting).
 
 Par [neoyume](https://github.com/neoyume). Contributions bienvenues.
 
@@ -84,6 +84,7 @@ Pour commencer, ouvre le **Mode Dessin** (bouton dans l'atelier, ou `nodes.html?
 - **Outils** : pinceau rond (taille, opacité, dureté, pression du stylet), estompe, gomme, pipette. Touches `B`, `S`, `E`, `I` ; `[` et `]` pour la taille ; `Alt`+clic pour prélever une couleur sans changer d'outil.
 - **Pinceau sonore** : la pointe joue la note sous elle, toujours dans la gamme, et la pression règle le volume. Lance aussi la lecture : un trait compte alors que ta main bouge encore.
 - **Miroirs et répétition** : miroir gauche-droite pour un palindrome, haut-bas pour une mélodie inversée, répétition du trait sur la largeur pour un motif rythmique. L'estompe les suit aussi, et le tout reste un seul trait pour Annuler et le replay.
+- **Zoom** : jusqu'à 800 %. `Z` pour l'outil Zoom (clic pour zoomer, `Alt`+clic pour dézoomer, glisser pour déplacer), `+`, `−` et `0` avec n'importe quel outil, ou pincer et faire défiler. Seule la vue change, jamais le dessin.
 - **Fond** : un nouveau dessin démarre sur un fond transparent ; *Couleur du pinceau* le remplit.
 - **Tout effacer** repart d'un dessin propre : traits, pages, fond, et les pistes ajoutées pour les instruments. La chaîne du node et ses réglages restent, et ↶ dans l'en-tête annule.
 
