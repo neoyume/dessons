@@ -3609,12 +3609,38 @@ function recentStrokes(strokes, prog, count, keyOf){
   }
   return kept;
 }
+// going back shouldn't mean repainting from the first stroke: the base is copied every
+// DRAW_MARK_WORK points, and the latest DRAW_MARKS copies are kept. Passing the oldest costs
+// one full repaint, which lays new copies along the way
+const DRAW_MARKS = 12, DRAW_MARK_WORK = 1500;
+function nearestMark(cache, strokes, i){
+  for(let k=cache.marks.length-1;k>=0;k--){
+    const m = cache.marks[k];
+    if(m.i > i) continue;
+    let j = m.i;
+    while(j > 0 && m.list[j - 1] === strokes[j - 1]) j--;
+    if(!j) return m;
+    cache.marks.splice(k, 1);       // another page, or a stroke drawn over an undo
+  }
+  return null;
+}
+function takeMark(cache, S, strokes){
+  const kept = cache.marks.filter(m=> m.i < cache.done), free = cache.marks.filter(m=> m.i >= cache.done);
+  if(kept.length >= DRAW_MARKS) free.push(kept.shift());
+  const reuse = free.pop(), cv = reuse ? reuse.cv : document.createElement('canvas');
+  if(!reuse) cv.width = cv.height = S;
+  const x = cv.getContext('2d');
+  x.globalCompositeOperation = 'copy';
+  x.drawImage(cache.base, 0, 0);
+  kept.push({i:cache.done, list:strokes, cv});
+  cache.marks = kept; cache.work = 0;
+}
 function drawAt(cache, S, strokes, bg, prog){
   if(!cache.out || cache.S !== S){
     cache.base = document.createElement('canvas'); cache.out = document.createElement('canvas');
     cache.base.width = cache.base.height = cache.out.width = cache.out.height = S;
     cache.bctx = cache.base.getContext('2d'); cache.octx = cache.out.getContext('2d', {willReadFrequently:S <= MAXDIM});
-    cache.S = S; cache.strokes = null;
+    cache.S = S; cache.strokes = null; cache.marks = []; cache.work = 0;
   }
   let total = 0;
   strokes.forEach(st=>{ total += strokePoints(st).length/3; });
@@ -3623,13 +3649,28 @@ function drawAt(cache, S, strokes, bg, prog){
   // a new stroke at the end keeps the base: only what changes earlier starts it again
   const prev = cache.strokes, same = prev && cache.done <= strokes.length && (!cache.done || prev[cache.done - 1] === strokes[cache.done - 1]);
   if(!same || cache.bg !== bg || i < cache.done){
-    cache.bg = bg; cache.done = 0;
+    if(cache.bg !== bg) cache.marks = [];
+    cache.bg = bg; cache.work = 0;
     cache.bctx.globalAlpha = 1;
-    cache.bctx.clearRect(0, 0, S, S);
-    if(bg !== 'transparent'){ cache.bctx.fillStyle = bg; cache.bctx.fillRect(0, 0, S, S); }
+    const mark = nearestMark(cache, strokes, i);
+    if(mark){
+      cache.done = mark.i;
+      cache.bctx.globalCompositeOperation = 'copy';
+      cache.bctx.drawImage(mark.cv, 0, 0);
+      cache.bctx.globalCompositeOperation = 'source-over';
+    } else {
+      cache.done = 0;
+      cache.bctx.clearRect(0, 0, S, S);
+      if(bg !== 'transparent'){ cache.bctx.fillStyle = bg; cache.bctx.fillRect(0, 0, S, S); }
+    }
   }
   cache.strokes = strokes;
-  for(; cache.done < i; cache.done++) commitStroke(cache.bctx, S, strokes[cache.done], null, bg);
+  while(cache.done < i){
+    commitStroke(cache.bctx, S, strokes[cache.done], null, bg);
+    cache.work += strokePoints(strokes[cache.done]).length/3;
+    cache.done++;
+    if(cache.work >= DRAW_MARK_WORK) takeMark(cache, S, strokes);
+  }
   cache.octx.globalAlpha = 1;
   cache.octx.clearRect(0, 0, S, S);
   cache.octx.drawImage(cache.base, 0, 0);

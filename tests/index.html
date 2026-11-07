@@ -869,6 +869,51 @@ test('Zoom : la grille gagne en définition, sans changer à 100 %', ()=>{
   drawGridLines(); eq(drawEd.gridCv.width, 4096);
   closeDrawEditor();
 });
+const markSetup = `
+  window.markStrokes = count=>{
+    const all = [];
+    for(let s=0;s<count;s++){
+      const a = [], y = 500 + (s*977) % 9000;
+      for(let i=0;i<120;i++) a.push(500 + i*70, y + (i % 7)*30, 100);
+      const st = {c:['#ff0000', '#00aa00', '#0000ff'][s % 3], s:30, o:0.8, h:0.7, r:0, pts:a.join(',')};
+      if(s % 5 === 3) st.t = 's';           // the smudge reads what's under it
+      if(s % 7 === 4) st.e = 1;
+      all.push(st);
+    }
+    return all;
+  };
+  window.pixels = (cv, S)=> Array.from(cv.getContext('2d').getImageData(0, 0, S, S).data);
+`;
+test('Annuler : repart d’un instantané, et le résultat est identique au pixel près', ()=>{
+  const S = 128, all = markStrokes(120), cache = {};
+  drawAt(cache, S, all, 'transparent', 1);
+  ok(cache.marks.length > 1, 'instantanés posés');
+  const real = window.commitStroke;
+  [119, 118, 100, 61, 60, 7].forEach(len=>{
+    let painted = 0;
+    window.commitStroke = (...a)=>{ painted++; return real(...a); };
+    const got = pixels(drawAt(cache, S, all.slice(0, len), 'transparent', 1), S);
+    window.commitStroke = real;
+    ok(painted <= 13, painted + ' traits repeints pour revenir à ' + len);
+    const want = pixels(drawAt({}, S, all.slice(0, len), 'transparent', 1), S);
+    ok(got.every((v, k)=> v === want[k]), 'image différente à ' + len);
+  });
+});
+test('Annuler : un trait refait par-dessus, une autre page ou un autre fond n’utilisent pas un ancien instantané', ()=>{
+  const S = 128, all = markStrokes(60), cache = {};
+  drawAt(cache, S, all, 'transparent', 1);
+  const fork = all.slice(0, 20).concat(markStrokes(60).slice(20).reverse());
+  eq(pixels(drawAt(cache, S, fork, 'transparent', 1), S), pixels(drawAt({}, S, fork, 'transparent', 1), S));
+  const other = markStrokes(30).reverse();
+  eq(pixels(drawAt(cache, S, other, 'transparent', 1), S), pixels(drawAt({}, S, other, 'transparent', 1), S));
+  eq(pixels(drawAt(cache, S, fork, '#ffffff', 1), S), pixels(drawAt({}, S, fork, '#ffffff', 1), S));
+});
+test('Annuler : le nombre d’instantanés reste borné', ()=>{
+  const cache = {};
+  drawAt(cache, 64, markStrokes(600), 'transparent', 1);
+  ok(cache.marks.length <= DRAW_MARKS, cache.marks.length + ' instantanés');
+  eq(cache.marks.map(m=> m.i), [...cache.marks.map(m=> m.i)].sort((a, b)=> a - b));
+});
 test('Pixel : changer de grille repart sur des cases carrées', ()=>{
   const {n} = drawing({grid:32, gridY:12});
   openDrawEditor(n);
@@ -1187,7 +1232,7 @@ frame.onload = async ()=>{
   w.ok = (v, msg)=>{ if(!v) throw new Error('faux' + (msg ? ' : ' + msg : '')); };
   w.throws = f=>{ try{ f(); }catch(e){ return; } throw new Error('aurait dû échouer'); };
   await new Promise(r=> setTimeout(r, 300));
-  { const tag = w.document.createElement('script'); tag.textContent = zoomSetup; w.document.body.appendChild(tag); tag.remove(); }
+  { const tag = w.document.createElement('script'); tag.textContent = zoomSetup + markSetup; w.document.body.appendChild(tag); tag.remove(); }
   for(const [name, fn] of T){
     let error = null;
     try{
