@@ -275,6 +275,40 @@ test('Dessin : l’historique garde les traits une seule fois', ()=>{
   eq(nodes.get(n.id).params.strokes[0].pts.length, pts.length);
 });
 
+/* ---- automatic versions ---- */
+test('Versions : une par changement, les 30 dernières', async ()=>{
+  await dbStore(VERSION_STORE, 'readwrite', st=> st.clear());
+  clearGraph(); autoLast = null;
+  addNode('edges', 0, 0);
+  eq(await autosave(), true);
+  eq(await autosave(), false);              // nothing changed
+  for(let i=0;i<33;i++){ addNode('octave', i*10, 0); await autosave(); }
+  const all = await dbStore(VERSION_STORE, 'readonly', st=> st.getAll());
+  eq(all.length, 30);
+  eq(all[all.length - 1].nodes, 34);
+});
+test('Versions : on revient à une version', async ()=>{
+  await dbStore(VERSION_STORE, 'readwrite', st=> st.clear());
+  clearGraph(); autoLast = null;
+  const n = addNode('srcDraw', 0, 0, {strokes:[{c:'#000000', s:10, o:1, h:1, r:0, pts:'1000,1000,50'}]});
+  await autosave();
+  n.params.strokes = [];
+  await autosave();
+  const all = await dbStore(VERSION_STORE, 'readonly', st=> st.getAll());
+  eq([all[0].strokes, all[1].strokes], [1, 0]);
+  loadGraph(JSON.parse(all[0].json));
+  eq(nodes.get(n.id).params.strokes.length, 1);
+});
+test('Versions : prise avant un remplacement, pas après', async ()=>{
+  await dbStore(VERSION_STORE, 'readwrite', st=> st.clear());
+  clearGraph(); autoLast = null;
+  addNode('edges', 0, 0); addNode('edges', 0, 0);
+  const done = autosave();
+  clearGraph();
+  await done;
+  eq((await dbStore(VERSION_STORE, 'readonly', st=> st.getAll()))[0].nodes, 2);
+});
+
 /* ---- the .mid follows what's heard ---- */
 test('L’export suit un signal sur la sensibilité', async ()=>{
   clearGraph();

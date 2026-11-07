@@ -95,6 +95,19 @@
   #tpPlay{min-width:96px;}
   #saveWarn{font-size:11px; color:#ffb4b6;}
   #saveWarn[hidden]{display:none;}
+  #saveState{font-size:11px; color:var(--text-dim); background:none; border:none; padding:0; cursor:pointer;}
+  #saveState[hidden]{display:none;}
+  #saveState.warn{color:#ffb4b6;}
+  #versionsPanel{
+    position:fixed; right:18px; top:64px; z-index:26; width:min(400px, calc(100vw - 32px)); max-height:calc(100vh - 90px); overflow:auto; padding:12px 14px;
+    display:flex; flex-direction:column; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:9px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  #versionsPanel[hidden]{display:none;}
+  #autoFileRow{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-dim);}
+  #autoFileRow span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .versionRow{display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--line); font-size:12px;}
+  .versionRow span{flex:1; min-width:0;}
+  .versionRow small{display:block; color:var(--text-dim); font-size:10.5px;}
   .tpField{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);}
   .tpField input{width:54px; font-family:var(--mono); font-size:11px; color:var(--accent); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:3px 5px;}
   .tpField input:disabled{opacity:.4;}
@@ -135,7 +148,9 @@
   .nyGrid{display:grid; grid-template-columns:repeat(9, 1fr); gap:3px;}
   .nyGrid button{aspect-ratio:1; padding:0; border:1px solid rgba(255,255,255,.18); border-radius:4px; cursor:pointer;}
   .nyGrid button.on{outline:2px solid var(--accent); outline-offset:1px;}
-  .nyName{font-family:var(--mono); font-size:11px; color:var(--text-dim);}
+  .nyName{display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; color:var(--text-dim);}
+  .nyName i{width:14px; height:14px; flex:none; border-radius:3px; border:1px solid rgba(255,255,255,.3);}
+  #drawEditor.picking #drawCanvas{cursor:crosshair;}
   #workspace{flex:1; display:flex; min-height:0; min-width:0; position:relative;}
   #propsPanel{flex:none; display:flex; flex-direction:column; min-height:0; width:270px; background:var(--panel); border-left:1px solid var(--line);}
   #propsPanel[hidden]{display:none;}
@@ -360,6 +375,7 @@
       <button type="button" id="newBtn" data-i18n="btnNew">Nouveau</button>
       <button type="button" id="openBtn" data-i18n="btnOpen">⬇ Ouvrir .json</button>
       <button type="button" id="saveBtn" data-i18n="btnSave">⬆ Sauver .json</button>
+      <button type="button" id="versionsBtn" data-i18n="btnVersions">Versions automatiques</button>
       <h3 data-i18n="tplPick">Modèles</h3>
       <div id="tplList"></div>
     </div>
@@ -399,8 +415,15 @@
   <label class="tpField"><span data-i18n="p_bars">Mesures</span><input type="number" id="tpBars" min="1" max="64" step="1"></label>
   <div id="tpPos" aria-hidden="true"><i></i></div>
   <span id="saveWarn" data-i18n="saveFull" role="status" hidden></span>
+  <button type="button" id="saveState" role="status" hidden></button>
   <button type="button" class="miniBtn" id="tpExport" data-i18n="btnExport">Exporter</button>
   <button type="button" class="miniBtn" id="tpLogic"></button>
+</div>
+<div id="versionsPanel" hidden role="dialog" aria-labelledby="versionsHead">
+  <div class="helpTop"><h2 id="versionsHead" data-i18n="btnVersions">Versions automatiques</h2><button type="button" class="nodeDel" id="versionsClose" aria-label="×">×</button></div>
+  <div class="nodeNote" data-i18n="versionsHint"></div>
+  <div id="autoFileRow"></div>
+  <div id="versionsList"></div>
 </div>
 <div id="helpPanel" hidden role="dialog" aria-labelledby="helpHead">
   <div class="helpTop"><h2 id="helpHead" data-i18n="helpTitle">Raccourcis</h2><button type="button" class="nodeDel" id="helpClose" aria-label="×">×</button></div>
@@ -445,14 +468,18 @@ const I18N = {
     btnUndo:'Annuler (Cmd+Z)', btnRedo:'Rétablir (Maj+Cmd+Z)', btnFrame:'Grouper', frameTitle:'Groupe', menuSearch:'Rechercher un node…', menuEmpty:'Aucun node trouvé.',
     btnAdd:'+ Node', btnFit:'Cadrer', btnNew:'Nouveau', btnSave:'⬆ Sauver .json', btnOpen:'⬇ Ouvrir .json',
     btnMidiOn:'Activer le MIDI',
+    btnVersions:'Versions automatiques', versionsHint:'Une version par minute si le graphe a changé, et juste avant Nouveau, un modèle, Ouvrir ou Tout effacer. Les 30 dernières sont gardées dans ce navigateur.',
+    versionRestore:'Restaurer', versionConfirm:'Remplacer le graphe actuel par cette version ? Il sera gardé dans les versions.', versionNone:'Aucune version pour l’instant.',
+    versionSum:'{n} nodes · {s} traits', autoFilePick:'Choisir un fichier…', autoFileOff:'Fichier sur le disque : aucun', autoFileOn:'Écrit dans {x}', autoFileStop:'Arrêter', autoFileResume:'Reconnecter', autoFileLost:'Fichier auto à reconnecter',
+    savedAt:'Sauvé {x}', savedFile:'Sauvé {x} · {f}',
     n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer le dessin', replayStop:'Arrêter', replayEnd:'Terminé',
     drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
-    toolBrush:'Pinceau', toolSmudge:'Estompe', brForce:'Force',
+    toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
-    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S','Pinceau, estompe, dans le dessin'],['?','Cette aide']],
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, I','Pinceau, estompe, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -535,14 +562,18 @@ const I18N = {
     btnUndo:'Undo (Cmd+Z)', btnRedo:'Redo (Shift+Cmd+Z)', btnFrame:'Group', frameTitle:'Group', menuSearch:'Search a node…', menuEmpty:'No node found.',
     btnAdd:'+ Node', btnFit:'Fit', btnNew:'New', btnSave:'⬆ Save .json', btnOpen:'⬇ Open .json',
     btnMidiOn:'Enable MIDI',
+    btnVersions:'Automatic versions', versionsHint:'One version a minute if the graph changed, and just before New, a template, Open or Clear all. The last 30 are kept in this browser.',
+    versionRestore:'Restore', versionConfirm:'Replace the current graph with this version? It will be kept in the versions.', versionNone:'No version yet.',
+    versionSum:'{n} nodes · {s} strokes', autoFilePick:'Choose a file…', autoFileOff:'File on disk: none', autoFileOn:'Writing to {x}', autoFileStop:'Stop', autoFileResume:'Reconnect', autoFileLost:'Auto file needs reconnecting',
+    savedAt:'Saved {x}', savedFile:'Saved {x} · {f}',
     n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay the drawing', replayStop:'Stop', replayEnd:'Finished',
     drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
-    toolBrush:'Brush', toolSmudge:'Smudge', brForce:'Strength',
+    toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
-    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S','Brush, smudge, in the drawing'],['?','This help']],
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, I','Brush, smudge, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -2658,18 +2689,27 @@ function parseSTL(buf){
 const parseMesh = (name, buf)=> /\.stl$/i.test(name) ? parseSTL(buf) : parseOBJ(new TextDecoder().decode(buf));
 // 3D files stay in IndexedDB, too big for the graph: separate base from the scenes',
 // so this doesn't touch dessons-core.js's schema. No IndexedDB = "reload the file", as before
-function meshStore(mode, fn){
+const VERSION_STORE = location.search === '?test' ? 'versions-test' : 'versions';
+function dbStore(name, mode, fn){
   return new Promise((res, rej)=>{
-    const open = indexedDB.open('dessons-nodes', 1);
-    open.onupgradeneeded = ()=> open.result.createObjectStore('meshes');
+    const open = indexedDB.open('dessons-nodes', 2);
+    open.onupgradeneeded = ()=>{
+      const db = open.result;
+      if(!db.objectStoreNames.contains('meshes')) db.createObjectStore('meshes');
+      ['versions', 'versions-test'].forEach(s=>{ if(!db.objectStoreNames.contains(s)) db.createObjectStore(s, {autoIncrement:true}); });
+      if(!db.objectStoreNames.contains('settings')) db.createObjectStore('settings');
+    };
     open.onerror = ()=> rej(open.error);
     open.onsuccess = ()=>{
-      const tx = open.result.transaction('meshes', mode), rq = fn(tx.objectStore('meshes'));
-      tx.oncomplete = ()=>{ open.result.close(); res(rq.result); };
-      tx.onerror = tx.onabort = ()=>{ open.result.close(); rej(tx.error); };
+      try{
+        const tx = open.result.transaction(name, mode), rq = fn(tx.objectStore(name));
+        tx.oncomplete = ()=>{ open.result.close(); res(rq.result); };
+        tx.onerror = tx.onabort = ()=>{ open.result.close(); rej(tx.error); };
+      }catch(e){ open.result.close(); rej(e); }
     };
   });
 }
+const meshStore = (mode, fn)=> dbStore('meshes', mode, fn);
 // the browser keeps the last few files, never one the graph on screen is using
 const MESH_KEEP = 8;
 function pruneMeshes(){
@@ -3190,7 +3230,7 @@ function drawKey(e){
   if(e.key === 'Escape'){ if(drawEd.watch) stopPlayback(); closeDrawEditor(); return true; }
   if(drawEd.watch) return e.key !== ' ';
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
-  if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's')){ setDrawTool(key === 's' ? 'smudge' : 'brush'); return true; }
+  if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's' || key === 'i')){ setDrawTool(key === 's' ? 'smudge' : key === 'i' ? 'pick' : 'brush'); return true; }
   if(!e.target.closest('input') && (e.key === '[' || e.key === ']')){
     brush.size = clamp(Math.round(brush.size*(e.key === ']' ? 1.2 : 1/1.2)), 1, 300);
     const f = $('brSize'); if(f){ f.value = brush.size; f.refresh(); }
@@ -3201,9 +3241,32 @@ function drawKey(e){
 }
 // the same sliders drive both tools; for the smudge, opacity is how far it drags
 function setDrawTool(tool){
-  brush.tool = tool; saveBrush();
+  // the eyedropper is a moment, not a tool you stay on: the next opening starts with the brush
+  if(tool === 'pick') drawEd.back = brush.tool === 'pick' ? 'brush' : brush.tool;
+  else { brush.tool = tool; saveBrush(); }
+  drawEd.tool = tool;
+  drawEd.box.classList.toggle('picking', tool === 'pick');
+  drawEd.ring.hidden = tool === 'pick' || drawEd.ring.hidden;
   drawEd.box.querySelectorAll('.drawTool').forEach(b=> b.classList.toggle('primary', b.dataset.tool === tool));
   $('brOpacity').closest('.prm').firstChild.textContent = t(tool === 'smudge' ? 'brForce' : 'brOpacity');
+}
+// the colour as seen: the paint, then each display layer over it, the way the page blends them
+function pickColor(e){
+  const d = drawEd, r = d.cv.getBoundingClientRect();
+  const u = clamp((e.clientX - r.left)/r.width, 0, 0.9999), v = clamp((e.clientY - r.top)/r.height, 0, 0.9999);
+  let px = [...d.ctx.getImageData(Math.floor(u*DRAW_RES), Math.floor(v*DRAW_RES), 1, 1).data].slice(0, 3);
+  d.layerEls.forEach(c=>{
+    if(!c.width || !c.height) return;
+    // object-fit: contain, so a layer that isn't square has margins
+    const s = Math.min(1/c.width, 1/c.height), w = c.width*s, h = c.height*s, x = (u - (1 - w)/2)/w, y = (v - (1 - h)/2)/h;
+    if(x < 0 || x >= 1 || y < 0 || y >= 1) return;
+    const l = c.getContext('2d').getImageData(Math.floor(x*c.width), Math.floor(y*c.height), 1, 1).data, a = +c.style.opacity;
+    const multiply = c.style.mixBlendMode === 'multiply';
+    px = px.map((b, i)=> b + ((multiply ? b*l[i]/255 : 255 - (255 - b)*(255 - l[i])/255) - b)*a);
+  });
+  brush.color = rgbToHex(Math.round(px[0]), Math.round(px[1]), Math.round(px[2])).toUpperCase();
+  saveBrush();
+  d.showColor();
 }
 function brushSlider(id, label, min, max, key, fmt){
   const row = document.createElement('label'); row.className = 'prm';
@@ -3325,7 +3388,7 @@ function openDrawEditor(n, watch){
   const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
   const pct = v=> v + '%';
   const toolRow = document.createElement('div'); toolRow.className = 'btnRow';
-  [['brush', 'toolBrush'], ['smudge', 'toolSmudge']].forEach(([id, label])=>{
+  [['brush', 'toolBrush'], ['smudge', 'toolSmudge'], ['pick', 'toolPick']].forEach(([id, label])=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'miniBtn drawTool'; b.dataset.tool = id; b.textContent = t(label);
     b.addEventListener('click', ()=> setDrawTool(id));
@@ -3336,14 +3399,18 @@ function openDrawEditor(n, watch){
     brushSlider('brHard', 'brHard', 0, 100, 'hard', pct), brushSlider('brPress', 'brPress', 0, 100, 'press', pct));
   const name = document.createElement('div'); name.className = 'nyName';
   const grid = document.createElement('div'); grid.className = 'nyGrid';
-  const showName = ()=>{ const c = NY_PALETTE.find(x=> x[1].toLowerCase() === brush.color.toLowerCase()); name.textContent = c ? 'NY_' + c[0] : brush.color; };
+  const showName = ()=>{
+    const c = NY_PALETTE.find(x=> x[1].toLowerCase() === brush.color.toLowerCase());
+    name.innerHTML = '<i></i><span></span>';
+    name.firstChild.style.background = brush.color;
+    name.lastChild.textContent = c ? 'NY_' + c[0] : brush.color;
+    grid.querySelectorAll('button').forEach(b=> b.classList.toggle('on', c ? b.title === 'NY_' + c[0] : false));
+  };
   NY_PALETTE.forEach(([nm, hex])=>{
     const b = document.createElement('button');
     b.type = 'button'; b.title = 'NY_' + nm; b.setAttribute('aria-label', 'NY_' + nm); b.style.background = hex;
-    b.classList.toggle('on', hex.toLowerCase() === brush.color.toLowerCase());
     b.addEventListener('click', ()=>{
       brush.color = hex; saveBrush(); showName();
-      grid.querySelectorAll('button').forEach(x=> x.classList.toggle('on', x === b));
     });
     grid.appendChild(b);
   });
@@ -3359,6 +3426,7 @@ function openDrawEditor(n, watch){
   const replayBtn = btn('drReplay', replayDrawing);
   const clear = btn('drClear', ()=>{
     if(!confirm(t('drConfirm'))) return;
+    autosave();
     stopReplay();
     drawEd.redo = []; n.params.strokes = [];
     drawChanged(); refreshDrawEditor();
@@ -3384,11 +3452,12 @@ function openDrawEditor(n, watch){
   box.append(area, tools);
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map()};
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false};
   drawEd.scanRaf = requestAnimationFrame(drawOverlay);
   refreshDrawEditor();
   if(!watch){ ringSize(); setDrawTool(brush.tool); }
   else return;
+  syncDrawLayers();
   cv.addEventListener('pointerenter', ()=>{ ring.hidden = false; ringSize(); });
   cv.addEventListener('pointerleave', ()=>{ if(!drawEd.cur) ring.hidden = true; });
   cv.addEventListener('pointerdown', e=>{
@@ -3396,6 +3465,7 @@ function openDrawEditor(n, watch){
     e.preventDefault();
     stopReplay();
     cv.setPointerCapture(e.pointerId);
+    if(drawEd.tool === 'pick' || e.altKey){ drawEd.picking = true; pickColor(e); return; }
     const lc = strokeLayer(DRAW_RES).getContext('2d');
     lc.clearRect(0, 0, DRAW_RES, DRAW_RES);
     const st = {c:brush.color, s:brush.size, o:brush.opacity/100, h:brush.hard/100, r:brush.press/100, pts:''};
@@ -3405,12 +3475,18 @@ function openDrawEditor(n, watch){
   });
   cv.addEventListener('pointermove', e=>{
     ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px';
+    if(drawEd.picking){ pickColor(e); return; }
     if(!drawEd.cur) return;
     // a pen sends more points than frames: the ones between two frames are in here
     (e.getCoalescedEvents && e.getCoalescedEvents().length ? e.getCoalescedEvents() : [e]).forEach(drawAdd);
   });
   const end = ()=>{
     const d = drawEd;
+    if(d && d.picking){
+      d.picking = false;
+      if(d.tool === 'pick') setDrawTool(d.back);      // back to painting with that colour
+      return;
+    }
     if(!d || !d.cur) return;
     d.cur.st.pts = d.cur.pts.join(',');
     n.params.strokes = n.params.strokes.concat([d.cur.st]);
@@ -4001,7 +4077,11 @@ document.addEventListener('visibilitychange', ()=>{
   else resumeCapture();
 });
 // reload / close / navigate away while playing: send the note-offs now
-window.addEventListener('pagehide', ()=>{ if(playing) stopPlayback(); });
+window.addEventListener('pagehide', ()=>{
+  if(playing) stopPlayback();
+  clearTimeout(saveTimer);      // what was waiting to be saved goes out now, not never
+  try{ localStorage.setItem(GRAPH_KEY, JSON.stringify(serialize())); }catch(e){}
+});
 
 /* ============================================================
    Canvas interaction: pan / zoom, node drag, wiring
@@ -4393,7 +4473,7 @@ function hideMenu(){
 document.addEventListener('pointerdown', e=>{ if(!addMenu.hidden && !addMenu.contains(e.target) && e.target.id !== 'addBtn') hideMenu(); });
 document.addEventListener('keydown', e=>{
   if(drawEd && drawKey(e)) return;
-  if(e.key === 'Escape'){ hideMenu(); closeFileMenu(); closeCatMenus(); toggleHelp(false); return; }
+  if(e.key === 'Escape'){ hideMenu(); closeFileMenu(); closeCatMenus(); toggleHelp(false); toggleVersions(false); return; }
   if(e.target.closest('input, select, textarea')) return;
   if(e.key === '?'){ e.preventDefault(); toggleHelp($('helpPanel').hidden); return; }
   if(e.key === ' ' && !e.target.closest('button')){
@@ -4586,6 +4666,129 @@ function saveSoon(){
     $('saveWarn').hidden = saved;       // a graph that isn't saved must say so
   }, 300);
 }
+
+/* ---- automatic versions: IndexedDB, so no 5 MB ceiling, and optionally a real file on
+   disk, which survives the browser's data being cleared. A version is made from the
+   graph as it is right now, synchronously: "just before" really means before. ---- */
+const AUTOSAVE_MS = 60000, VERSIONS_KEEP = 30;
+let autoLast = null, autoFile = null, autoFileOk = false;
+const pickerSupported = ()=> typeof window.showSaveFilePicker === 'function';
+const stamp = at=> new Date(at).toLocaleTimeString(LANG, {hour:'2-digit', minute:'2-digit'});
+function showSaved(at, file){
+  const el = $('saveState');
+  el.hidden = false; el.classList.remove('warn');
+  el.textContent = t(file ? 'savedFile' : 'savedAt').replace('{x}', stamp(at)).replace('{f}', file || '');
+}
+function autosave(){
+  const key = snapshot();
+  if(key === autoLast) return Promise.resolve(false);
+  autoLast = key;
+  // everything read now: the store only opens later, when the graph may be another one
+  const version = {at:Date.now(), json:JSON.stringify(serialize()), nodes:nodes.size,
+    strokes:[...nodes.values()].reduce((a, n)=> a + (n.type === 'srcDraw' ? n.params.strokes.length : 0), 0)};
+  const stored = dbStore(VERSION_STORE, 'readwrite', st=> st.add(version)).then(pruneVersions).catch(e=> console.warn('version not stored', e));
+  return stored.then(()=> writeAutoFile(version.json)).then(wrote=>{
+    // a file that should have been written and wasn't must stay visible
+    if(autoFile && !autoFileOk) autoFileLost(); else showSaved(version.at, wrote ? autoFile.name : null);
+    return true;
+  });
+}
+function pruneVersions(){
+  return dbStore(VERSION_STORE, 'readwrite', st=>{
+    const rq = st.getAllKeys();
+    rq.onsuccess = ()=> rq.result.slice(0, Math.max(0, rq.result.length - VERSIONS_KEEP)).forEach(k=> st.delete(k));
+    return rq;
+  });
+}
+async function writeAutoFile(json){
+  if(!autoFile || !autoFileOk) return false;
+  try{
+    const w = await autoFile.createWritable();
+    await w.write(json);
+    await w.close();
+    return true;
+  }catch(e){
+    console.warn('auto file not written', e);
+    autoFileOk = false; autoFileLost();
+    return false;
+  }
+}
+function autoFileLost(){
+  const el = $('saveState');
+  el.hidden = false; el.classList.add('warn'); el.textContent = t('autoFileLost');
+}
+async function pickAutoFile(){
+  try{
+    autoFile = await window.showSaveFilePicker({suggestedName:'dessons-auto.json', types:[{description:'Dessons', accept:{'application/json':['.json']}}]});
+  }catch(e){ return; }      // closed without choosing
+  autoFileOk = true;
+  dbStore('settings', 'readwrite', st=> st.put(autoFile, 'autoFile')).catch(()=>{});
+  autoLast = null;
+  await autosave();
+  renderVersions();
+}
+async function reconnectAutoFile(){
+  if(!autoFile) return;
+  autoFileOk = (await autoFile.requestPermission({mode:'readwrite'})) === 'granted';
+  if(autoFileOk){ autoLast = null; await autosave(); }
+  renderVersions();
+}
+function stopAutoFile(){
+  autoFile = null; autoFileOk = false;
+  dbStore('settings', 'readwrite', st=> st.delete('autoFile')).catch(()=>{});
+  $('saveState').classList.remove('warn');
+  renderVersions();
+}
+// the browser remembers the file, but may ask again before writing: that takes a click
+async function restoreAutoFile(){
+  try{
+    const h = await dbStore('settings', 'readonly', st=> st.get('autoFile'));
+    if(!h) return;
+    autoFile = h;
+    autoFileOk = (await h.queryPermission({mode:'readwrite'})) === 'granted';
+    if(!autoFileOk) autoFileLost();
+  }catch(e){ console.warn('auto file not restored', e); }
+}
+async function renderVersions(){
+  const row = $('autoFileRow'), list = $('versionsList');
+  row.innerHTML = '';
+  const label = document.createElement('span');
+  label.textContent = autoFile ? t('autoFileOn').replace('{x}', autoFile.name) : t('autoFileOff');
+  row.appendChild(label);
+  const btn = (key, fn)=>{ const b = document.createElement('button'); b.type = 'button'; b.className = 'miniBtn'; b.textContent = t(key); b.addEventListener('click', fn); row.appendChild(b); };
+  if(!autoFile && pickerSupported()) btn('autoFilePick', pickAutoFile);
+  if(autoFile && !autoFileOk) btn('autoFileResume', reconnectAutoFile);
+  if(autoFile) btn('autoFileStop', stopAutoFile);
+  row.hidden = !pickerSupported() && !autoFile;
+  let all = [];
+  try{ all = await dbStore(VERSION_STORE, 'readonly', st=> st.getAll()); }catch(e){}
+  let keys = [];
+  try{ keys = await dbStore(VERSION_STORE, 'readonly', st=> st.getAllKeys()); }catch(e){}
+  list.innerHTML = '';
+  if(!all.length){ const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t('versionNone'); list.appendChild(p); return; }
+  all.map((v, i)=> [v, keys[i]]).reverse().forEach(([v])=>{
+    const r = document.createElement('div'); r.className = 'versionRow';
+    const info = document.createElement('span'), when = document.createElement('div'), sum = document.createElement('small'), b = document.createElement('button');
+    when.textContent = new Date(v.at).toLocaleString(LANG, {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+    sum.textContent = t('versionSum').replace('{n}', v.nodes).replace('{s}', v.strokes);
+    info.append(when, sum);
+    b.type = 'button'; b.className = 'miniBtn'; b.textContent = t('versionRestore');
+    b.addEventListener('click', async ()=>{
+      if(!confirm(t('versionConfirm'))) return;
+      await autosave();
+      try{ loadGraph(JSON.parse(v.json)); saveSoon(); }catch(e){ alert(t('loadErr')); }
+      toggleVersions(false);
+    });
+    r.append(info, b);
+    list.appendChild(r);
+  });
+}
+function toggleVersions(open){
+  $('versionsPanel').hidden = !open;
+  if(open) renderVersions();
+}
+setInterval(()=>{ if(!draftBusy()) autosave(); }, AUTOSAVE_MS);
+const draftBusy = ()=> !!(drawEd && drawEd.cur);     // never in the middle of a stroke
 
 /* ---- undo / redo: a snapshot each time the graph settles (the same moment it's
    saved, so one slider drag is one step). Applied as a diff, not a reload: a node
@@ -4872,7 +5075,7 @@ function buildTemplateMenu(){
   Object.keys(TEMPLATES).forEach(k=>{
     const b = document.createElement('button');
     b.type = 'button'; b.textContent = t('tpl_' + k);
-    b.addEventListener('click', ()=>{ closeFileMenu(); if(confirm(t('confirmNew'))){ TEMPLATES[k](); saveSoon(); } });
+    b.addEventListener('click', ()=>{ closeFileMenu(); if(confirm(t('confirmNew'))){ autosave(); TEMPLATES[k](); saveSoon(); } });
     list.appendChild(b);
   });
 }
@@ -4883,7 +5086,11 @@ $('fileBtn').addEventListener('click', ()=>{
   $('fileBtn').setAttribute('aria-expanded', open);
 });
 document.addEventListener('pointerdown', e=>{ if(!e.target.closest('.fileWrap')) closeFileMenu(); });
-['newBtn', 'openBtn', 'saveBtn'].forEach(id=> $(id).addEventListener('click', closeFileMenu));
+['newBtn', 'openBtn', 'saveBtn', 'versionsBtn'].forEach(id=> $(id).addEventListener('click', closeFileMenu));
+$('versionsBtn').addEventListener('click', ()=> toggleVersions(true));
+$('versionsClose').addEventListener('click', ()=> toggleVersions(false));
+$('saveState').addEventListener('click', ()=> toggleVersions(true));
+document.addEventListener('pointerdown', e=>{ if(!e.target.closest('#versionsPanel, #saveState, #fileMenu')) toggleVersions(false); });
 
 function buildHelp(){
   const list = $('helpList');
@@ -4937,7 +5144,7 @@ $('tpExport').addEventListener('click', ()=>{ const n = transportLoop(); if(n) e
   });
 });
 
-$('newBtn').addEventListener('click', ()=>{ if(confirm(t('confirmNew'))){ defaultGraph(); saveSoon(); } });
+$('newBtn').addEventListener('click', ()=>{ if(confirm(t('confirmNew'))){ autosave(); defaultGraph(); saveSoon(); } });
 $('saveBtn').addEventListener('click', ()=>{
   downloadBlob(new Blob([JSON.stringify(serialize(), null, 1)], {type:'application/json'}), 'dessons-graph.json');
 });
@@ -4945,7 +5152,7 @@ $('openBtn').addEventListener('click', ()=>{ $('graphInput').value = ''; $('grap
 $('graphInput').addEventListener('change', ()=>{
   const f = $('graphInput').files[0];
   if(!f) return;
-  f.text().then(txt=>{ loadGraph(JSON.parse(txt)); saveSoon(); }).catch(()=> alert(t('loadErr')));
+  f.text().then(txt=>{ const g = JSON.parse(txt); validateGraph(g); autosave(); loadGraph(g); saveSoon(); }).catch(()=> alert(t('loadErr')));
 });
 window.addEventListener('resize', drawWires);
 
@@ -4960,6 +5167,8 @@ if(!restored) defaultGraph();
 applyView();
 setLang(LANG);
 historyCommit();
+autoLast = snapshot();
+restoreAutoFile();
 </script>
 
 <!-- grain overlay, same as index.html -->

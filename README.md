@@ -73,11 +73,11 @@ Start from **File → Templates**: they play straight away, except *Imported MID
 
 ![Live painting in Nodes: colored strokes and a spiral over a moving noise layer, a playhead reading the painting, the brush settings and NY palette on the right](docs/screenshot-drawing.jpg)
 
-**Drawing**: paint straight into the graph with a round brush and a smudge tool (size, opacity, hardness, pen pressure) and the NY color palette. For **live painting**, start from *File → Templates → Live painting*: the canvas is read as you paint, a stroke counts while your hand is still moving, and a playhead on the painting shows what is sounding. Every stroke is recorded, so **Replay the drawing** rebuilds it over the length you choose (3 minutes by default) with the sound running, and you hear the loops evolve. *Cycles / loop* can also rebuild it on each pass of the loop. **Display layers** show other nodes with the painting, such as a noise moving with the loop or a video: they are visual only, the music reads your drawing alone.
+**Drawing**: paint straight into the graph with a round brush, a smudge tool and an eyedropper (size, opacity, hardness, pen pressure) and the NY color palette. For **live painting**, start from *File → Templates → Live painting*: the canvas is read as you paint, a stroke counts while your hand is still moving, and a playhead on the painting shows what is sounding. Every stroke is recorded, so **Replay the drawing** rebuilds it over the length you choose (3 minutes by default) with the sound running, and you hear the loops evolve. *Cycles / loop* can also rebuild it on each pass of the loop. **Display layers** show other nodes with the painting, such as a noise moving with the loop or a video: they are visual only, the music reads your drawing alone.
 
 The exported `.mid` follows what you hear: a spinning mesh or a moving signal is replayed step by step. Notes from an imported `.mid` keep their own pitches, so they can leave the scale: wire them through **Snap to scale** to bring them back. Use **Match the Loop** on the MIDI node to give the Loop the file's length and tempo.
 
-Keyboard: `Tab` or `/` to search a node, `Space` to play, `Cmd+Z` to undo, `Cmd+C` / `V` / `D` to copy, paste, duplicate, `G` to group, `?` for the full list. Graphs save themselves in the browser, and as `.json` from the **File** menu.
+Keyboard: `Tab` or `/` to search a node, `Space` to play, `Cmd+Z` to undo, `Cmd+C` / `V` / `D` to copy, paste, duplicate, `G` to group, `?` for the full list. Graphs save themselves in the browser, and as `.json` from the **File** menu. **File → Automatic versions** keeps the last 30 versions, one a minute, and can also keep writing to a `.json` file of your choice (Chrome, Edge).
 
 ## One track per layer in Logic
 
