@@ -7,7 +7,7 @@
 
 *dessin + sons* (French for "drawing + sounds") — turns an image, a video, a webcam feed or a live painting into a multi-track MIDI file, exported as `.mid` or streamed live into your DAW through a virtual MIDI port. Built for making loops in Logic Pro (or any DAW). It can also render the loop as a vertical video, sound included, to post straight to social platforms.
 
-**New:** [Nodes](https://neoyume.github.io/dessons/nodes.html), the modular version: wire the pipeline your own way, paint live and hear each stroke, give each color an instrument, chain pages, animate the drawing, replay the painting as a piece. [See below](#nodes-the-modular-version).
+**New:** [Drawing mode](https://neoyume.github.io/dessons/nodes.html?draw): paint full screen and hear each stroke, give each color an instrument, zoom in on the details, chain pages, animate the drawing, replay the painting as a piece. It's part of [Nodes](https://neoyume.github.io/dessons/nodes.html), the modular version, where you wire the pipeline your own way. [See below](#drawing-and-live-painting).
 
 By [neoyume](https://github.com/neoyume). Contributions welcome.
 
@@ -84,6 +84,7 @@ To start, open **Drawing mode** (a button in the workshop, or `nodes.html?draw`)
 - **Tools**: round brush (size, opacity, hardness, pen pressure), smudge, eraser, eyedropper. Keys `B`, `S`, `E`, `I`; `[` and `]` for size; `Alt`+click to pick a color without changing tool.
 - **Sounding brush**: the tip plays the note under it, always in the scale, and pressure sets the volume. Start playback too: a stroke counts while your hand is still moving.
 - **Mirrors and repeat**: a left-right mirror for a palindrome, top-bottom for an inverted melody, a stroke repeated across the width for a rhythmic pattern. The smudge follows them too, and undo and the replay treat it all as one stroke.
+- **Zoom**: up to 800%. `Z` for the zoom tool (click to zoom in, `Alt`+click to zoom out, drag to move), `+`, `−` and `0` with any tool, or pinch and scroll. Only the view changes, never the drawing.
 - **Paper**: a new drawing starts on transparent paper; *Brush color* fills it.
 - **Clear all** starts again from a clean sheet: strokes, pages, paper, and the tracks added for instruments. The node's chain and its settings stay, and ↶ in the header undoes it.
 
