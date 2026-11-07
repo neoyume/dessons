@@ -131,7 +131,9 @@
   #drawEditor.watch #drawCanvas{cursor:default;}
   /* difference: the playhead shows on any colour of the painting */
   #drawScan{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; mix-blend-mode:difference;}
-  .drawFrame{isolation:isolate;}
+  .drawFrame{isolation:isolate; background:repeating-conic-gradient(#d4d4d4 0 25%, #fff 0 50%) 0 0/28px 28px; border-radius:4px;}
+  #drawCanvas{z-index:2;} #drawGrid{z-index:4;} #drawScan{z-index:5;}
+  .drawLayers{z-index:1;}
   .drawLayers, .drawLayers canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
   .drawLayers canvas{object-fit:contain;}
   .layerList{display:flex; flex-direction:column; gap:5px;}
@@ -485,12 +487,13 @@ const I18N = {
     drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
     viaPixel:'une note par case', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grille', pxSize:'Taille (cases)', pxShow:'Afficher la grille',
+    toolErase:'Gomme', drNoBg:'Fond transparent',
     toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
-    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, I','Pinceau, estompe, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['P','Mode pixel, dans le dessin'],['?','Cette aide']],
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, E, I','Pinceau, estompe, gomme, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['P','Mode pixel, dans le dessin'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -581,12 +584,13 @@ const I18N = {
     drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
     viaPixel:'one note per cell', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grid', pxSize:'Size (cells)', pxShow:'Show the grid',
+    toolErase:'Eraser', drNoBg:'Transparent background',
     toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
-    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, I','Brush, smudge, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['P','Pixel mode, in the drawing'],['?','This help']],
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, E, I','Brush, smudge, eraser, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['P','Pixel mode, in the drawing'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -797,8 +801,14 @@ function pixelNotes(field, scale, p, curve){
   for(let y=0;y<g;y++) for(let x=0;x<g;x++){
     const px = Math.floor((y + 0.5)*h/g)*w + Math.floor((x + 0.5)*w/g), i = px*4;
     if(!mask[px]) continue;
-    const dist = Math.abs(rgb[i] - bg[0]) + Math.abs(rgb[i+1] - bg[1]) + Math.abs(rgb[i+2] - bg[2]);
-    if(dist < 24) continue;
+    let dist;
+    if(bg){
+      dist = Math.abs(rgb[i] - bg[0]) + Math.abs(rgb[i+1] - bg[1]) + Math.abs(rgb[i+2] - bg[2]);
+      if(dist < 24) continue;
+    } else {
+      if(rgb[i+3] < 128) continue;      // transparent paper: painted or not, and contrast sets the loudness
+      dist = 200 + Math.abs(0.299*rgb[i] + 0.587*rgb[i+1] + 0.114*rgb[i+2] - 128)*3;
+    }
     const [tau, rho] = dir.fwd((x + 0.5)/g, (y + 0.5)/g);
     const row = clamp(Math.floor(rho*g), 0, g - 1);
     notes.push({step:clamp(Math.floor(tau*g), 0, g - 1), midi:pitch(row), row, vel:Math.round(clamp(60 + dist/765*67, 60, 127)), px:(x + 0.5)/g, py:(y + 0.5)/g});
@@ -982,7 +992,7 @@ const NODE_DEFS = {
     cat:'catSource', custom:'draw', thumb:'image', outputs:[{id:'image', type:'image'}],
     params:[
       {id:'strokes', kind:'hidden', def:[]},
-      {id:'bg', kind:'hidden', def:'#FFFFFF'},
+      {id:'bg', kind:'hidden', def:'transparent'},
       {id:'layers', kind:'hidden', def:[]},
       {id:'grid', kind:'hidden', def:0},
       {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
@@ -991,11 +1001,11 @@ const NODE_DEFS = {
     ],
     clean:o=>{
       const hex = v=> typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
-      if(!hex(o.bg)) delete o.bg;
+      if(!hex(o.bg) && o.bg !== 'transparent') delete o.bg;
       if(!PIXEL_GRIDS.includes(o.grid)) delete o.grid;
       o.layers = !Array.isArray(o.layers) ? [] : o.layers.filter(l=> isPlain(l) && typeof l.id === 'string' && isNum(l.a)).slice(0, 32).map(l=> ({id:l.id, a:clamp(l.a, 0, 1)}));
       o.strokes = !Array.isArray(o.strokes) ? [] : o.strokes.filter(st=> isPlain(st) && hex(st.c) && typeof st.pts === 'string' && /^[0-9,]*$/.test(st.pts))
-        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {}),
+        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {}), ...(st.e ? {e:1} : {}),
           ...(st.t === 'p' && PIXEL_GRIDS.includes(st.g) && st.g ? {t:'p', g:st.g, z:isNum(st.z) ? clamp(Math.round(st.z), 1, 16) : 1} : {})}));
     },
     compute:(p, inp, n)=>{
@@ -1006,8 +1016,9 @@ const NODE_DEFS = {
       n.drawCache = n.drawCache || {};
       const cv = drawAt(n.drawCache, MAXDIM, p.strokes, p.bg, prog);
       // the stroke being painted counts already: it's read while the hand is still moving
-      if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive);
-      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, pixel:p.grid ? {g:p.grid, bg:hexToRgb(p.bg)} : null}};
+      if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive, null, p.bg);
+      const clear = p.bg === 'transparent';
+      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, alpha:clear, pixel:p.grid ? {g:p.grid, bg:clear ? null : hexToRgb(p.bg)} : null}};
     },
     summary:n=> t('drawSum').replace('{n}', n.params.strokes.length)
   },
@@ -1259,6 +1270,9 @@ const NODE_DEFS = {
       }
       // same two detectors as the workshop: the cheap |Δx|+|Δy| gradient,
       // or a real Sobel. Both also keep an orientation for the Orientation node.
+      // a drawing on transparent paper: where the paint starts is an edge, whatever its
+      // colour (a black stroke has the same brightness as the empty pixels around it)
+      const al = image.alpha ? Float32Array.from({length:N}, (_, i)=> data[i*4 + 3]) : null;
       const edge = new Float32Array(N), angle = new Float32Array(N);
       let maxEdge = 1;
       for(let y=0;y<h;y++){
@@ -1273,11 +1287,24 @@ const NODE_DEFS = {
             gy = y<h-1 ? lum[px+w]-lum[px] : 0;
             m = Math.abs(gx) + Math.abs(gy);
           }
+          if(al){
+            let ax, ay, ma;
+            if(p.method === 'sobel'){ [ax, ay] = sobelAt(al, w, h, x, y); ma = Math.sqrt(ax*ax + ay*ay); }
+            else { ax = x<w-1 ? al[px+1]-al[px] : 0; ay = y<h-1 ? al[px+w]-al[px] : 0; ma = Math.abs(ax) + Math.abs(ay); }
+            if(ma > m){ m = ma; gx = ax; gy = ay; }
+          }
           edge[px] = m; angle[px] = Math.atan2(gy, gx);
           if(m > maxEdge) maxEdge = m;
         }
       }
       const mask = new Uint8Array(N).fill(1);
+      if(al) for(let px=0; px<N; px++){
+        if(al[px]) continue;
+        // empty paper isn't a colour. An edge lands one pixel before the paint: it keeps the paint's colour
+        const nb = al[px+1] ? px + 1 : al[px+w] ? px + w : -1;
+        if(nb < 0){ mask[px] = 0; continue; }
+        hue[px] = hue[nb]; sat[px] = sat[nb];
+      }
       return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask, pixel:image.pixel || null}};
     }
   },
@@ -3094,12 +3121,23 @@ function fillCells(ctx, S, g, cx, cy, z){
   ctx.fillRect(x0, y0, Math.floor((cx + z)*S/g) - x0, Math.floor((cy + z)*S/g) - y0);
 }
 const cellAnchor = (c, z)=> c - Math.floor((z - 1)/2);      // the block sits on the cell under the pointer
-function commitStroke(ctx, S, st, limit){
+function commitStroke(ctx, S, st, limit, bg){
+  // the eraser: on opaque paper it paints the paper, on transparent paper it takes the paint away
+  let erase = false;
+  if(st.e){
+    if(bg && bg !== 'transparent'){
+      const paper = Object.assign({}, st, {c:bg, e:0});
+      decoded.set(paper, strokePoints(st));
+      st = paper;
+    } else erase = true;
+  }
   if(st.t === 'p'){
     const pts = strokePoints(st), n = limit == null ? pts.length/3 : limit, z = st.z || 1;
     ctx.globalAlpha = 1;
     ctx.fillStyle = st.c;
+    if(erase) ctx.globalCompositeOperation = 'destination-out';
     for(let i=0;i<n;i++) fillCells(ctx, S, st.g, cellAnchor(Math.floor(pts[i*3]*st.g), z), cellAnchor(Math.floor(pts[i*3+1]*st.g), z), z);
+    ctx.globalCompositeOperation = 'source-over';
     return;
   }
   if(st.t === 's'){
@@ -3113,7 +3151,9 @@ function commitStroke(ctx, S, st, limit){
   for(let i=0;i<n;i++) stampTo(lc, S, st, state, pts[i*3], pts[i*3+1], pts[i*3+2]);
   lc.globalAlpha = 1;
   ctx.globalAlpha = st.o;
+  if(erase) ctx.globalCompositeOperation = 'destination-out';
   ctx.drawImage(layer, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
 }
 // the picture at a point of the replay (0..1, by points drawn). Finished strokes
@@ -3133,13 +3173,16 @@ function drawAt(cache, S, strokes, bg, prog){
   const prev = cache.strokes, same = prev && cache.done <= strokes.length && (!cache.done || prev[cache.done - 1] === strokes[cache.done - 1]);
   if(!same || cache.bg !== bg || i < cache.done){
     cache.bg = bg; cache.done = 0;
-    cache.bctx.globalAlpha = 1; cache.bctx.fillStyle = bg; cache.bctx.fillRect(0, 0, S, S);
+    cache.bctx.globalAlpha = 1;
+    cache.bctx.clearRect(0, 0, S, S);
+    if(bg !== 'transparent'){ cache.bctx.fillStyle = bg; cache.bctx.fillRect(0, 0, S, S); }
   }
   cache.strokes = strokes;
-  for(; cache.done < i; cache.done++) commitStroke(cache.bctx, S, strokes[cache.done]);
+  for(; cache.done < i; cache.done++) commitStroke(cache.bctx, S, strokes[cache.done], null, bg);
   cache.octx.globalAlpha = 1;
+  cache.octx.clearRect(0, 0, S, S);
   cache.octx.drawImage(cache.base, 0, 0);
-  if(left > 0 && i < strokes.length) commitStroke(cache.octx, S, strokes[i], left);
+  if(left > 0 && i < strokes.length) commitStroke(cache.octx, S, strokes[i], left, bg);
   return cache.out;
 }
 function buildDrawControls(n, body){
@@ -3182,7 +3225,7 @@ function replayFrame(){
   const d = drawEd, r = drawReplay;
   if(!d || !r) return;
   const u = replayPos();
-  d.ctx.drawImage(drawAt(d.cache, DRAW_RES, r.n.params.strokes, r.n.params.bg, u), 0, 0);
+  showDraw(d, drawAt(d.cache, DRAW_RES, r.n.params.strokes, r.n.params.bg, u));
   d.time.textContent = clock(u*r.ms/1000) + ' / ' + clock(r.ms/1000);
   d.bar.firstElementChild.style.width = u*100 + '%';
   if(u >= 1){
@@ -3204,9 +3247,14 @@ function drawChanged(){
   markDirty(n.id); saveSoon();
   syncDrawButtons();
 }
+function showDraw(d, cv){
+  d.ctx.globalAlpha = 1;
+  d.ctx.clearRect(0, 0, DRAW_RES, DRAW_RES);
+  d.ctx.drawImage(cv, 0, 0);
+}
 function refreshDrawEditor(){
   const d = drawEd;
-  d.ctx.drawImage(drawAt(d.cache, DRAW_RES, d.n.params.strokes, d.n.params.bg, 1), 0, 0);
+  showDraw(d, drawAt(d.cache, DRAW_RES, d.n.params.strokes, d.n.params.bg, 1));
   syncDrawButtons();
 }
 function syncDrawButtons(){
@@ -3265,11 +3313,12 @@ function drawPaintView(){
   if(!d) return;
   d.raf = 0;
   if(d.cur && d.cur.st.t) return;     // smudge and pixels work straight on this canvas
-  d.ctx.globalAlpha = 1;
-  d.ctx.drawImage(d.cache.out, 0, 0);
+  showDraw(d, d.cache.out);
   if(d.cur){
     d.ctx.globalAlpha = d.cur.st.o;
+    if(d.cur.st.e && d.n.params.bg === 'transparent') d.ctx.globalCompositeOperation = 'destination-out';
     d.ctx.drawImage(strokeLayer(DRAW_RES), 0, 0);
+    d.ctx.globalCompositeOperation = 'source-over';
     d.ctx.globalAlpha = 1;
   }
 }
@@ -3291,10 +3340,12 @@ function drawAdd(e){
     const st = d.cur.st, g = st.g, cx = Math.min(g - 1, Math.floor(x*g)), cy = Math.min(g - 1, Math.floor(y*g)), last = d.cur.cell;
     if(last && last[0] === cx && last[1] === cy) return;
     d.ctx.globalAlpha = 1; d.ctx.fillStyle = st.c;
+    if(st.e && d.n.params.bg === 'transparent') d.ctx.globalCompositeOperation = 'destination-out';
     (last ? cellsBetween(last[0], last[1], cx, cy).slice(1) : [[cx, cy]]).forEach(([a, b])=>{
       d.cur.pts.push(Math.round((a + 0.5)/g*10000), Math.round((b + 0.5)/g*10000), 100);
       fillCells(d.ctx, DRAW_RES, g, cellAnchor(a, st.z), cellAnchor(b, st.z), st.z);
     });
+    d.ctx.globalCompositeOperation = 'source-over';
     d.cur.cell = [cx, cy];
     d.n.drawLive = Object.assign({}, st, {pts:d.cur.pts.join(',')});
     markDirty(d.n.id);
@@ -3320,7 +3371,7 @@ function replayDrawing(){
   const frame = now=>{
     if(!drawEd || !d.replay) return;
     const u = Math.min(1, (now - t0)/ms);
-    d.ctx.drawImage(drawAt(cache, DRAW_RES, d.n.params.strokes, d.n.params.bg, u), 0, 0);
+    showDraw(d, drawAt(cache, DRAW_RES, d.n.params.strokes, d.n.params.bg, u));
     if(u < 1) d.replay = requestAnimationFrame(frame); else d.replay = 0;
   };
   d.replay = requestAnimationFrame(frame);
@@ -3345,7 +3396,7 @@ function drawKey(e){
   if(e.key === 'Escape'){ if(drawEd.watch) stopPlayback(); closeDrawEditor(); return true; }
   if(drawEd.watch) return e.key !== ' ';
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
-  if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's' || key === 'i')){ setDrawTool(key === 's' ? 'smudge' : key === 'i' ? 'pick' : 'brush'); return true; }
+  if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's' || key === 'i' || key === 'e')){ setDrawTool({b:'brush', s:drawEd.n.params.grid ? 'brush' : 'smudge', i:'pick', e:'erase'}[key]); return true; }
   if(!cmd && !e.target.closest('input, select') && key === 'p'){ setDrawGrid(drawEd.n.params.grid ? 0 : (brush.lastGrid || 32)); return true; }
   if(!e.target.closest('input') && (e.key === '[' || e.key === ']')){
     const up = e.key === ']';
@@ -3373,7 +3424,8 @@ function setDrawTool(tool){
 function pickColor(e){
   const d = drawEd, r = d.cv.getBoundingClientRect();
   const u = clamp((e.clientX - r.left)/r.width, 0, 0.9999), v = clamp((e.clientY - r.top)/r.height, 0, 0.9999);
-  let px = [...d.ctx.getImageData(Math.floor(u*DRAW_RES), Math.floor(v*DRAW_RES), 1, 1).data].slice(0, 3);
+  const paint = d.ctx.getImageData(Math.floor(u*DRAW_RES), Math.floor(v*DRAW_RES), 1, 1).data, clear = d.n.params.bg === 'transparent';
+  let px = clear ? null : [paint[0], paint[1], paint[2]];
   d.layerEls.forEach(c=>{
     if(!c.width || !c.height) return;
     // object-fit: contain, so a layer that isn't square has margins
@@ -3381,8 +3433,14 @@ function pickColor(e){
     if(x < 0 || x >= 1 || y < 0 || y >= 1) return;
     const l = c.getContext('2d').getImageData(Math.floor(x*c.width), Math.floor(y*c.height), 1, 1).data, a = +c.style.opacity;
     const multiply = c.style.mixBlendMode === 'multiply';
+    if(clear){ px = px ? px.map((b, i)=> b + (l[i] - b)*a*l[3]/255) : (l[3] ? [l[0], l[1], l[2]] : null); return; }
     px = px.map((b, i)=> b + ((multiply ? b*l[i]/255 : 255 - (255 - b)*(255 - l[i])/255) - b)*a);
   });
+  if(clear){
+    const k = paint[3]/255;     // the paint is on top of the layers here
+    px = px ? px.map((b, i)=> b + (paint[i] - b)*k) : (k ? [paint[0], paint[1], paint[2]] : null);
+    if(!px) return;             // nothing there to pick: the colour stays
+  }
   brush.color = rgbToHex(Math.round(px[0]), Math.round(px[1]), Math.round(px[2])).toUpperCase();
   saveBrush();
   d.showColor();
@@ -3419,8 +3477,10 @@ function layerSource(m){
 }
 function layerNodes(n){ return [...nodes.values()].filter(m=> m !== n && layerSource(m)); }
 function syncDrawLayers(){
-  const d = drawEd, [r, g, b] = hexToRgb(d.n.params.bg);
-  const blend = 0.299*r + 0.587*g + 0.114*b > 128 ? 'multiply' : 'screen', keep = new Set();
+  const d = drawEd, clear = d.n.params.bg === 'transparent', [r, g, b] = clear ? [0, 0, 0] : hexToRgb(d.n.params.bg);
+  // transparent paper: simply behind the painting. Opaque paper: blended over it
+  const blend = clear ? 'normal' : 0.299*r + 0.587*g + 0.114*b > 128 ? 'multiply' : 'screen', keep = new Set();
+  d.held.style.zIndex = clear ? 1 : 3;
   d.n.params.layers.forEach(l=>{
     const m = nodes.get(l.id), src = m && layerSource(m), v = src && src.value;
     if(!v) return;
@@ -3551,7 +3611,7 @@ function openDrawEditor(n, watch){
   pxSlider.classList.add('pxOnly');
   tools.append(gridRow, pxSlider, showRow);
   const toolRow = document.createElement('div'); toolRow.className = 'btnRow';
-  [['brush', 'toolBrush'], ['smudge', 'toolSmudge'], ['pick', 'toolPick']].forEach(([id, label])=>{
+  [['brush', 'toolBrush'], ['smudge', 'toolSmudge'], ['erase', 'toolErase'], ['pick', 'toolPick']].forEach(([id, label])=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'miniBtn drawTool'; b.dataset.tool = id; b.textContent = t(label);
     b.addEventListener('click', ()=> setDrawTool(id));
@@ -3595,12 +3655,13 @@ function openDrawEditor(n, watch){
     drawChanged(); refreshDrawEditor();
   });
   const bgBtn = btn('drBg', ()=>{ stopReplay(); n.params.bg = brush.color; drawChanged(); refreshDrawEditor(); });
+  const noBg = btn('drNoBg', ()=>{ stopReplay(); n.params.bg = 'transparent'; drawChanged(); refreshDrawEditor(); });
   const row1 = document.createElement('div'), row2 = document.createElement('div');
   row1.className = row2.className = 'btnRow';
-  row1.append(undo, redoBtn); row2.append(bgBtn, clear);
+  row1.append(undo, redoBtn); row2.append(bgBtn, noBg);
   buildDirPicker(n, tools);
   buildLayerList(n, tools);
-  tools.append(row1, row2, replayBtn, btn('drDone', closeDrawEditor, true));
+  tools.append(row1, row2, clear, replayBtn, btn('drDone', closeDrawEditor, true));
   const time = document.createElement('div'), bar = document.createElement('div');
   if(watch){
     // the replay: only its clock. Clicking the bar jumps through the painting
@@ -3635,6 +3696,7 @@ function openDrawEditor(n, watch){
     const st = {c:brush.color, s:brush.size, o:brush.opacity/100, h:brush.hard/100, r:brush.press/100, pts:''};
     if(n.params.grid){ st.t = 'p'; st.g = n.params.grid; st.z = brush.pxSize; st.o = 1; st.h = 1; st.r = 0; }
     else if(brush.tool === 'smudge') st.t = 's';
+    if(brush.tool === 'erase'){ st.e = 1; if(n.params.bg !== 'transparent') st.c = n.params.bg; }
     drawEd.cur = {st, pts:[], state:{}};
     drawAdd(e);
   });
