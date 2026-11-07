@@ -149,6 +149,11 @@
   #drawGrid{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
   #drawGrid[hidden]{display:none;}
   .brushRing.square{border-radius:0;}
+  .dirGrid{display:grid; grid-template-columns:repeat(8, 1fr); gap:3px;}
+  .dirGrid button{aspect-ratio:1; padding:0; font-size:13px; line-height:1; color:var(--text-dim); background:var(--panel-2); border:1px solid var(--line); border-radius:4px; cursor:pointer;}
+  .dirGrid button:hover{color:var(--text);}
+  .dirGrid button.on{color:var(--accent); border-color:var(--accent);}
+  .dirLabel{font-size:11px; color:var(--text-dim);}
   .nyGrid{display:grid; grid-template-columns:repeat(9, 1fr); gap:3px;}
   .nyGrid button{aspect-ratio:1; padding:0; border:1px solid rgba(255,255,255,.18); border-radius:4px; cursor:pointer;}
   .nyGrid button.on{outline:2px solid var(--accent); outline-offset:1px;}
@@ -3431,6 +3436,27 @@ function syncDrawLayers(){
   });
   d.layerEls.forEach((c, id)=>{ if(!keep.has(id)){ c.remove(); d.layerEls.delete(id); } });
 }
+// the reading direction from the painting screen: it's the Scans' own setting, set on
+// each one fed by this drawing, so the node and the screen can't disagree
+function buildDirPicker(n, tools){
+  const scans = scansOf(n);
+  if(!scans.length) return;
+  const lab = document.createElement('div'), grid = document.createElement('div');
+  lab.className = 'dirLabel'; lab.textContent = t('p_dir'); grid.className = 'dirGrid';
+  const def = NODE_DEFS.scan.params.find(d=> d.id === 'dir');
+  const show = k=> grid.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.dir === k));
+  DIR_KEYS.forEach(k=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.dir = k; b.textContent = DIR_LABELS[k]; b.setAttribute('aria-label', t('p_dir') + ' ' + DIR_LABELS[k]);
+    b.addEventListener('click', ()=>{
+      scansOf(n).forEach(s=>{ s.params.dir = k; syncTwins(s, def); markDirty(s.id); });
+      show(k); saveSoon();
+    });
+    grid.appendChild(b);
+  });
+  show(scans[0].params.dir);
+  tools.append(lab, grid);
+}
 function buildLayerList(n, tools){
   const list = layerNodes(n);
   if(!list.length) return;
@@ -3572,6 +3598,7 @@ function openDrawEditor(n, watch){
   const row1 = document.createElement('div'), row2 = document.createElement('div');
   row1.className = row2.className = 'btnRow';
   row1.append(undo, redoBtn); row2.append(bgBtn, clear);
+  buildDirPicker(n, tools);
   buildLayerList(n, tools);
   tools.append(row1, row2, replayBtn, btn('drDone', closeDrawEditor, true));
   const time = document.createElement('div'), bar = document.createElement('div');

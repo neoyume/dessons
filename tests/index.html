@@ -334,6 +334,14 @@ test('Pixel : l’avancement du replay ajoute les notes', ()=>{
   d.params.reveal = 100; markDirty(d.id);
   eq(evalNode(s).notes.notes.length, 8);
 });
+test('Pixel : le sens du balayage change l’ordre des notes', ()=>{
+  clearGraph();
+  const st = {c:'#000000', s:1, o:1, h:1, r:0, t:'p', g:8, z:1, pts:[Math.round(1.5/8*10000), Math.round(6.5/8*10000), 100].join(',')};
+  const d = addNode('srcDraw', 0, 0, {turns:0, grid:8, strokes:[st]}), e = addNode('edges', 200, 0), s = addNode('scan', 400, 0);
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
+  const step = dir=>{ s.params.dir = dir; markDirty(s.id); return evalNode(s).notes.notes[0].step; };
+  eq([step('lr'), step('rl'), step('tb'), step('bt')], [1, 6, 6, 1]);
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;
