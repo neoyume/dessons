@@ -397,7 +397,10 @@ test('Dessin : un trait compte autant dans un dessin chargé', ()=>{
   ok(added([], ln('#000000', 5000)) >= 8, 'un trait droit sur toile vide');
   const some = [ln('#E6267A', 3500, 200), ln('#FCEF28', 6500, 200)];
   ok(added(some, ln('#00FFFF', 5000, 200)) >= 4, 'un trait sur de la peinture');
-  ok(added([], ln('#000000', 5000, 120, .15)) >= 4, 'un pinceau très doux');
+  // a very soft brush has no sharp edge: it takes more sensitivity, not less
+  eq(added([], ln('#000000', 5000, 120, .15)), 0);
+  s.params.thresh = 85; markDirty(s.id);
+  ok(added([], ln('#000000', 5000, 120, .15)) >= 4, 'un pinceau très doux, sensibilité haute');
 });
 test('Mémoire : un nouveau trait s’entend même si la grille est pleine', ()=>{
   clearGraph();

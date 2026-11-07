@@ -3320,6 +3320,7 @@ function setDrawGrid(g){
   d.box.querySelectorAll('.pxOnly').forEach(el=>{ el.hidden = !g; });
   ['brSize', 'brOpacity', 'brHard', 'brPress'].forEach(id=>{ $(id).closest('.prm').hidden = !!g; });
   d.box.querySelector('.drawTool[data-tool=smudge]').hidden = !!g;
+  d.box.querySelectorAll('.drawThresh, .drawMemory').forEach(el=>{ el.hidden = !!g; });
   d.box.querySelector('.drawTool[data-tool=brush]').hidden = false;
   if(g) $('pxGrid').value = g;
   ringSize(); drawGridLines();
@@ -3538,6 +3539,26 @@ function buildDirPicker(n, tools){
   show(scans[0].params.dir);
   tools.append(lab, grid);
 }
+// same for the threshold: the Scans' own slider, here where you hear what it does.
+// Pixel mode doesn't use it: every cell is a note
+function buildThreshSlider(n, tools){
+  const scans = scansOf(n);
+  if(!scans.length) return;
+  const def = NODE_DEFS.scan.params.find(d=> d.id === 'thresh');
+  const row = document.createElement('label'), lab = document.createElement('span'), input = document.createElement('input'), val = document.createElement('span');
+  row.className = 'prm drawThresh'; val.className = 'v';
+  lab.textContent = t(def.label);
+  input.type = 'range'; input.id = 'drawThresh'; input.min = def.min; input.max = def.max; input.step = def.step; input.value = scans[0].params.thresh;
+  const show = ()=>{ val.textContent = def.fmt(+input.value); };
+  show();
+  input.addEventListener('input', ()=>{
+    show();
+    scansOf(n).forEach(s=>{ s.params.thresh = +input.value; syncTwins(s, def); markDirty(s.id); });
+    saveSoon();
+  });
+  row.append(lab, input, val);
+  tools.appendChild(row);
+}
 function buildLayerList(n, tools){
   const list = layerNodes(n);
   if(!list.length) return;
@@ -3689,7 +3710,10 @@ function openDrawEditor(n, watch){
   const count = document.createElement('div'); count.className = 'nodeNote';
   tools.appendChild(count);
   buildDirPicker(n, tools);
-  tools.appendChild(paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'memory'), true));
+  buildThreshSlider(n, tools);
+  const memRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'memory'), true);
+  memRow.classList.add('drawMemory');
+  tools.appendChild(memRow);
   buildLayerList(n, tools);
   tools.append(row1, row2, clear, replayBtn, btn('drDone', closeDrawEditor, true));
   const time = document.createElement('div'), bar = document.createElement('div');
@@ -5314,7 +5338,7 @@ const TEMPLATES = {
     finishGraph();
   },
   // live painting: the whole canvas is read, so each stroke is heard as it's made
-  draw(){ drawTemplate({turns:0, reveal:100, memory:16}, {steps:16, thresh:60}); },
+  draw(){ drawTemplate({turns:0, reveal:100, memory:8}, {steps:16, thresh:60}); },
   // pixel art: the grid is the score, a painted cell is a note
   pixel(){ drawTemplate({turns:0, reveal:100, grid:16}, {steps:16, thresh:60}); },
   logic(){
