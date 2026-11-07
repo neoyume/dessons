@@ -374,6 +374,15 @@ test('Alpha : gomme et mode Pixel', ()=>{
   connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
   eq(evalNode(s).notes.notes.map(n=> n.step), [1, 3]);
 });
+test('Dessin : un résidu de gomme ne remplit pas la grille', ()=>{
+  clearGraph();
+  const st = (c, h)=> ({c, s:500, o:1, h, r:0, pts:[2000,5000,100, 8000,5000,100].join(',')});
+  const d = addNode('srcDraw', 0, 0, {bg:'#FFFFFF', turns:0, strokes:[st('#FEFEFE', .3)]}), e = addNode('edges', 200, 0), s = addNode('scan', 400, 0, {thresh:40});
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
+  eq(evalNode(s).notes.notes.length, 0);
+  d.params.strokes = [st('#000000', .9)]; markDirty(d.id);
+  ok(evalNode(s).notes.notes.length > 4, 'un vrai trait sonne toujours');
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;

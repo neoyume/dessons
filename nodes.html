@@ -487,7 +487,7 @@ const I18N = {
     drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
     viaPixel:'une note par case', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grille', pxSize:'Taille (cases)', pxShow:'Afficher la grille',
-    toolErase:'Gomme', drNoBg:'Fond transparent',
+    toolErase:'Gomme', drNoBg:'Fond transparent', drNotes:'Ce dessin : {a} notes · Boucle : {b}',
     toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
@@ -584,7 +584,7 @@ const I18N = {
     drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
     viaPixel:'one note per cell', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grid', pxSize:'Size (cells)', pxShow:'Show the grid',
-    toolErase:'Eraser', drNoBg:'Transparent background',
+    toolErase:'Eraser', drNoBg:'Transparent background', drNotes:'This drawing: {a} notes · Loop: {b}',
     toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
@@ -1018,7 +1018,7 @@ const NODE_DEFS = {
       // the stroke being painted counts already: it's read while the hand is still moving
       if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive, null, p.bg);
       const clear = p.bg === 'transparent';
-      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, alpha:clear, pixel:p.grid ? {g:p.grid, bg:clear ? null : hexToRgb(p.bg)} : null}};
+      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, alpha:clear, drawn:true, pixel:p.grid ? {g:p.grid, bg:clear ? null : hexToRgb(p.bg)} : null}};
     },
     summary:n=> t('drawSum').replace('{n}', n.params.strokes.length)
   },
@@ -1305,7 +1305,7 @@ const NODE_DEFS = {
         if(nb < 0){ mask[px] = 0; continue; }
         hue[px] = hue[nb]; sat[px] = sat[nb];
       }
-      return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask, pixel:image.pixel || null}};
+      return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask, pixel:image.pixel || null, drawn:!!image.drawn}};
     }
   },
   // per-branch threshold: put one on each layer to tune it on its own
@@ -1448,7 +1448,9 @@ const NODE_DEFS = {
       if(pitches.length){
         for(let ti=0; ti<steps; ti++) for(let pi=0; pi<rows; pi++){
           const ci = ti*rows+pi, v = best[ci];
-          if(v >= cutoff && v > 2){
+          // the threshold is relative to the strongest edge: on an almost empty drawing, what's
+          // left by an eraser would be that strongest edge and fill the grid with notes
+          if(v >= cutoff && v > (field.drawn ? 12 : 2)){
             const nt = {step:ti, midi:pitches[pi], row:pi, vel:Math.round(clamp(40 + 87*(v/field.maxEdge), 40, 127))};
             if(cen && cen.n[ci]){ nt.px = cen.sx[ci]/cen.n[ci]; nt.py = cen.sy[ci]/cen.n[ci]; }
             notes.push(nt);
@@ -3553,6 +3555,12 @@ function drawOverlay(){
   const c = d.scan, x = d.sctx, W = c.width;
   x.clearRect(0, 0, W, W);
   syncDrawLayers();
+  // what comes from this painting, and what the Loop plays in all: other chains show here
+  const mine = scansOf(d.n).reduce((a, s)=> a + (s.out && s.out.notes ? s.out.notes.notes.length : 0), 0);
+  const lp = loopOfDrawing(d.n), L = lp && lp.out && lp.out._loop;
+  const all = L ? L.tracks.reduce((a, tr)=> a + (tr.mute ? 0 : tr.notes.length), 0) : 0;
+  const text = t('drNotes').replace('{a}', mine).replace('{b}', all);
+  if(d.count && d.count.textContent !== text) d.count.textContent = text;
   if(!playing) return;
   const pos = loopPosNow() % 1;
   scansOf(d.n).forEach(s=>{
@@ -3659,6 +3667,8 @@ function openDrawEditor(n, watch){
   const row1 = document.createElement('div'), row2 = document.createElement('div');
   row1.className = row2.className = 'btnRow';
   row1.append(undo, redoBtn); row2.append(bgBtn, noBg);
+  const count = document.createElement('div'); count.className = 'nodeNote';
+  tools.appendChild(count);
   buildDirPicker(n, tools);
   buildLayerList(n, tools);
   tools.append(row1, row2, clear, replayBtn, btn('drDone', closeDrawEditor, true));
@@ -3677,7 +3687,7 @@ function openDrawEditor(n, watch){
   box.append(area, tools);
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv};
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, count, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv};
   drawEd.scanRaf = requestAnimationFrame(drawOverlay);
   refreshDrawEditor();
   if(!watch){ setDrawTool(brush.tool); setDrawGrid(n.params.grid); }
