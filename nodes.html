@@ -145,6 +145,10 @@
   .brushRing{position:fixed; z-index:16; pointer-events:none; border:1px solid #fff; outline:1px solid #000; border-radius:50%; transform:translate(-50%,-50%);}
   .drawTools{flex:none; width:270px; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; background:var(--panel); border-left:1px solid var(--line);}
   .drawTools .prm{grid-template-columns:96px 1fr auto;}
+  .drawTools .prm[hidden], .drawTools .pxOnly[hidden]{display:none;}
+  #drawGrid{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+  #drawGrid[hidden]{display:none;}
+  .brushRing.square{border-radius:0;}
   .nyGrid{display:grid; grid-template-columns:repeat(9, 1fr); gap:3px;}
   .nyGrid button{aspect-ratio:1; padding:0; border:1px solid rgba(255,255,255,.18); border-radius:4px; cursor:pointer;}
   .nyGrid button.on{outline:2px solid var(--accent); outline-offset:1px;}
@@ -474,12 +478,14 @@ const I18N = {
     savedAt:'Sauvé {x}', savedFile:'Sauvé {x} · {f}',
     n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer le dessin', replayStop:'Arrêter', replayEnd:'Terminé',
     drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
+    viaPixel:'une note par case', tpl_pixel:'Pixel art',
+    modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grille', pxSize:'Taille (cases)', pxShow:'Afficher la grille',
     toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
-    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, I','Pinceau, estompe, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['?','Cette aide']],
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, I','Pinceau, estompe, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['P','Mode pixel, dans le dessin'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -568,12 +574,14 @@ const I18N = {
     savedAt:'Saved {x}', savedFile:'Saved {x} · {f}',
     n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay the drawing', replayStop:'Stop', replayEnd:'Finished',
     drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
+    viaPixel:'one note per cell', tpl_pixel:'Pixel art',
+    modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grid', pxSize:'Size (cells)', pxShow:'Show the grid',
     toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
-    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, I','Brush, smudge, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['?','This help']],
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, I','Brush, smudge, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['P','Pixel mode, in the drawing'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -722,6 +730,7 @@ const MATH_OPS = {
   mod:(a, b)=> b ? ((a % b) + b) % b : 0, min:Math.min, max:Math.max,
   abs:a=> Math.abs(a), sin:a=> Math.sin(a*Math.PI*2), cos:a=> Math.cos(a*Math.PI*2), floor:a=> Math.floor(a), frac:a=> a - Math.floor(a)
 };
+const PIXEL_GRIDS = [0, 8, 16, 32, 64, 128];     // 0 = the normal mode
 const hash01 = (a, b, c)=>{
   let h = (Math.imul(a, 374761393) + Math.imul(b, 668265263) + Math.imul(c, 2246822519))|0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -769,6 +778,27 @@ function generateImage(p, t){
     d[i] = r*255; d[i+1] = g*255; d[i+2] = b*255; d[i+3] = 255;
   }
   return {w:S, h:S, data:d};
+}
+// pixel mode: the grid is the score. One cell that isn't the paper = one note, whatever
+// the sensitivity: column = step, row = pitch, darker against the paper = louder. Rows
+// climb the scale from its lowest note, so nothing leaves it; a grid taller than the
+// whole scale shares pitches between rows. A layer filter upstream still applies (mask).
+function pixelNotes(field, scale, p, curve){
+  const {g, bg} = field.pixel, {w, h, rgb, mask} = field, dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
+  const lad = scaleLadder(scale), low = scale ? scale.pitches[0] : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh)[0];
+  const start = Math.max(0, Math.min(lad.indexOf(low), lad.length - g));
+  const pitch = row=> g <= lad.length ? lad[start + row] : lad[Math.floor(row*lad.length/g)];
+  const notes = [];
+  for(let y=0;y<g;y++) for(let x=0;x<g;x++){
+    const px = Math.floor((y + 0.5)*h/g)*w + Math.floor((x + 0.5)*w/g), i = px*4;
+    if(!mask[px]) continue;
+    const dist = Math.abs(rgb[i] - bg[0]) + Math.abs(rgb[i+1] - bg[1]) + Math.abs(rgb[i+2] - bg[2]);
+    if(dist < 24) continue;
+    const [tau, rho] = dir.fwd((x + 0.5)/g, (y + 0.5)/g);
+    const row = clamp(Math.floor(rho*g), 0, g - 1);
+    notes.push({step:clamp(Math.floor(tau*g), 0, g - 1), midi:pitch(row), row, vel:Math.round(clamp(60 + dist/765*67, 60, 127)), px:(x + 0.5)/g, py:(y + 0.5)/g});
+  }
+  return {steps:g, curve:curve ? 'custom' : p.curve, customPts:curve ? curve.pts : null, notes:uniqueNotes(notes), rows:g, field, dir:p.dir, pathModel:null, pixel:true};
 }
 const withNotes = (src, list)=> Object.assign({}, src, {notes:list});
 // one note per (step, pitch): the loudest
@@ -949,6 +979,7 @@ const NODE_DEFS = {
       {id:'strokes', kind:'hidden', def:[]},
       {id:'bg', kind:'hidden', def:'#FFFFFF'},
       {id:'layers', kind:'hidden', def:[]},
+      {id:'grid', kind:'hidden', def:0},
       {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
       {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1},
       {id:'replayMin', label:'p_replayMin', kind:'range', min:0.5, max:20, step:0.5, def:3, fmt:v=> v + ' min'}
@@ -956,9 +987,11 @@ const NODE_DEFS = {
     clean:o=>{
       const hex = v=> typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
       if(!hex(o.bg)) delete o.bg;
+      if(!PIXEL_GRIDS.includes(o.grid)) delete o.grid;
       o.layers = !Array.isArray(o.layers) ? [] : o.layers.filter(l=> isPlain(l) && typeof l.id === 'string' && isNum(l.a)).slice(0, 32).map(l=> ({id:l.id, a:clamp(l.a, 0, 1)}));
       o.strokes = !Array.isArray(o.strokes) ? [] : o.strokes.filter(st=> isPlain(st) && hex(st.c) && typeof st.pts === 'string' && /^[0-9,]*$/.test(st.pts))
-        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {})}));
+        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {}),
+          ...(st.t === 'p' && PIXEL_GRIDS.includes(st.g) && st.g ? {t:'p', g:st.g, z:isNum(st.z) ? clamp(Math.round(st.z), 1, 16) : 1} : {})}));
     },
     compute:(p, inp, n)=>{
       n.lastPhase = meshPhase();
@@ -969,7 +1002,7 @@ const NODE_DEFS = {
       const cv = drawAt(n.drawCache, MAXDIM, p.strokes, p.bg, prog);
       // the stroke being painted counts already: it's read while the hand is still moving
       if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive);
-      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data}};
+      return {image:{w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, pixel:p.grid ? {g:p.grid, bg:hexToRgb(p.bg)} : null}};
     },
     summary:n=> t('drawSum').replace('{n}', n.params.strokes.length)
   },
@@ -1240,7 +1273,7 @@ const NODE_DEFS = {
         }
       }
       const mask = new Uint8Array(N).fill(1);
-      return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask}};
+      return {field:{w, h, rgb:data, lum, hue, sat, edge, angle, maxEdge, mask, pixel:image.pixel || null}};
     }
   },
   // per-branch threshold: put one on each layer to tune it on its own
@@ -1357,6 +1390,7 @@ const NODE_DEFS = {
     // land off them where the path curls.
     compute:(p, {field, scale, curve, path}, n)=>{
       if(!field) return {notes:null};
+      if(field.pixel) return {notes:pixelNotes(field, scale, p, curve)};
       const pitches = scale ? scale.pitches : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh);
       const rows = Math.max(1, pitches.length), steps = p.steps, {w, h} = field;
       const dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
@@ -1396,7 +1430,8 @@ const NODE_DEFS = {
       const o = n.out && n.out.notes;
       if(!o) return '';
       const via = [];
-      if(o.field.thresh != null) via.push(t('viaSens') + ' (' + o.field.thresh + '%)');
+      if(o.pixel) via.push(t('viaPixel'));
+      else if(o.field.thresh != null) via.push(t('viaSens') + ' (' + o.field.thresh + '%)');
       if(o.pathModel) via.push(t('viaPath'));
       if(o.customPts) via.push(t('viaCurve'));
       return [o.notes.length + ' ' + t('notesWord')].concat(via).join(' · ');
@@ -3047,7 +3082,21 @@ function strokeLayer(S){
 }
 // a stroke is built on its own layer, then laid down at its opacity: crossing
 // itself doesn't darken it, like a real pass of the brush
+// a block of cells, from its top-left cell: edges rounded the same way on both sides,
+// so cells meet without a seam at any size
+function fillCells(ctx, S, g, cx, cy, z){
+  const x0 = Math.floor(cx*S/g), y0 = Math.floor(cy*S/g);
+  ctx.fillRect(x0, y0, Math.floor((cx + z)*S/g) - x0, Math.floor((cy + z)*S/g) - y0);
+}
+const cellAnchor = (c, z)=> c - Math.floor((z - 1)/2);      // the block sits on the cell under the pointer
 function commitStroke(ctx, S, st, limit){
+  if(st.t === 'p'){
+    const pts = strokePoints(st), n = limit == null ? pts.length/3 : limit, z = st.z || 1;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = st.c;
+    for(let i=0;i<n;i++) fillCells(ctx, S, st.g, cellAnchor(Math.floor(pts[i*3]*st.g), z), cellAnchor(Math.floor(pts[i*3+1]*st.g), z), z);
+    return;
+  }
   if(st.t === 's'){
     const pts = strokePoints(st), state = {}, n = limit == null ? pts.length/3 : limit;
     for(let i=0;i<n;i++) stampTo(ctx, S, st, state, pts[i*3], pts[i*3+1], pts[i*3+2]);
@@ -3142,7 +3191,7 @@ function replayFrame(){
 }
 
 let drawEd = null;      // {n, cv, ctx, cache, cur, state, redo, ring, replay}
-let brush = {size:28, opacity:100, hard:75, press:60, color:'#231F20', tool:'brush'};
+let brush = {size:28, opacity:100, hard:75, press:60, color:'#231F20', tool:'brush', pxSize:1, gridOn:true};
 try{ brush = Object.assign(brush, JSON.parse(localStorage.getItem('dessons.brush') || '{}')); }catch(e){}
 const saveBrush = ()=>{ try{ localStorage.setItem('dessons.brush', JSON.stringify(brush)); }catch(e){} };
 function drawChanged(){
@@ -3161,9 +3210,45 @@ function syncDrawButtons(){
   d.redoBtn.disabled = !d.redo.length;
 }
 function ringSize(){
-  const d = drawEd;
-  const px = brush.size/DRAW_RES*d.cv.getBoundingClientRect().width;
+  const d = drawEd, g = d.n.params.grid, w = d.cv.getBoundingClientRect().width;
+  const px = g ? brush.pxSize/g*w : brush.size/DRAW_RES*w;
+  d.ring.classList.toggle('square', !!g);
   d.ring.style.width = d.ring.style.height = Math.max(3, px) + 'px';
+}
+// in pixel mode the cursor is the block it will fill, sitting on the grid
+function moveRing(e){
+  const d = drawEd, g = d.n.params.grid;
+  if(!g){ d.ring.style.left = e.clientX + 'px'; d.ring.style.top = e.clientY + 'px'; return; }
+  const r = d.cv.getBoundingClientRect(), z = brush.pxSize;
+  const cell = v=> Math.min(g - 1, Math.max(0, Math.floor(v*g)));
+  const ax = cellAnchor(cell((e.clientX - r.left)/r.width), z), ay = cellAnchor(cell((e.clientY - r.top)/r.height), z);
+  d.ring.style.left = r.left + (ax + z/2)/g*r.width + 'px';
+  d.ring.style.top = r.top + (ay + z/2)/g*r.height + 'px';
+}
+function drawGridLines(){
+  const d = drawEd, g = d.n.params.grid, c = d.gridCv;
+  c.hidden = !g || !brush.gridOn;
+  if(c.hidden) return;
+  const x = c.getContext('2d'), W = c.width;
+  x.clearRect(0, 0, W, W);
+  for(let i=1;i<g;i++){
+    const p = Math.round(i*W/g) + 0.5, major = i % 8 === 0;
+    x.strokeStyle = major ? 'rgba(128,128,128,.65)' : 'rgba(128,128,128,.32)';
+    x.beginPath(); x.moveTo(p, 0); x.lineTo(p, W); x.moveTo(0, p); x.lineTo(W, p); x.stroke();
+  }
+}
+// the mode belongs to the drawing; strokes keep the grid they were made on
+function setDrawGrid(g){
+  const d = drawEd;
+  d.n.params.grid = g; saveSoon();
+  if(g && drawEd.tool === 'smudge') setDrawTool('brush');
+  d.box.querySelectorAll('.drawMode').forEach(b=> b.classList.toggle('primary', (b.dataset.mode === 'pixel') === !!g));
+  d.box.querySelectorAll('.pxOnly').forEach(el=>{ el.hidden = !g; });
+  ['brSize', 'brOpacity', 'brHard', 'brPress'].forEach(id=>{ $(id).closest('.prm').hidden = !!g; });
+  d.box.querySelector('.drawTool[data-tool=smudge]').hidden = !!g;
+  d.box.querySelector('.drawTool[data-tool=brush]').hidden = false;
+  if(g) $('pxGrid').value = g;
+  ringSize(); drawGridLines();
 }
 function drawPoint(e){
   const r = drawEd.cv.getBoundingClientRect();
@@ -3174,7 +3259,7 @@ function drawPaintView(){
   const d = drawEd;
   if(!d) return;
   d.raf = 0;
-  if(d.cur && d.cur.st.t === 's') return;     // the smudge is already working on this canvas
+  if(d.cur && d.cur.st.t) return;     // smudge and pixels work straight on this canvas
   d.ctx.globalAlpha = 1;
   d.ctx.drawImage(d.cache.out, 0, 0);
   if(d.cur){
@@ -3183,8 +3268,33 @@ function drawPaintView(){
     d.ctx.globalAlpha = 1;
   }
 }
+// every cell between two pointer samples: a fast stroke stays one line
+function cellsBetween(ax, ay, bx, by){
+  const out = [], dx = Math.abs(bx - ax), dy = Math.abs(by - ay), sx = ax < bx ? 1 : -1, sy = ay < by ? 1 : -1;
+  let err = dx - dy, x = ax, y = ay;
+  for(;;){
+    out.push([x, y]);
+    if(x === bx && y === by) return out;
+    const e2 = err*2;
+    if(e2 > -dy){ err -= dy; x += sx; }
+    if(e2 < dx){ err += dx; y += sy; }
+  }
+}
 function drawAdd(e){
   const d = drawEd, [x, y, p] = drawPoint(e);
+  if(d.cur.st.t === 'p'){
+    const st = d.cur.st, g = st.g, cx = Math.min(g - 1, Math.floor(x*g)), cy = Math.min(g - 1, Math.floor(y*g)), last = d.cur.cell;
+    if(last && last[0] === cx && last[1] === cy) return;
+    d.ctx.globalAlpha = 1; d.ctx.fillStyle = st.c;
+    (last ? cellsBetween(last[0], last[1], cx, cy).slice(1) : [[cx, cy]]).forEach(([a, b])=>{
+      d.cur.pts.push(Math.round((a + 0.5)/g*10000), Math.round((b + 0.5)/g*10000), 100);
+      fillCells(d.ctx, DRAW_RES, g, cellAnchor(a, st.z), cellAnchor(b, st.z), st.z);
+    });
+    d.cur.cell = [cx, cy];
+    d.n.drawLive = Object.assign({}, st, {pts:d.cur.pts.join(',')});
+    markDirty(d.n.id);
+    return;
+  }
   d.cur.pts.push(Math.round(x*10000), Math.round(y*10000), Math.round(p*100));
   const now = performance.now();
   if(now - (d.liveAt || 0) > 66){
@@ -3231,9 +3341,13 @@ function drawKey(e){
   if(drawEd.watch) return e.key !== ' ';
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
   if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's' || key === 'i')){ setDrawTool(key === 's' ? 'smudge' : key === 'i' ? 'pick' : 'brush'); return true; }
+  if(!cmd && !e.target.closest('input, select') && key === 'p'){ setDrawGrid(drawEd.n.params.grid ? 0 : (brush.lastGrid || 32)); return true; }
   if(!e.target.closest('input') && (e.key === '[' || e.key === ']')){
-    brush.size = clamp(Math.round(brush.size*(e.key === ']' ? 1.2 : 1/1.2)), 1, 300);
-    const f = $('brSize'); if(f){ f.value = brush.size; f.refresh(); }
+    const up = e.key === ']';
+    if(drawEd.n.params.grid) brush.pxSize = clamp(brush.pxSize + (up ? 1 : -1), 1, 16);
+    else brush.size = clamp(Math.round(brush.size*(up ? 1.2 : 1/1.2)), 1, 300);
+    const f = drawEd.n.params.grid ? $('pxSizeIn') : $('brSize');
+    if(f){ f.value = drawEd.n.params.grid ? brush.pxSize : brush.size; f.refresh(); }
     ringSize(); saveBrush();
     return true;
   }
@@ -3275,7 +3389,7 @@ function brushSlider(id, label, min, max, key, fmt){
   input.type = 'range'; input.id = id; input.min = min; input.max = max; input.step = 1; input.value = brush[key];
   input.refresh = ()=>{ val.textContent = fmt(brush[key]); };
   input.refresh();
-  input.addEventListener('input', ()=>{ brush[key] = +input.value; input.refresh(); if(key === 'size') ringSize(); saveBrush(); });
+  input.addEventListener('input', ()=>{ brush[key] = +input.value; input.refresh(); if(key === 'size' || key === 'pxSize') ringSize(); saveBrush(); });
   row.append(lab, input, val);
   return row;
 }
@@ -3382,11 +3496,34 @@ function openDrawEditor(n, watch){
   const scan = document.createElement('canvas'); scan.id = 'drawScan'; scan.width = scan.height = 700;
   const frame = document.createElement('div'); frame.className = 'drawFrame';
   const held = document.createElement('div'); held.className = 'drawLayers';
-  frame.append(cv, held, scan);
+  const gridCv = document.createElement('canvas'); gridCv.id = 'drawGrid'; gridCv.width = gridCv.height = 1024; gridCv.hidden = true;
+  frame.append(cv, held, gridCv, scan);
   area.appendChild(frame);
   const tools = document.createElement('div'); tools.className = 'drawTools';
   const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
   const pct = v=> v + '%';
+  const modeRow = document.createElement('div'); modeRow.className = 'btnRow';
+  [['normal', 'modeNormal'], ['pixel', 'modePixel']].forEach(([id, label])=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn drawMode'; b.dataset.mode = id; b.textContent = t(label);
+    b.addEventListener('click', ()=> setDrawGrid(id === 'pixel' ? (n.params.grid || brush.lastGrid || 32) : 0));
+    modeRow.appendChild(b);
+  });
+  tools.appendChild(modeRow);
+  const gridRow = document.createElement('label'); gridRow.className = 'prm full pxOnly';
+  const gridLab = document.createElement('span'), gridSel = document.createElement('select');
+  gridLab.textContent = t('pxGrid'); gridSel.id = 'pxGrid';
+  PIXEL_GRIDS.filter(Boolean).forEach(g=> gridSel.appendChild(new Option(g + ' × ' + g, g)));
+  gridSel.addEventListener('change', ()=>{ brush.lastGrid = +gridSel.value; saveBrush(); setDrawGrid(+gridSel.value); });
+  gridRow.append(gridLab, gridSel);
+  const showRow = document.createElement('label'); showRow.className = 'prm full pxOnly';
+  const showLab = document.createElement('span'), showBox = document.createElement('input');
+  showLab.textContent = t('pxShow'); showBox.type = 'checkbox'; showBox.checked = brush.gridOn; showBox.style.justifySelf = 'start';
+  showBox.addEventListener('change', ()=>{ brush.gridOn = showBox.checked; saveBrush(); drawGridLines(); });
+  showRow.append(showLab, showBox);
+  const pxSlider = brushSlider('pxSizeIn', 'pxSize', 1, 16, 'pxSize', v=> v);
+  pxSlider.classList.add('pxOnly');
+  tools.append(gridRow, pxSlider, showRow);
   const toolRow = document.createElement('div'); toolRow.className = 'btnRow';
   [['brush', 'toolBrush'], ['smudge', 'toolSmudge'], ['pick', 'toolPick']].forEach(([id, label])=>{
     const b = document.createElement('button');
@@ -3452,10 +3589,10 @@ function openDrawEditor(n, watch){
   box.append(area, tools);
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false};
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv};
   drawEd.scanRaf = requestAnimationFrame(drawOverlay);
   refreshDrawEditor();
-  if(!watch){ ringSize(); setDrawTool(brush.tool); }
+  if(!watch){ setDrawTool(brush.tool); setDrawGrid(n.params.grid); }
   else return;
   syncDrawLayers();
   cv.addEventListener('pointerenter', ()=>{ ring.hidden = false; ringSize(); });
@@ -3469,12 +3606,13 @@ function openDrawEditor(n, watch){
     const lc = strokeLayer(DRAW_RES).getContext('2d');
     lc.clearRect(0, 0, DRAW_RES, DRAW_RES);
     const st = {c:brush.color, s:brush.size, o:brush.opacity/100, h:brush.hard/100, r:brush.press/100, pts:''};
-    if(brush.tool === 'smudge') st.t = 's';
+    if(n.params.grid){ st.t = 'p'; st.g = n.params.grid; st.z = brush.pxSize; st.o = 1; st.h = 1; st.r = 0; }
+    else if(brush.tool === 'smudge') st.t = 's';
     drawEd.cur = {st, pts:[], state:{}};
     drawAdd(e);
   });
   cv.addEventListener('pointermove', e=>{
-    ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px';
+    moveRing(e);
     if(drawEd.picking){ pickColor(e); return; }
     if(!drawEd.cur) return;
     // a pen sends more points than frames: the ones between two frames are in here
@@ -5004,6 +5142,14 @@ function finishGraph(){
 }
 const wired = (a, ap, b, bp)=> links.push({from:a.id, fromPort:ap, to:b.id, toPort:bp});
 // starting points that sound straight away: only the MIDI one needs a file
+function drawTemplate(drawP, scanP){
+  clearGraph();
+  const draw = addNode('srcDraw', 0, 60, drawP), edges = addNode('edges', 260, 60), scale = addNode('scale', 260, 340);
+  const scan = addNode('scan', 520, 60, scanP), tr = addNode('track', 780, 60, {program:'11'}), loop = addNode('loop', 1040, 60), out = addNode('midiOut', 780, 420);
+  wired(draw,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(scale,'scale', scan,'scale');
+  wired(scan,'notes', tr,'notes'); wired(tr,'track', loop,'tracks'); wired(scan,'notes', out,'notes');
+  finishGraph();
+}
 const TEMPLATES = {
   starter:defaultGraph,
   spin(){
@@ -5049,15 +5195,9 @@ const TEMPLATES = {
     finishGraph();
   },
   // live painting: the whole canvas is read, so each stroke is heard as it's made
-  draw(){
-    clearGraph();
-    const draw = addNode('srcDraw', 0, 60, {turns:0, reveal:100}), edges = addNode('edges', 260, 60), scale = addNode('scale', 260, 340);
-    const scan = addNode('scan', 520, 60, {steps:16, thresh:40}), limit = addNode('limit', 780, 60, {perStep:3});
-    const tr = addNode('track', 1040, 60, {program:'11'}), loop = addNode('loop', 1300, 60), out = addNode('midiOut', 1040, 420);
-    wired(draw,'image', edges,'image'); wired(edges,'field', scan,'field'); wired(scale,'scale', scan,'scale');
-    wired(scan,'notes', limit,'notes'); wired(limit,'notes', tr,'notes'); wired(tr,'track', loop,'tracks'); wired(limit,'notes', out,'notes');
-    finishGraph();
-  },
+  draw(){ drawTemplate({turns:0, reveal:100}, {steps:16, thresh:40}); },
+  // pixel art: the grid is the score, a painted cell is a note
+  pixel(){ drawTemplate({turns:0, reveal:100, grid:16}, {steps:16, thresh:40}); },
   logic(){
     clearGraph();
     const gen = addNode('srcGen', 0, 60, {kind:'noise', detail:10}), edges = addNode('edges', 260, 60);

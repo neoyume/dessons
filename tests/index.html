@@ -262,6 +262,78 @@ test('Calques d’affichage : sans effet sur les notes, et ids filtrés', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{layers:[{id:5, a:1}, {id:'x', a:'non'}, {id:'y', a:9}, 'z']}}], links:[]});
   eq(nodes.get('n1').params.layers, [{id:'y', a:1}]);
 });
+test('Pixel : cases pleines, sans flou ni couture', ()=>{
+  const cells = [];
+  for(let y=0;y<16;y++) for(let x=0;x<16;x++) cells.push(Math.round((x + .5)/16*10000), Math.round((y + .5)/16*10000), 100);
+  const st = {c:'#000000', s:1, o:1, h:1, r:0, t:'p', g:16, z:1, pts:cells.join(',')};
+  [260, 1024, 100].forEach(S=>{
+    const d = drawAt({}, S, [st], '#FFFFFF', 1).getContext('2d').getImageData(0, 0, S, S).data;
+    for(let i=0;i<d.length;i+=4) ok(d[i] === 0, S + ' : pixel non couvert');
+  });
+});
+test('Pixel : aucune couleur intermédiaire', ()=>{
+  const st = {c:'#E6267A', s:1, o:1, h:1, r:0, t:'p', g:8, z:2, pts:[3125,3125,100, 6875,6875,100].join(',')};
+  const d = drawAt({}, 260, [st], '#FFFFFF', 1).getContext('2d').getImageData(0, 0, 260, 260).data, seen = new Set();
+  for(let i=0;i<d.length;i+=4) seen.add(d[i] + ',' + d[i+1]);
+  eq(seen.size, 2);
+});
+test('Pixel : un trait rapide ne laisse pas de trou', ()=>{
+  const c = cellsBetween(0, 0, 9, 4);
+  eq(c[0], [0, 0]); eq(c[c.length - 1], [9, 4]);
+  for(let i=1;i<c.length;i++) ok(Math.abs(c[i][0] - c[i-1][0]) <= 1 && Math.abs(c[i][1] - c[i-1][1]) <= 1);
+});
+test('Pixel : grille et trait validés', ()=>{
+  loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{grid:7, strokes:[{c:'#000000', t:'p', g:9, pts:'1,2,3'}, {c:'#000000', t:'p', g:16, z:99, pts:'1,2,3'}]}}], links:[]});
+  const p = nodes.get('n1').params;
+  eq([p.grid, p.strokes[0].t, p.strokes[1].t, p.strokes[1].g, p.strokes[1].z], [0, undefined, 'p', 16, 16]);
+});
+test('Pixel : chaque case peinte est une note, ni plus ni moins', ()=>{
+  clearGraph();
+  const cell = (x, y, g)=> [Math.round((x + .5)/g*10000), Math.round((y + .5)/g*10000), 100];
+  const cells = [[0,15],[1,15],[4,10],[4,3],[7,0],[15,7]];
+  const d = addNode('srcDraw', 0, 0, {turns:0, grid:16, strokes:[{c:'#000000', s:1, o:1, h:1, r:0, t:'p', g:16, z:1, pts:cells.map(c=> cell(c[0], c[1], 16)).flat().join(',')}]});
+  const e = addNode('edges', 200, 0), s = addNode('scan', 400, 0, {thresh:1, steps:64});
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
+  const o = evalNode(s).notes;
+  eq(o.steps, 16);
+  eq(o.notes.length, cells.length);
+  eq(o.notes.map(n=> n.step).sort((a, b)=> a - b), [0, 1, 4, 4, 7, 15]);
+  const at = (x, y)=> o.notes.find(n=> Math.abs(n.px - (x + .5)/16) < .001 && Math.abs(n.py - (y + .5)/16) < .001);
+  ok(at(4, 3).midi > at(4, 10).midi, 'le haut doit être plus aigu');
+  ok(at(7, 0).midi > at(0, 15).midi);
+  s.params.thresh = 100; markDirty(s.id);
+  eq(evalNode(s).notes.notes.length, cells.length);     // the sensitivity has no say
+});
+test('Pixel : les notes restent dans la gamme', ()=>{
+  [8, 16, 32, 64, 128].forEach(g=>{
+    clearGraph();
+    const pts = []; for(let y=0;y<g;y++) pts.push(Math.round(.5/g*10000), Math.round((y + .5)/g*10000), 100);
+    const d = addNode('srcDraw', 0, 0, {turns:0, grid:g, strokes:[{c:'#000000', s:1, o:1, h:1, r:0, t:'p', g, z:1, pts:pts.join(',')}]});
+    const sc = addNode('scale', 0, 300, {scale:'major', root:'2'}), e = addNode('edges', 200, 0), s = addNode('scan', 400, 0);
+    connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field'); connect(sc.id, 'scale', s.id, 'scale');
+    const cls = new Set(evalNode(sc).scale.pitches.map(m=> m % 12)), n = evalNode(s).notes.notes;
+    n.forEach(x=> ok(cls.has(x.midi % 12) && x.midi >= 0 && x.midi <= 127, g + ' : ' + x.midi));
+    ok(n.length >= Math.min(g, 70), g + ' : ' + n.length + ' notes');
+  });
+});
+test('Pixel : une couleur peut aller vers son instrument', ()=>{
+  clearGraph();
+  const st = (c, x)=> ({c, s:1, o:1, h:1, r:0, t:'p', g:8, z:1, pts:[Math.round((x + .5)/8*10000), 5000, 100].join(',')});
+  const d = addNode('srcDraw', 0, 0, {turns:0, grid:8, strokes:[st('#E72728', 1), st('#2AABE2', 5)]});
+  const e = addNode('edges', 200, 0), b = addNode('hueBand', 400, 0, {from:340, to:20, minSat:15}), s = addNode('scan', 600, 0);
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', b.id, 'field'); connect(b.id, 'field', s.id, 'field');
+  eq(evalNode(s).notes.notes.map(n=> n.step), [1]);
+});
+test('Pixel : l’avancement du replay ajoute les notes', ()=>{
+  clearGraph();
+  const pts = Array.from({length:8}, (_, x)=> [Math.round((x + .5)/8*10000), 5000, 100]).flat().join(',');
+  const d = addNode('srcDraw', 0, 0, {turns:0, grid:8, reveal:50, strokes:[{c:'#000000', s:1, o:1, h:1, r:0, t:'p', g:8, z:1, pts}]});
+  const e = addNode('edges', 200, 0), s = addNode('scan', 400, 0);
+  connect(d.id, 'image', e.id, 'image'); connect(e.id, 'field', s.id, 'field');
+  eq(evalNode(s).notes.notes.length, 4);
+  d.params.reveal = 100; markDirty(d.id);
+  eq(evalNode(s).notes.notes.length, 8);
+});
 test('Dessin : rejeté si piégé', ()=>{
   loadGraph({app:'dessons-nodes', nodes:[{id:'n1', type:'srcDraw', x:0, y:0, params:{bg:'url(x)', strokes:[{c:'red', pts:'1,2,3'}, {c:'#000000', pts:'<img>'}, {c:'#112233', s:1e9, o:9, h:-1, r:'x', pts:'1,2,3'}, 5]}}], links:[]});
   const p = nodes.get('n1').params;
