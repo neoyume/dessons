@@ -4249,9 +4249,9 @@ function drawKey(e){
   if(!e.target.closest('input') && (e.key === '[' || e.key === ']')){
     const up = e.key === ']';
     if(drawEd.n.params.grid) brush.pxSize = clamp(brush.pxSize + (up ? 1 : -1), 1, 16);
-    else brush.size = clamp(Math.round(brush.size*(up ? 1.2 : 1/1.2)), 1, 300);
+    else brush.size = nextBrushSize(brush.size, up);
     const f = drawEd.n.params.grid ? $('pxSizeIn') : $('brSize');
-    if(f){ f.value = drawEd.n.params.grid ? brush.pxSize : brush.size; f.refresh(); }
+    if(f){ f.value = drawEd.n.params.grid ? brush.pxSize : brushCurve.to(brush.size); f.refresh(); }
     ringSize(); saveBrush();
     return true;
   }
@@ -4295,14 +4295,32 @@ function pickColor(e){
   saveBrush();
   d.showColor();
 }
-function brushSlider(id, label, min, max, key, fmt){
+// the size is felt in ratios: 1 to 2 is as big a change as 100 to 200, so the slider is
+// logarithmic, and the small sizes get almost half of it
+const BRUSH_MAX = 300, BRUSH_POS = 2000;
+const brushCurve = {
+  to:s=> Math.round(Math.log(s)/Math.log(BRUSH_MAX)*BRUSH_POS),
+  from:v=> Math.round(BRUSH_MAX**(v/BRUSH_POS))
+};
+// one size at a time at the small end, about 20% further up
+const nextBrushSize = (s, up)=> clamp(up ? Math.max(s + 1, Math.round(s*1.2)) : Math.min(s - 1, Math.round(s/1.2)), 1, BRUSH_MAX);
+function brushSlider(id, label, min, max, key, fmt, curve){
   const row = document.createElement('label'); row.className = 'prm';
   const lab = document.createElement('span'), input = document.createElement('input'), val = document.createElement('span');
   lab.textContent = t(label); val.className = 'v';
-  input.type = 'range'; input.id = id; input.min = min; input.max = max; input.step = 1; input.value = brush[key];
+  input.type = 'range'; input.id = id; input.min = curve ? 0 : min; input.max = curve ? BRUSH_POS : max; input.step = 1; input.value = curve ? curve.to(brush[key]) : brush[key];
   input.refresh = ()=>{ val.textContent = fmt(brush[key]); };
   input.refresh();
-  input.addEventListener('input', ()=>{ brush[key] = +input.value; input.refresh(); if(key === 'size' || key === 'pxSize') ringSize(); saveBrush(); });
+  input.addEventListener('input', ()=>{ brush[key] = curve ? curve.from(+input.value) : +input.value; input.refresh(); if(key === 'size' || key === 'pxSize') ringSize(); saveBrush(); });
+  // the arrow keys move by a size, not by one of the curve's many positions
+  if(curve) input.addEventListener('keydown', e=>{
+    const up = e.key === 'ArrowRight' || e.key === 'ArrowUp';
+    if(!up && e.key !== 'ArrowLeft' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    brush[key] = nextBrushSize(brush[key], up);
+    input.value = curve.to(brush[key]);
+    input.refresh(); ringSize(); saveBrush();
+  });
   if(key === 'size' || key === 'pxSize') row.title = t(label) + ' ([ ])';
   row.append(lab, input, val);
   return row;
@@ -4515,6 +4533,9 @@ function initDrawZoom(){
     const [a, b] = [...touches.values()];
     return {dist:Math.max(1, Math.hypot(a[0] - b[0], a[1] - b[1])), x:(a[0] + b[0])/2, y:(a[1] + b[1])/2};
   };
+  // a pen's side button, ctrl+click, a two-finger click: the browser's menu would swallow the
+  // pointerup, and the canvas would keep the pointer, so nothing could be clicked any more
+  stage.addEventListener('contextmenu', e=> e.preventDefault());
   // in the capture phase: these gestures must never reach the canvas as paint
   stage.addEventListener('pointerdown', e=>{
     if(e.target.closest('.drawZoomBar')) return;
@@ -4565,6 +4586,7 @@ function initDrawZoom(){
   };
   stage.addEventListener('pointerup', up, true);
   stage.addEventListener('pointercancel', up, true);
+  stage.addEventListener('lostpointercapture', up, true);
   stage.addEventListener('wheel', e=>{
     e.preventDefault();
     const line = e.deltaMode ? 30 : 1;
@@ -4677,7 +4699,7 @@ function openDrawEditor(n, watch){
     toolRow.appendChild(b);
   });
   toolSec.appendChild(toolRow);
-  toolSec.append(brushSlider('brSize', 'brSize', 1, 300, 'size', v=> v), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
+  toolSec.append(brushSlider('brSize', 'brSize', 1, BRUSH_MAX, 'size', v=> v, brushCurve), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
     brushSlider('brHard', 'brHard', 0, 100, 'hard', pct), brushSlider('brPress', 'brPress', 0, 100, 'press', pct));
   // mirrors and repeats: a shape drawn once, a phrase answered
   const symRow = document.createElement('div'); symRow.className = 'btnRow';
@@ -4822,6 +4844,7 @@ function openDrawEditor(n, watch){
     e.preventDefault();
     stopReplay();
     cv.setPointerCapture(e.pointerId);
+    drawEd.capture = e.pointerId;
     if(drawEd.tool === 'pick' || e.altKey){ drawEd.picking = true; pickColor(e); return; }
     const lc = strokeLayer(DRAW_RES).getContext('2d');
     lc.clearRect(0, 0, DRAW_RES, DRAW_RES);
@@ -4838,6 +4861,8 @@ function openDrawEditor(n, watch){
     drawAdd(e);
   });
   cv.addEventListener('pointermove', e=>{
+    // nothing pressed any more: the release went somewhere else
+    if((drawEd.cur || drawEd.picking) && !e.buttons){ end(); return; }
     ring.hidden = !paintTool();
     moveRing(e);
     if(drawEd.picking){ pickColor(e); return; }
@@ -4847,6 +4872,10 @@ function openDrawEditor(n, watch){
   });
   const end = ()=>{
     const d = drawEd;
+    if(d && d.capture != null){
+      if(cv.hasPointerCapture(d.capture)) cv.releasePointerCapture(d.capture);
+      d.capture = null;
+    }
     if(d && d.picking){
       d.picking = false;
       if(d.tool === 'pick') setDrawTool(d.back);      // back to painting with that colour
@@ -4861,7 +4890,11 @@ function openDrawEditor(n, watch){
   };
   cv.addEventListener('pointerup', end);
   cv.addEventListener('pointercancel', end);
+  cv.addEventListener('lostpointercapture', end);
+  drawEd.endStroke = end;
 }
+// leaving the window in the middle of a stroke: its release will never come
+window.addEventListener('blur', ()=>{ if(drawEd && drawEd.endStroke) drawEd.endStroke(); });
 function closeDrawEditor(){
   if(!drawEd) return;
   if(drawEd.replay) cancelAnimationFrame(drawEd.replay);

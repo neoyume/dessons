@@ -914,6 +914,58 @@ test('Annuler : le nombre d’instantanés reste borné', ()=>{
   ok(cache.marks.length <= DRAW_MARKS, cache.marks.length + ' instantanés');
   eq(cache.marks.map(m=> m.i), [...cache.marks.map(m=> m.i)].sort((a, b)=> a - b));
 });
+test('Pinceau : les petites tailles ont près de la moitié du curseur, et chacune s’atteint', ()=>{
+  const {n} = drawing({});
+  const was = brush.size;
+  openDrawEditor(n);
+  setDrawGrid(0);
+  const f = $('brSize'), reach = new Set();
+  for(let v=0;v<=BRUSH_POS;v++){ f.value = v; f.dispatchEvent(new Event('input')); reach.add(brush.size); }
+  for(let s=1;s<=BRUSH_MAX;s++) ok(reach.has(s), 'taille ' + s + ' atteignable');
+  ok(brushCurve.to(12)/BRUSH_POS > 0.4, 'part de 1 à 12');
+  for(let s=1;s<=BRUSH_MAX;s++) eq(brushCurve.from(brushCurve.to(s)), s);
+  brush.size = was; closeDrawEditor();
+});
+test('Pinceau : [ et ] ne restent jamais coincés, flèches comprises', ()=>{
+  let s = 1;
+  const up = [];
+  while(s < BRUSH_MAX){ const x = nextBrushSize(s, true); ok(x > s, 'bloqué à ' + s); s = x; up.push(s); }
+  eq(up.slice(0, 7), [2, 3, 4, 5, 6, 7, 8]);
+  while(s > 1){ const x = nextBrushSize(s, false); ok(x < s, 'bloqué à ' + s); s = x; }
+  const {n} = drawing({});
+  const was = brush.size;
+  openDrawEditor(n);
+  setDrawGrid(0);
+  brush.size = 5;
+  $('brSize').dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true, cancelable:true}));
+  eq([brush.size, $('brSize').value], [6, String(brushCurve.to(6))]);
+  brush.size = was; closeDrawEditor();
+});
+test('Dessin : pas de menu du navigateur sur le dessin', ()=>{
+  const {cv} = zoomOpen({});
+  const e = new MouseEvent('contextmenu', {bubbles:true, cancelable:true});
+  cv.dispatchEvent(e);
+  ok(e.defaultPrevented);
+  closeDrawEditor();
+});
+test('Dessin : un trait interrompu se termine et rend le pointeur', ()=>{
+  const {n, cv} = zoomOpen({});
+  setDrawTool('brush');
+  const r = cv.getBoundingClientRect(), x = r.left + 50, y = r.top + 50;
+  const starts = [
+    ()=> cv.dispatchEvent(new PointerEvent('lostpointercapture', {pointerId:1, bubbles:true})),
+    ()=> ptr(cv, 'pointermove', x + 9, y, {buttons:0}),
+    ()=> drawEd.endStroke()
+  ];
+  starts.forEach((stop, i)=>{
+    ptr(cv, 'pointerdown', x, y); ptr(cv, 'pointermove', x + 5, y);
+    ok(drawEd.cur, 'trait en cours');
+    stop();
+    ok(!drawEd.cur, 'trait fini');
+    eq(n.params.strokes.length, i + 1);
+  });
+  closeDrawEditor();
+});
 test('Pixel : changer de grille repart sur des cases carrées', ()=>{
   const {n} = drawing({grid:32, gridY:12});
   openDrawEditor(n);
