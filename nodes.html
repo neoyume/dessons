@@ -57,6 +57,12 @@
   .backLink{font-size:12px; color:var(--text-dim); text-decoration:none; border:1px solid var(--line); border-radius:6px; padding:5px 10px;}
   .backLink:hover{color:var(--text); border-color:var(--accent);}
   .toolbar{display:flex; gap:6px; flex-wrap:wrap; margin-left:auto;}
+  .histBtns{display:flex; gap:6px;}
+  #viewBar{position:absolute; left:12px; bottom:12px; z-index:5; display:flex; gap:6px;}
+  #viewBar .miniBtn{background:var(--panel);}
+  #zoomBtn{min-width:52px; font-family:var(--mono);}
+  /* while painting, only what acts on the painting: the graph's tools would work unseen behind it */
+  body.drawing .fileWrap, body.drawing .histBtns, body.drawing #nodeBar, body.drawing #addBtn, body.drawing #propsBtn{display:none;}
   .langToggle{display:flex; flex:none; border:1px solid var(--line); border-radius:6px; overflow:hidden;}
   .langToggle button{
     background:var(--panel); color:var(--text-dim); border:none; cursor:pointer;
@@ -125,8 +131,43 @@
   #helpList dd{margin:0; color:var(--text-dim);}
   #drawEditor{position:absolute; inset:0; z-index:15; display:flex; background:var(--bg); min-height:0;}
   #drawEditor[hidden]{display:none;}
-  .drawArea{flex:1; min-width:0; display:flex; align-items:center; justify-content:center; padding:14px; position:relative; overflow:hidden;}
-  .drawFrame{position:relative; height:100%; max-width:100%; aspect-ratio:1;}
+  .drawArea{flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; padding:14px; position:relative; overflow:hidden;}
+  /* a container, so the frame can take the smaller of its two sides and stay square */
+  .drawStage{flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; container-type:size;}
+  /* the pages: one thumbnail each, the page you're on, the page you hear */
+  .pageStrip{flex:none; display:flex; align-items:center; gap:6px; min-height:58px; overflow-x:auto;}
+  .pageList{display:flex; gap:5px;}
+  .pageBtn{position:relative; flex:none; width:52px; height:52px; padding:0; background:#e4e4e4; border:2px solid var(--line); border-radius:5px; cursor:pointer; overflow:hidden;}
+  .pageBtn canvas{display:block; width:100%; height:100%;}
+  .pageBtn span{position:absolute; left:2px; bottom:1px; padding:0 3px; border-radius:3px; background:rgba(0,0,0,.66); color:#fff; font-size:9px; line-height:12px;}
+  .pageBtn.on{border-color:var(--accent);}
+  .pageBtn.heard{box-shadow:0 0 0 2px var(--cyan);}
+  .pageTools{display:flex; gap:4px; flex:none;}
+  .pageTools .miniBtn{padding:4px 7px;}
+  #drawOnion{position:absolute; inset:0; z-index:3; width:100%; height:100%; opacity:.28; pointer-events:none;}
+  #drawOnion[hidden]{display:none;}
+  .pageOpt[hidden], #pxSquare[hidden], .lightOct[hidden]{display:none;}
+  /* the animated picture, over the painting while the Loop plays */
+  #drawMove{position:absolute; inset:0; z-index:2; width:100%; height:100%; pointer-events:none; image-rendering:pixelated; border-radius:4px;}
+  #drawMove[hidden]{display:none;}
+  #drawEditor .switchRow input[type=checkbox]{appearance:none; -webkit-appearance:none; position:relative; flex:none; width:36px; height:20px; padding:0; margin:0; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); cursor:pointer; transition:background-color .12s, border-color .12s;}
+  #drawEditor .switchRow input[type=checkbox]::before{content:''; position:absolute; left:2px; top:2px; width:14px; height:14px; border-radius:50%; background:var(--text-dim); transition:transform .12s, background-color .12s;}
+  #drawEditor .switchRow input[type=checkbox]:checked{background:var(--accent-dim); border-color:var(--accent);}
+  #drawEditor .switchRow input[type=checkbox]:checked::before{transform:translateX(16px); background:var(--accent);}
+  #drawEditor .switchRow input[type=checkbox]:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .voiceList{display:flex; flex-direction:column; gap:6px;}
+  .voiceRow{display:flex; flex-direction:column; gap:4px;}
+  .voiceColors{display:flex; flex-wrap:wrap; gap:3px;}
+  .voiceSw{position:relative; width:18px; height:18px; border-radius:4px; border:1px solid rgba(255,255,255,.3); cursor:pointer;}
+  .voiceSw:hover{outline:2px solid var(--accent); outline-offset:1px;}
+  .voiceSw select{position:absolute; inset:0; width:100%; height:100%; padding:0; opacity:0; cursor:pointer;}
+  .voiceRow select, .drawTools .btnRow select{min-width:0; font-size:11px; padding:3px; color:var(--text); background:var(--panel-2); border:1px solid var(--line); border-radius:5px;}
+  .voiceOpt{display:flex; gap:4px;}
+  .voiceOpt select{flex:1;}
+  .drawFrame.mirX::before, .drawFrame.mirY::after{content:''; position:absolute; z-index:6; pointer-events:none; background:rgba(0,200,90,.7);}
+  .drawFrame.mirX::before{left:50%; top:0; bottom:0; width:1px;}
+  .drawFrame.mirY::after{top:50%; left:0; right:0; height:1px;}
+  .drawFrame{position:relative; flex:none; width:min(100cqw, 100cqh); aspect-ratio:1;}
   #drawCanvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:none; border-radius:4px; box-shadow:0 6px 24px rgba(0,0,0,.45);}
   #drawEditor.watch #drawCanvas{cursor:default;}
   /* difference: the playhead shows on any colour of the painting */
@@ -137,7 +178,6 @@
   .drawLayers, .drawLayers canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
   .drawLayers canvas{object-fit:contain;}
   .layerList{display:flex; flex-direction:column; gap:5px;}
-  .layerList h3{margin:4px 0 0; font-size:10px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-dim); font-weight:600;}
   .layerRow{display:grid; grid-template-columns:auto 1fr 74px; align-items:center; gap:6px; font-size:11.5px; color:var(--text);}
   .layerRow span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .layerRow input[type=checkbox]{width:14px; height:14px; margin:0; accent-color:var(--accent);}
@@ -145,7 +185,25 @@
   .replayBar{height:10px; border-radius:5px; background:var(--panel-2); overflow:hidden; cursor:pointer;}
   .replayBar i{display:block; height:100%; width:0; background:var(--accent);}
   .brushRing{position:fixed; z-index:16; pointer-events:none; border:1px solid #fff; outline:1px solid #000; border-radius:50%; transform:translate(-50%,-50%);}
-  .drawTools{flex:none; width:270px; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; background:var(--panel); border-left:1px solid var(--line);}
+  .drawTools{flex:none; width:270px; min-height:0; display:flex; flex-direction:column; background:var(--panel); border-left:1px solid var(--line);}
+  #drawEditor.watch .drawTools{padding:12px; gap:10px;}
+  /* head and foot stay on screen however short the window is */
+  .drawHead, .drawFoot{flex:none; display:flex; align-items:center; gap:5px; padding:9px 12px;}
+  .drawHead{border-bottom:1px solid var(--line);}
+  .drawHead .drawName{flex:1; min-width:0; font-size:13px; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .drawFoot{border-top:1px solid var(--line);}
+  .drawFoot .miniBtn{flex:1;}
+  .drawScroll{flex:1; min-height:0; overflow:auto;}
+  .drawSec{border-bottom:1px solid var(--line);}
+  .drawSec:last-child{border-bottom:none;}
+  .drawSec summary{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; font-size:10px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-dim); cursor:pointer; list-style:none; user-select:none;}
+  .drawSec summary::-webkit-details-marker{display:none;}
+  .drawSec summary::after{content:'▸'; font-size:11px;}
+  .drawSec[open] summary::after{content:'▾';}
+  .drawSec summary:hover, .drawSec summary:focus-visible{color:var(--text); outline:none;}
+  .drawSecBody{display:flex; flex-direction:column; gap:9px; padding:2px 12px 12px;}
+  .drawEmpty{position:absolute; left:50%; top:50%; z-index:6; transform:translate(-50%,-50%); max-width:70%; padding:8px 12px; border-radius:6px; background:rgba(0,0,0,.66); color:#fff; font-size:12.5px; line-height:1.4; text-align:center; pointer-events:none;}
+  .drawEmpty[hidden]{display:none;}
   .drawTools .prm{grid-template-columns:96px 1fr auto;}
   .drawTools .prm[hidden], .drawTools .pxOnly[hidden]{display:none;}
   #drawGrid{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
@@ -187,6 +245,11 @@
   }
   .sideItem:hover, .sideItem:focus-visible{background:var(--panel-2); outline:none;}
   .sideItem i{width:8px; height:8px; border-radius:2px; flex:none;}
+  .startList{display:flex; flex-direction:column; gap:5px; margin-bottom:10px;}
+  .startTpl{display:block; width:100%; text-align:left; padding:7px 9px; background:var(--panel-2); border:1px solid var(--line); border-radius:6px; color:var(--text); cursor:pointer;}
+  .startTpl:hover, .startTpl:focus-visible{border-color:var(--accent); outline:none;}
+  .startTpl b{display:block; font-weight:400; font-size:12px;}
+  .startTpl span{display:block; margin-top:2px; font-size:10.5px; line-height:1.35; color:var(--text-dim);}
   .propTitle{font-size:13px; color:var(--accent); margin-bottom:8px;}
   #propBody{display:flex; flex-direction:column; gap:8px;}
   #propBody .prm{grid-template-columns:96px 1fr auto;}
@@ -241,6 +304,8 @@
   .nodeHead .title{flex:1; font-size:12.5px; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .nodeDel{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; line-height:1; padding:0 2px;}
   .nodeDel:hover{color:#ff8a8e;}
+  .nodeInfo{flex:none; width:13px; height:13px; border:1px solid currentColor; border-radius:50%; font-size:9px; line-height:12px; text-align:center; color:var(--text-dim); cursor:help;}
+  .node.source .nodeInfo{color:#fff;}
   .nodeFold{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:11px; line-height:1; padding:0 2px;}
   .nodeFold:hover{color:var(--text);}
   .node.source .nodeFold{color:#fff;}
@@ -284,7 +349,7 @@
     width:100%; min-width:0; background:var(--panel-2); color:var(--text); border:1px solid var(--line);
     border-radius:5px; font-size:11px; padding:3px 5px;
   }
-  .prm input[type=color]{width:100%; height:22px; padding:0 2px; background:var(--panel-2); border:1px solid var(--line); border-radius:5px; cursor:pointer;}
+  .prm input[type=color]{width:44px; justify-self:start; height:22px; padding:0 2px; background:var(--panel-2); border:1px solid var(--line); border-radius:5px; cursor:pointer;}
   .prm input[type=checkbox]{width:14px; height:14px; accent-color:var(--accent); margin:0; cursor:pointer;}
   input[type=range]{-webkit-appearance:none; width:100%; min-width:0; height:3px; background:var(--line); border-radius:2px; outline:none; margin:0;}
   input[type=range]::-webkit-slider-thumb{
@@ -295,6 +360,9 @@
   .btnRow{display:flex; gap:5px; flex-wrap:wrap;}
   .btnRow .miniBtn{flex:1;}
   .thumb{display:block; width:100%; border-radius:5px; background:#06100f; image-rendering:pixelated;}
+  .thumb.empty{display:none;}
+  #sidePreview:has(canvas.empty){display:none;}
+  .thumb.open{cursor:pointer;}
   .thumb.pick, .thumb.draw{cursor:crosshair;}
   .thumb.drag{cursor:ns-resize;}
   .nodeNote{font-size:10.5px; color:var(--text-dim); line-height:1.4;}
@@ -370,8 +438,15 @@
     mix-blend-mode:overlay; opacity:0.1; image-rendering:pixelated;
   }
   @media (prefers-reduced-motion: reduce){ #ny-noise{opacity:0.075;} }
+  @media (max-width:1280px){
+    header{column-gap:10px;}
+    .catBtn{padding:5px 6px;} .catBtn i{display:none;}
+  }
   @media (max-width:700px){
     header{padding:10px 12px;} .toolbar{margin-left:0;}
+    #drawEditor{flex-direction:column;}
+    .drawArea{padding:8px;}
+    .drawTools{width:auto; height:48%; border-left:none; border-top:1px solid var(--line);}
     #propsPanel{position:absolute; right:0; top:0; bottom:0; z-index:10;}
   }
 </style>
@@ -391,14 +466,14 @@
       <div id="tplList"></div>
     </div>
   </div>
+  <div class="histBtns">
+    <button type="button" class="miniBtn" id="undoBtn" data-i18n-title="btnUndo" disabled>↶</button>
+    <button type="button" class="miniBtn" id="redoBtn" data-i18n-title="btnRedo" disabled>↷</button>
+  </div>
   <nav id="nodeBar"></nav>
   <div class="toolbar">
     <button type="button" class="miniBtn primary" id="addBtn" data-i18n="btnAdd">+ Node</button>
-    <button type="button" class="miniBtn" id="undoBtn" data-i18n-title="btnUndo" disabled>↶</button>
-    <button type="button" class="miniBtn" id="redoBtn" data-i18n-title="btnRedo" disabled>↷</button>
     <button type="button" class="miniBtn" id="propsBtn" data-i18n="tabProps" aria-controls="propsPanel">Réglages</button>
-    <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
-    <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
     <button type="button" class="miniBtn" id="helpBtn" data-i18n-title="helpTitle" aria-controls="helpPanel">?</button>
     <input type="file" id="graphInput" accept="application/json,.json" hidden>
   </div>
@@ -411,6 +486,12 @@
 <div id="workspace">
   <div id="stage">
     <div id="world"><div id="frames"></div><svg id="wires"></svg></div>
+  </div>
+  <div id="viewBar">
+    <button type="button" class="miniBtn" id="arrangeBtn" data-i18n="btnArrange" data-i18n-title="arrangeTitle">Arranger</button>
+    <button type="button" class="miniBtn" id="fitBtn" data-i18n="btnFit">Cadrer</button>
+    <button type="button" class="miniBtn" id="frameBtn" data-i18n="btnFrame">Grouper</button>
+    <button type="button" class="miniBtn" id="zoomBtn" data-i18n-title="zoomReset"></button>
   </div>
   <aside id="propsPanel">
     <div class="sidePane">
@@ -483,17 +564,27 @@ const I18N = {
     versionRestore:'Restaurer', versionConfirm:'Remplacer le graphe actuel par cette version ? Il sera gardé dans les versions.', versionNone:'Aucune version pour l’instant.',
     versionSum:'{n} nodes · {s} traits', autoFilePick:'Choisir un fichier…', autoFileOff:'Fichier sur le disque : aucun', autoFileOn:'Écrit dans {x}', autoFileStop:'Arrêter', autoFileResume:'Reconnecter', autoFileLost:'Fichier auto à reconnecter',
     savedAt:'Sauvé {x}', savedFile:'Sauvé {x} · {f}',
-    drawHint:'Sortie notes vers une Piste. Sens, pas et sensibilité sont dans Dessiner.', n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer le dessin', replayStop:'Arrêter', replayEnd:'Terminé',
+    drawHint:'Sortie notes vers une Piste. Sens, pas et sensibilité sont dans Dessiner.', n_srcDraw:'Dessin', p_reveal:'Avancement', btnDraw:'Dessiner', drawSum:'{n} traits', tpl_draw:'Live painting', p_replayMin:'Durée du replay', btnReplayLive:'Rejouer en musique', replayStop:'Arrêter', replayEnd:'Terminé',
     drLayers:'Calques d’affichage', drLayersHint:'Visuels seulement : la musique ne lit que ton dessin.',
     viaPixel:'une note par case', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grille', pxSize:'Taille (cases)', pxShow:'Afficher la grille',
-    p_memory:'Mémoire (traits)', memAll:'tout', toolErase:'Gomme', drNoBg:'Fond transparent', drNotes:'Ce dessin : {a} notes · Boucle : {b}',
+    p_memory:'Mémoire (traits)', memAll:'tout', toolErase:'Gomme', drNoBg:'Transparent', drNotes:'Ce dessin : {a} notes · Boucle : {b}',
     toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
-    drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Mettre en fond', drReplay:'Rejouer', drDone:'Terminer', drConfirm:'Effacer tout le dessin ?',
+    drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Couleur du pinceau', drReplay:'Revoir le tracé', drDone:'Terminer', drConfirm:'Repartir de zéro ? Les traits, les pages, le fond et les pistes ajoutées pour les instruments seront effacés.',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
-    btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsNone:'Sélectionne un node.', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
-    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, E, I','Pinceau, estompe, gomme, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['P','Mode pixel, dans le dessin'],['?','Cette aide']],
+    secTool:'Outil', secColor:'Couleur', secRead:'Lecture', secBg:'Fond', drEmpty:'Dessine ici : chaque trait devient des notes. Espace pour écouter.',
+    startTitle:'Pour commencer', startHint:'Ou ajoute un node : barre du haut, Tab, ou double-clic sur le fond. ? affiche les raccourcis.', zoomReset:'Revenir à 100 %',
+    tplDesc_draw:'Peins, chaque trait s’entend tout de suite.', tplDesc_pixel:'Une case peinte, une note.', tplDesc_starter:'Une image, deux balayages, deux instruments.', tplDesc_spin:'Un objet 3D qui tourne joue la boucle.', tplDesc_breathe:'Un LFO fait varier la densité des notes.', tplDesc_rhythm:'Deux balayages de longueurs différentes.', tplDesc_midi:'Un fichier .mid recalé sur une gamme.', tplDesc_logic:'Notes et CC envoyés en direct à Logic.',
+    pageSum:'page {a}/{b}', pageN:'Page {n}', pageAdd:'Nouvelle page (N)', pageCopy:'Dupliquer la page', pageLeft:'Avancer la page', pageRight:'Reculer la page', pageDel:'Supprimer la page', pageOnion:'Pelure', pageConfirm:'Supprimer cette page et ses traits ?',
+    p_pageChain:'Enchaîner les pages', p_pageLoops:'Boucles par page', drExportReplay:'Exporter le replay en .mid', tpl_flip:'Flipbook', tplDesc_flip:'Quatre pages, une par boucle.',
+    secVoices:'Instruments', secAnim:'Animation', voiceSuggest:'Instruments suggérés', voiceSuggestTitle:'Un instrument pour chaque couleur sans le sien, d’après Kandinsky. Modifiable ensuite.', voiceMain:'Piste principale', voiceNone:'Peins : chaque couleur utilisée apparaît ici.', voiceHint:'Un instrument, une piste, pour toutes ses couleurs. Clique sur une pastille pour l’envoyer ailleurs.', voiceMove:'changer d’instrument', voiceSteps:'Pas du dessin', voiceDir:'Sens du dessin',
+    pxSquare:'Remettre des cases carrées', pxRows:'Hauteurs', pxRowsSame:'Comme la grille', pxRowsScale:'la gamme', p_perStep:'Notes par pas', p_lightOct:'Octave selon la clarté', p_hold:'Notes tenues', p_read:'Lecture', readScan:'Balayage', readGesture:'Ordre du geste', p_trace:'dernier trait',
+    brSound:'Pinceau sonore', mirrorX:'Miroir gauche-droite : un palindrome', mirrorY:'Miroir haut-bas : la mélodie inversée', repOff:'Pas de répétition', repTitle:'Répéter le trait sur la largeur',
+    p_animGo:'Animation active', p_animX:'Défilement X', p_animY:'Défilement Y', p_animRot:'Rotation', p_animLoops:'Cycle (boucles)', animHint:'Le dessin se répète sur les côtés et bouge pendant la lecture : la tête lit un autre passage à chaque boucle.', tpl_anim:'Dessin qui défile', tplDesc_anim:'Un motif qui monte, un passage différent à chaque boucle.',
+    btnArrange:'Arranger', arrangeTitle:'Remettre les nodes en ordre, dans le sens du signal',
+    btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, E, I','Pinceau, estompe, gomme, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['P','Mode pixel, dans le dessin'],['← →, N','Changer de page, nouvelle page, dans le dessin'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -545,7 +636,7 @@ const I18N = {
     keyHint:'Clique l\'aperçu pour prélever une couleur.',
     btnPlay:'▶ Écouter', btnStop:'■ Stop', btnExport:'Exporter le .mid',
     loopEmpty:'Branche des pistes ici.',
-    notesWord:'notes', tracksWord:'pistes',
+    notesWord:'notes', tracksWord:'pistes', notesWord1:'note', tracksWord1:'piste',
     curve_linear:'Linéaire', curve_accel:'Accélérée', curve_decel:'Ralentie', curve_pulse:'Pulsée', curve_swing:'Swing',
     sc_majPenta:'Penta. majeure', sc_minPenta:'Penta. mineure', sc_major:'Majeure', sc_minor:'Mineure',
     sc_dorian:'Dorienne', sc_wholetone:'Par tons', sc_chromatic:'Chromatique',
@@ -580,17 +671,27 @@ const I18N = {
     versionRestore:'Restore', versionConfirm:'Replace the current graph with this version? It will be kept in the versions.', versionNone:'No version yet.',
     versionSum:'{n} nodes · {s} strokes', autoFilePick:'Choose a file…', autoFileOff:'File on disk: none', autoFileOn:'Writing to {x}', autoFileStop:'Stop', autoFileResume:'Reconnect', autoFileLost:'Auto file needs reconnecting',
     savedAt:'Saved {x}', savedFile:'Saved {x} · {f}',
-    drawHint:'Notes output to a Track. Direction, steps and sensitivity are in Draw.', n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay the drawing', replayStop:'Stop', replayEnd:'Finished',
+    drawHint:'Notes output to a Track. Direction, steps and sensitivity are in Draw.', n_srcDraw:'Drawing', p_reveal:'Progress', btnDraw:'Draw', drawSum:'{n} strokes', tpl_draw:'Live painting', p_replayMin:'Replay length', btnReplayLive:'Replay with music', replayStop:'Stop', replayEnd:'Finished',
     drLayers:'Display layers', drLayersHint:'Visual only: the music reads your drawing alone.',
     viaPixel:'one note per cell', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grid', pxSize:'Size (cells)', pxShow:'Show the grid',
-    p_memory:'Memory (strokes)', memAll:'all', toolErase:'Eraser', drNoBg:'Transparent background', drNotes:'This drawing: {a} notes · Loop: {b}',
+    p_memory:'Memory (strokes)', memAll:'all', toolErase:'Eraser', drNoBg:'Transparent', drNotes:'This drawing: {a} notes · Loop: {b}',
     toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
-    drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Set as background', drReplay:'Replay', drDone:'Done', drConfirm:'Clear the whole drawing?',
+    drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Brush color', drReplay:'Review strokes', drDone:'Done', drConfirm:'Start again? The strokes, pages, paper and the tracks added for instruments will be cleared.',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
-    btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsNone:'Select a node.', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
-    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, E, I','Brush, smudge, eraser, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['P','Pixel mode, in the drawing'],['?','This help']],
+    secTool:'Tool', secColor:'Color', secRead:'Playback', secBg:'Background', drEmpty:'Draw here: each stroke becomes notes. Space to listen.',
+    startTitle:'Getting started', startHint:'Or add a node: top bar, Tab, or double-click the background. ? shows the shortcuts.', zoomReset:'Back to 100%',
+    tplDesc_draw:'Paint, and hear each stroke straight away.', tplDesc_pixel:'One painted cell, one note.', tplDesc_starter:'One image, two scans, two instruments.', tplDesc_spin:'A spinning 3D object plays the loop.', tplDesc_breathe:'An LFO changes how dense the notes are.', tplDesc_rhythm:'Two scans of different lengths.', tplDesc_midi:'A .mid file snapped to a scale.', tplDesc_logic:'Notes and CC sent live to Logic.',
+    pageSum:'page {a}/{b}', pageN:'Page {n}', pageAdd:'New page (N)', pageCopy:'Duplicate the page', pageLeft:'Move the page earlier', pageRight:'Move the page later', pageDel:'Delete the page', pageOnion:'Onion skin', pageConfirm:'Delete this page and its strokes?',
+    p_pageChain:'Chain the pages', p_pageLoops:'Loops per page', drExportReplay:'Export the replay as .mid', tpl_flip:'Flipbook', tplDesc_flip:'Four pages, one per loop.',
+    secVoices:'Instruments', secAnim:'Animation', voiceSuggest:'Suggested instruments', voiceSuggestTitle:'An instrument for each color without one, after Kandinsky. You can change them afterwards.', voiceMain:'Main track', voiceNone:'Paint: each colour used appears here.', voiceHint:'One instrument, one track, for all its colors. Click a swatch to send it elsewhere.', voiceMove:'change instrument', voiceSteps:'Drawing’s steps', voiceDir:'Drawing’s direction',
+    pxSquare:'Back to square cells', pxRows:'Pitches', pxRowsSame:'Same as the grid', pxRowsScale:'the scale', p_perStep:'Notes per step', p_lightOct:'Octave follows lightness', p_hold:'Held notes', p_read:'Reading', readScan:'Scan', readGesture:'Gesture order', p_trace:'last stroke',
+    brSound:'Sounding brush', mirrorX:'Left-right mirror: a palindrome', mirrorY:'Top-bottom mirror: the melody inverted', repOff:'No repeat', repTitle:'Repeat the stroke across the width',
+    p_animGo:'Animation on', p_animX:'Scroll X', p_animY:'Scroll Y', p_animRot:'Rotation', p_animLoops:'Cycle (loops)', animHint:'The drawing repeats on its sides and moves during playback: the playhead reads a different passage each loop.', tpl_anim:'Scrolling drawing', tplDesc_anim:'A rising pattern, a different passage each loop.',
+    btnArrange:'Arrange', arrangeTitle:'Put the nodes in order, following the signal',
+    btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, E, I','Brush, smudge, eraser, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['P','Pixel mode, in the drawing'],['← →, N','Change page, new page, in the drawing'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -642,7 +743,7 @@ const I18N = {
     keyHint:'Click the preview to sample a color.',
     btnPlay:'▶ Listen', btnStop:'■ Stop', btnExport:'Export .mid',
     loopEmpty:'Wire tracks in here.',
-    notesWord:'notes', tracksWord:'tracks',
+    notesWord:'notes', tracksWord:'tracks', notesWord1:'note', tracksWord1:'track',
     curve_linear:'Linear', curve_accel:'Accelerating', curve_decel:'Slowing', curve_pulse:'Pulsing', curve_swing:'Swing',
     sc_majPenta:'Major penta.', sc_minPenta:'Minor penta.', sc_major:'Major', sc_minor:'Minor',
     sc_dorian:'Dorian', sc_wholetone:'Whole tone', sc_chromatic:'Chromatic',
@@ -676,6 +777,7 @@ function initialLang(){
   try{ const s = localStorage.getItem('dessons.lang'); if(s === 'fr' || s === 'en') return s; }catch(e){}
   return (navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en';
 }
+const countOf = (n, word)=> n + ' ' + t(word + (n === 1 ? '1' : ''));
 function setLang(lang){
   LANG = (lang === 'fr' || lang === 'en') ? lang : 'en';
   try{ localStorage.setItem('dessons.lang', LANG); }catch(e){}
@@ -691,6 +793,8 @@ function setLang(lang){
   syncTransport();
   drawWires();
   scheduleRun(true);
+  renderProps();
+  if(drawEd && !drawEd.watch) openDrawEditor(drawEd.n);
 }
 document.querySelectorAll('#langToggle button').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)));
 
@@ -707,7 +811,17 @@ const DEFAULT_SCALE = {scale:'minPenta', root:0, octLow:3, octHigh:5};
 // the workshop's 6 instruments, plus the ones only this page has for now
 // (no icon drawn yet, the workshop shows instruments as icons)
 const PIZZ_PROGRAM = 45;   // GM "Pizzicato Strings"
-const NODE_INSTR = GM_INSTR.concat([{fr:'Pizzicato', en:'Pizzicato', prog:PIZZ_PROGRAM, icon:null, abbr:'Pz'}]);
+// the GM numbers are the real ones: a .mid opens on the right instrument in Logic too
+const NODE_INSTR = GM_INSTR.concat([
+  {fr:'Pizzicato', en:'Pizzicato', prog:PIZZ_PROGRAM, icon:null, abbr:'Pz'},
+  {fr:'Violon', en:'Violin', prog:40, icon:null, abbr:'Vn'},
+  {fr:'Violoncelle', en:'Cello', prog:42, icon:null, abbr:'Vc'},
+  {fr:'Contrebasse', en:'Double Bass', prog:43, icon:null, abbr:'Cb'},
+  {fr:'Trompette', en:'Trumpet', prog:56, icon:null, abbr:'Tp'},
+  {fr:'Cor anglais', en:'English Horn', prog:69, icon:null, abbr:'Ca'},
+  {fr:'Basson', en:'Bassoon', prog:70, icon:null, abbr:'Bn'},
+  {fr:'Tambour', en:'Drum', prog:116, icon:null, abbr:'Tb'}
+]);
 
 function scalePitches(scale, root, octLow, octHigh){
   const degrees = SCALES[scale] || SCALES.minPenta;
@@ -740,6 +854,129 @@ const MATH_OPS = {
   abs:a=> Math.abs(a), sin:a=> Math.sin(a*Math.PI*2), cos:a=> Math.cos(a*Math.PI*2), floor:a=> Math.floor(a), frac:a=> a - Math.floor(a)
 };
 const PIXEL_GRIDS = [0, 8, 16, 32, 64, 128];     // 0 = the normal mode
+const MAX_PAGES = 32;
+// which page sounds. A page only turns at the start of a loop, never in the middle:
+// only what passes under the playhead is heard, so each page gets a whole pass
+let pagePassOverride = null;     // the pass being baked into a .mid
+let replayBake = null;           // {n, u}: the replay's position, baked into a .mid
+const pageCount = p=> Math.max(1, p.pages.length);
+const pageStrokes = (p, i)=> i === p.page ? p.strokes : (p.pages[i] || []);
+const pagesChained = p=> p.pages.length > 1 && p.pageChain;
+function drawPageIdx(p){
+  const pass = pagePassOverride !== null ? pagePassOverride : playing ? Math.floor(schedPos) : null;
+  if(pass === null || !pagesChained(p)) return p.page;
+  return Math.floor(pass/p.pageLoops) % p.pages.length;
+}
+const pagedDraws = ()=> [...nodes.values()].filter(n=> n.type === 'srcDraw' && pagesChained(n.params));
+// colours: a voice is one instrument and the colours that play it. One output, one Track
+const voicePort = prog=> 'v' + prog;
+const instrName = prog=>{ const g = NODE_INSTR.find(x=> String(x.prog) === String(prog)); return g ? g[LANG] || g.en : ''; };
+function colorName(c){
+  const hit = NY_PALETTE.find(x=> x[1].toLowerCase() === c.toLowerCase());
+  return hit ? hit[0] : c;
+}
+// dark is low, light is high: the colour sets the octave, by how light it looks. A whole
+// number of octaves, so a note stays in its scale. Not in Pixel: its staff names each note
+function colourOctave(hex){
+  const [r, g, b] = hexToRgb(hex), y = (0.299*r + 0.587*g + 0.114*b)/255;
+  return y < 0.2 ? -2 : y < 0.4 ? -1 : y < 0.72 ? 0 : 1;
+}
+const octaveNote = (midi, oct)=> midi + 12*oct >= 0 && midi + 12*oct <= 127 ? midi + 12*oct : midi;
+const strokeColors = list=> [...new Set(list.filter(st=> !st.e && st.t !== 's').map(st=> st.c.toLowerCase()))];
+// which colour each pixel belongs to (index + 1, 0 = paper), by the nearest colour painted.
+// An edge lands just before the paint, on bare paper: it goes to the paint it announces
+function colourOwners(field, colours, bg){
+  const {w, h, rgb} = field, N = w*h, own = new Uint8Array(N), pal = colours.map(hexToRgb);
+  for(let px=0; px<N; px++){
+    const i = px*4;
+    if(bg ? Math.abs(rgb[i] - bg[0]) + Math.abs(rgb[i+1] - bg[1]) + Math.abs(rgb[i+2] - bg[2]) < 24 : rgb[i+3] < 128) continue;
+    let best = 0, dist = Infinity;
+    pal.forEach(([r, g, b], k)=>{
+      const e = (rgb[i] - r)**2 + (rgb[i+1] - g)**2 + (rgb[i+2] - b)**2;
+      if(e < dist){ dist = e; best = k + 1; }
+    });
+    own[px] = best;
+  }
+  const out = own.slice();
+  for(let px=0; px<N; px++){
+    if(own[px]) continue;
+    for(let k=1; k<=3 && !out[px]; k++) out[px] = own[px + k] || own[px + w*k] || 0;
+  }
+  return out;
+}
+// the stroke as a melody: its points in the order they were drawn, spread over the steps.
+// Height picks the note, pressure the loudness; staying on a note holds it
+function gestureNotes(list, prog, scale, p, curve, field){
+  const pitches = scale ? scale.pitches : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh);
+  const pts = [];
+  list.forEach((st, id)=>{
+    if(st.e || st.t === 's') return;
+    const v = strokePoints(st);
+    for(let i=0;i<v.length;i+=3) pts.push([v[i], v[i+1], v[i+2], id]);
+  });
+  const cut = Math.round(pts.length*clamp(prog, 0, 1)), notes = [], rows = Math.max(1, pitches.length);
+  if(cut && pitches.length) for(let k=0;k<p.steps;k++){
+    const [x, y, pr, id] = pts[Math.min(cut - 1, Math.floor((k + 0.5)/p.steps*cut))];
+    const row = clamp(Math.floor((1 - y)*rows), 0, rows - 1), last = notes[notes.length - 1];
+    if(last && last.id === id && last.row === row){ last.len++; continue; }
+    notes.push({step:k, midi:pitches[row], vel:Math.round(50 + 77*pr), row, len:1, px:x, py:y, id});
+  }
+  return {steps:p.steps, curve:curve ? 'custom' : p.curve, customPts:curve ? curve.pts : null, notes, rows, field, dir:p.dir, pathModel:null, gesture:true};
+}
+// the last stroke, as a path for a Scan
+function lastStrokePath(list){
+  const st = [...list].reverse().find(x=> !x.e && strokePoints(x).length >= 6);
+  if(!st) return null;
+  const v = strokePoints(st), n = v.length/3, every = Math.max(1, Math.floor(n/128)), points = [];
+  for(let i=0;i<n;i+=every) points.push([v[i*3], v[i*3+1]]);
+  return {points};
+}
+/* ---- animation: the drawing repeats on every side and moves under the playhead, over a
+   cycle of several loops: the same painting, a different passage each time round. Whole
+   tiles and whole turns per cycle, so the cycle ends where it began ---- */
+const animOn = p=> !!(p.animGo && (p.animX || p.animY || p.animRot));   // the switch keeps the settings
+function drawAnimNow(p){
+  if(!animOn(p)) return null;
+  const baking = pagePassOverride !== null || meshPhaseOverride !== null;
+  const pos = baking ? (pagePassOverride || 0) + (meshPhaseOverride || 0) : playing ? schedPos : 0;
+  const u = (pos/p.animLoops) % 1;
+  let ox = p.animX*u, oy = p.animY*u;
+  const gy = p.gridY || p.grid;
+  if(p.grid){ ox = Math.round(ox*p.grid)/p.grid; oy = Math.round(oy*gy)/gy; }
+  return {u, ox, oy, ang:p.animRot*u*Math.PI*2, cells:p.grid && !p.animRot ? [p.grid, gy] : null};
+}
+// where a point on screen comes from in the drawing
+function animSource(a, x, y){
+  const c = Math.cos(a.ang), s = Math.sin(a.ang), u = x - 0.5, v = y - 0.5;
+  const sx = u*c + v*s + 0.5 - a.ox, sy = -u*s + v*c + 0.5 - a.oy;
+  return [sx - Math.floor(sx), sy - Math.floor(sy)];
+}
+// a grid moves cell by cell, on the cells' own edges: 260 pixels don't divide evenly, and a
+// cell moved by a rounded distance would spill a pixel into its neighbour, which is a note
+function cellShift(size, count, off){
+  const edge = i=> Math.floor(i*size/count), map = new Int32Array(size), shift = Math.round(off*count);
+  for(let c=0;c<count;c++){
+    const from = ((c - shift) % count + count) % count, a = edge(c), b = edge(c + 1), sa = edge(from), sb = edge(from + 1);
+    for(let x=a;x<b;x++) map[x] = sa + Math.min(sb - sa - 1, Math.floor((x - a)*(sb - sa)/(b - a)));
+  }
+  return map;
+}
+function tileImage(data, w, h, a){
+  if(!a.ox && !a.oy && !a.ang) return data;
+  const out = new Uint8ClampedArray(w*h*4);
+  if(a.cells){
+    const mx = cellShift(w, a.cells[0], a.ox), my = cellShift(h, a.cells[1], a.oy), src = new Uint32Array(data.buffer, data.byteOffset, w*h), dst = new Uint32Array(out.buffer);
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++) dst[y*w + x] = src[my[y]*w + mx[x]];
+    return out;
+  }
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+    const [sx, sy] = animSource(a, (x + 0.5)/w, (y + 0.5)/h);
+    const i = (Math.min(h - 1, Math.floor(sy*h))*w + Math.min(w - 1, Math.floor(sx*w)))*4, o = (y*w + x)*4;
+    out[o] = data[i]; out[o+1] = data[i+1]; out[o+2] = data[i+2]; out[o+3] = data[i+3];
+  }
+  return out;
+}
+function syncDrawPages(){ pagedDraws().forEach(n=>{ if(n.lastPage !== drawPageIdx(n.params)) markDirty(n.id); }); }
 // shared by the Edges and Scan nodes and by the Drawing, which has both built in
 function edgesCompute(p, {image}){
   if(!image) return {field:null};
@@ -897,30 +1134,75 @@ function generateImage(p, t){
 // the sensitivity: column = step, row = pitch, darker against the paper = louder. Rows
 // climb the scale from its lowest note, so nothing leaves it; a grid taller than the
 // whole scale shares pitches between rows. A layer filter upstream still applies (mask).
-function pixelNotes(field, scale, p, curve){
-  const {g, bg} = field.pixel, {w, h, rgb, mask} = field, dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
+function pixelPitches(scale, rows){
   const lad = scaleLadder(scale), low = scale ? scale.pitches[0] : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh)[0];
-  const start = Math.max(0, Math.min(lad.indexOf(low), lad.length - g));
-  const pitch = row=> g <= lad.length ? lad[start + row] : lad[Math.floor(row*lad.length/g)];
-  const notes = [];
-  for(let y=0;y<g;y++) for(let x=0;x<g;x++){
-    const px = Math.floor((y + 0.5)*h/g)*w + Math.floor((x + 0.5)*w/g), i = px*4;
-    if(!mask[px]) continue;
-    let dist;
+  const start = Math.max(0, Math.min(lad.indexOf(low), lad.length - rows));
+  return Array.from({length:rows}, (_, r)=> rows <= lad.length ? lad[start + r] : lad[Math.floor(r*lad.length/rows)]);
+}
+// a line of cells on one note is one held note
+function holdNotes(list){
+  const out = [], open = new Map();
+  list.forEach(n=>{
+    const o = open.get(n.midi);
+    if(o && o.step + o.len === n.step){ o.len++; return; }
+    const m = Object.assign({}, n, {len:1});
+    open.set(n.midi, m); out.push(m);
+  });
+  return out;
+}
+function pixelNotes(field, scale, p, curve){
+  const {g, gy, bg, centre} = field.pixel, {w, h, rgb, mask} = field, dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
+  // the columns are the time, unless the reading goes up or down the page
+  const upright = p.dir === 'tb' || p.dir === 'bt', steps = upright ? gy : g, rows = upright ? g : gy;
+  const pitches = pixelPitches(scale, rows);
+  // how far a pixel is from the paper, -1 if it is paper
+  const ink = px=>{
+    const i = px*4;
+    if(!mask[px]) return -1;
     if(bg){
-      dist = Math.abs(rgb[i] - bg[0]) + Math.abs(rgb[i+1] - bg[1]) + Math.abs(rgb[i+2] - bg[2]);
-      if(dist < 24) continue;
-    } else {
-      if(rgb[i+3] < 128) continue;      // transparent paper: painted or not, and contrast sets the loudness
-      dist = 200 + Math.abs(0.299*rgb[i] + 0.587*rgb[i+1] + 0.114*rgb[i+2] - 128)*3;
+      const dist = Math.abs(rgb[i] - bg[0]) + Math.abs(rgb[i+1] - bg[1]) + Math.abs(rgb[i+2] - bg[2]);
+      return dist < 24 ? -1 : dist;
     }
-    const [tau, rho] = dir.fwd((x + 0.5)/g, (y + 0.5)/g);
-    const row = clamp(Math.floor(rho*g), 0, g - 1);
-    notes.push({step:clamp(Math.floor(tau*g), 0, g - 1), midi:pitch(row), row, vel:Math.round(clamp(60 + dist/765*67, 60, 127)), px:(x + 0.5)/g, py:(y + 0.5)/g});
+    if(rgb[i+3] < 128) return -1;       // transparent paper: painted or not, and contrast sets the loudness
+    return 200 + Math.abs(0.299*rgb[i] + 0.587*rgb[i+1] + 0.114*rgb[i+2] - 128)*3;
+  };
+  const notes = [];
+  for(let y=0;y<gy;y++) for(let x=0;x<g;x++){
+    // the whole cell, not its centre: strokes keep the grid they were painted on, so after a
+    // change of grid a cell can be only partly painted. Same edges as fillCells(): a painted
+    // cell doesn't spill into its neighbour, and the grids nest (powers of two)
+    // A turning grid no longer sits on its cells: there, the centre decides
+    let dist = -1;
+    const x0 = Math.floor((centre ? x + 0.5 : x)*w/g), y0 = Math.floor((centre ? y + 0.5 : y)*h/gy);
+    const x1 = centre ? x0 + 1 : Math.floor((x + 1)*w/g), y1 = centre ? y0 + 1 : Math.floor((y + 1)*h/gy);
+    for(let py=y0; py<y1; py++) for(let px=x0; px<x1; px++) dist = Math.max(dist, ink(py*w + px));
+    if(dist < 0) continue;
+    const [tau, rho] = dir.fwd((x + 0.5)/g, (y + 0.5)/gy);
+    const row = clamp(Math.floor(rho*rows), 0, rows - 1);
+    notes.push({step:clamp(Math.floor(tau*steps), 0, steps - 1), midi:pitches[row], row, vel:Math.round(clamp(60 + dist/765*67, 60, 127)), px:(x + 0.5)/g, py:(y + 0.5)/gy});
   }
-  return {steps:g, curve:curve ? 'custom' : p.curve, customPts:curve ? curve.pts : null, notes:uniqueNotes(notes), rows:g, field, dir:p.dir, pathModel:null, pixel:true};
+  const list = uniqueNotes(notes);
+  return {steps, curve:curve ? 'custom' : p.curve, customPts:curve ? curve.pts : null, notes:p.hold ? holdNotes(list) : list, rows, field, dir:p.dir, pathModel:null, pixel:true};
 }
 const withNotes = (src, list)=> Object.assign({}, src, {notes:list});
+// a thick stroke fills every pitch of a step at once, a block rather than a chord. Each step
+// is cut into as many slices of pitch as notes allowed, and the loudest of each slice stays:
+// fewer notes, the same outline
+function thinNotes(list, max){
+  if(!max) return list;
+  const steps = new Map(), out = [];
+  list.forEach(n=>{ if(!steps.has(n.step)) steps.set(n.step, []); steps.get(n.step).push(n); });
+  steps.forEach(group=>{
+    if(group.length <= max){ out.push(...group); return; }
+    group.sort((a, b)=> a.midi - b.midi);
+    for(let i=0;i<max;i++){
+      const slice = group.slice(Math.floor(i*group.length/max), Math.floor((i + 1)*group.length/max));
+      // same loudness, as in a solid stroke: the middle of the slice
+      out.push(slice.reduce((a, b)=> b.vel > a.vel ? b : a, slice[slice.length >> 1]));
+    }
+  });
+  return out.sort((a, b)=> a.step - b.step || a.midi - b.midi);
+}
 // one note per (step, pitch): the loudest
 function uniqueNotes(list){
   const best = new Map();
@@ -1094,53 +1376,127 @@ const NODE_DEFS = {
   // a painting kept as its strokes, in the order they were made, so it can be replayed:
   // with cycles on, the picture builds up during each pass of the Loop
   srcDraw: {
-    cat:'catSource', custom:'draw', thumb:'image', note:'drawHint',
+    cat:'catSource', custom:'draw', thumb:'image', thumbClass:'open', note:'drawHint',
     inputs:[{id:'scale', type:'scale', opt:true}, {id:'curve', type:'curve', opt:true}, {id:'path', type:'path', opt:true}],
-    outputs:[{id:'notes', type:'notes'}, {id:'image', type:'image'}],
+    outputs:[{id:'notes', type:'notes'}, {id:'image', type:'image'}, {id:'trace', type:'path', label:'p_trace'}],
+    // one output per instrument, for all its colours; 'notes' keeps the rest
+    dynOut:n=> n.params.voices.map(v=> ({id:voicePort(v.prog), type:'notes', text:instrName(v.prog)})),
     params:[
       {id:'strokes', kind:'hidden', def:[]},
+      {id:'voices', kind:'hidden', def:[]},
+      {id:'free', kind:'hidden', def:[]},      // colours kept on the main track on purpose
+      {id:'gridY', kind:'hidden', def:0},
       {id:'bg', kind:'hidden', def:'transparent'},
       {id:'layers', kind:'hidden', def:[]},
       {id:'grid', kind:'hidden', def:0},
+      // pages: p.strokes is the page on the easel, p.pages[p.page] is stale until storePage()
+      {id:'pages', kind:'hidden', def:[]},
+      {id:'page', kind:'hidden', def:0},
       {id:'reveal', label:'p_reveal', kind:'range', min:0, max:100, step:1, def:100, fmt:v=>v+'%', sig:true},
-      {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1},
+      {id:'turns', label:'p_rate', kind:'range', min:0, max:4, step:1, def:1, panel:true},
       {id:'memory', label:'p_memory', kind:'range', min:0, max:64, step:1, def:0, fmt:v=> v || t('memAll'), panel:true},
       {id:'dir', label:'p_dir', kind:'select', def:'lr', options:()=> DIR_KEYS.map(k=>[k, DIR_LABELS[k]]), panel:true},
       {id:'steps', label:'p_steps', kind:'range', min:4, max:64, step:1, def:16, panel:true},
       {id:'thresh', label:'p_thresh', kind:'range', min:1, max:100, step:1, def:60, fmt:v=>v+'%', panel:true},
       {id:'curve', label:'p_curve', kind:'select', def:'linear', options:()=> CURVE_KEYS.map(k=>[k, t('curve_'+k)]), panel:true},
-      {id:'replayMin', label:'p_replayMin', kind:'range', min:0.5, max:20, step:0.5, def:3, fmt:v=> v + ' min'}
+      {id:'replayMin', label:'p_replayMin', kind:'range', min:0.5, max:20, step:0.5, def:3, fmt:v=> v + ' min', panel:true},
+      {id:'read', label:'p_read', kind:'select', def:'scan', options:()=> [['scan', t('readScan')], ['gesture', t('readGesture')]], panel:true},
+      {id:'perStep', label:'p_perStep', kind:'range', min:0, max:8, step:1, def:3, fmt:v=> v || t('memAll'), panel:true},
+      {id:'lightOct', label:'p_lightOct', kind:'check', def:true, panel:true},
+      {id:'hold', label:'p_hold', kind:'check', def:false, panel:true},
+      {id:'animGo', label:'p_animGo', kind:'check', def:true, panel:true},
+      {id:'animX', label:'p_animX', kind:'range', min:-4, max:4, step:1, def:0, panel:true},
+      {id:'animY', label:'p_animY', kind:'range', min:-4, max:4, step:1, def:0, panel:true},
+      {id:'animRot', label:'p_animRot', kind:'range', min:-4, max:4, step:1, def:0, panel:true},
+      {id:'animLoops', label:'p_animLoops', kind:'range', min:1, max:32, step:1, def:4, panel:true},
+      {id:'pageChain', label:'p_pageChain', kind:'check', def:true, panel:true},
+      {id:'pageLoops', label:'p_pageLoops', kind:'range', min:1, max:16, step:1, def:1, panel:true}
     ],
     clean:o=>{
       const hex = v=> typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
       if(!hex(o.bg) && o.bg !== 'transparent') delete o.bg;
       if(!PIXEL_GRIDS.includes(o.grid)) delete o.grid;
+      const rows = v=> isNum(v) && v >= 4 && v <= 128 ? Math.round(v) : 0;
+      o.gridY = rows(o.gridY);
+      const colorList = l=> !Array.isArray(l) ? [] : [...new Set(l.filter(hex).map(c=> c.toLowerCase()))].slice(0, 64);
+      const progs = new Set();
+      o.voices = !Array.isArray(o.voices) ? [] : o.voices.filter(v=>{
+        if(!isPlain(v) || !NODE_INSTR.some(g=> String(g.prog) === String(v.prog)) || progs.has(String(v.prog))) return false;
+        progs.add(String(v.prog));
+        return true;
+      }).slice(0, 16).map(v=> ({prog:String(v.prog), colors:colorList(v.colors), steps:isNum(v.steps) ? clamp(Math.round(v.steps), 0, 64) : 0, dir:DIR_KEYS.includes(v.dir) ? v.dir : ''}));
+      o.free = colorList(o.free);
       o.layers = !Array.isArray(o.layers) ? [] : o.layers.filter(l=> isPlain(l) && typeof l.id === 'string' && isNum(l.a)).slice(0, 32).map(l=> ({id:l.id, a:clamp(l.a, 0, 1)}));
-      o.strokes = !Array.isArray(o.strokes) ? [] : o.strokes.filter(st=> isPlain(st) && hex(st.c) && typeof st.pts === 'string' && /^[0-9,]*$/.test(st.pts))
-        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {}), ...(st.e ? {e:1} : {}),
-          ...(st.t === 'p' && PIXEL_GRIDS.includes(st.g) && st.g ? {t:'p', g:st.g, z:isNum(st.z) ? clamp(Math.round(st.z), 1, 16) : 1} : {})}));
+      const strokes = list=> !Array.isArray(list) ? [] : list.filter(st=> isPlain(st) && hex(st.c) && typeof st.pts === 'string' && /^[0-9,]*$/.test(st.pts))
+        .map(st=> ({c:st.c, s:isNum(st.s) ? clamp(st.s, 1, 400) : 20, o:isNum(st.o) ? clamp(st.o, 0, 1) : 1, h:isNum(st.h) ? clamp(st.h, 0, 1) : 1, r:isNum(st.r) ? clamp(st.r, 0, 1) : 0, pts:st.pts, ...(st.t === 's' ? {t:'s'} : {}), ...(st.e ? {e:1} : {}), ...(st.m ? {m:clamp(Math.round(st.m) || 0, 0, 3)} : {}), ...(st.k > 1 ? {k:clamp(Math.round(st.k) || 1, 1, 16)} : {}), ...(st.ka ? {ka:1} : {}), ...(st.w ? {w:1} : {}),
+          ...(st.t === 'p' && PIXEL_GRIDS.includes(st.g) && st.g ? {t:'p', g:st.g, z:isNum(st.z) ? clamp(Math.round(st.z), 1, 16) : 1, ...(rows(st.gy) ? {gy:rows(st.gy)} : {})} : {})}));
+      o.strokes = strokes(o.strokes);
+      o.pages = !Array.isArray(o.pages) ? [] : o.pages.slice(0, MAX_PAGES).map(strokes);
+      o.page = isNum(o.page) && o.pages[Math.round(o.page)] ? Math.round(o.page) : 0;
     },
     compute:(p, {scale, curve, path}, n)=>{
       n.lastPhase = meshPhase();
       const baking = meshPhaseOverride !== null, replay = !baking && drawReplay && drawReplay.n === n;
+      const baked = replayBake && replayBake.n === n ? replayBake.u : null;
       const live = p.turns && (playing || baking);
-      const prog = replay ? replayPos() : live ? (p.turns*n.lastPhase) % 1 : clamp(p.reveal/100, 0, 1);
+      const prog = baked !== null ? baked : replay ? replayPos() : live ? (p.turns*n.lastPhase) % 1 : clamp(p.reveal/100, 0, 1);
+      // the replay rebuilds the page on the easel; otherwise the page the Loop has reached
+      n.lastPage = replay || baked !== null ? p.page : drawPageIdx(p);
+      const strokes = pageStrokes(p, n.lastPage);
       n.drawCache = n.drawCache || {};
       // memory: the music reads only the latest strokes, the painting on screen stays whole.
       // A grid has a limited number of cells: once a full painting has filled them all, a new
       // stroke has nothing left to add. Pixel mode reads every cell, so it keeps everything.
-      const recent = p.memory && !p.grid ? recentStrokes(p.strokes, prog, p.memory) : null;
-      const cv = recent ? drawAt(n.drawCache, MAXDIM, recent, p.bg, 1) : drawAt(n.drawCache, MAXDIM, p.strokes, p.bg, prog);
+      const voiced = new Map();
+      p.voices.forEach(v=> v.colors.forEach(c=> voiced.set(c, v.prog)));
+      const voiceKey = st=> st.e || st.t === 's' ? 'tool' : voiced.get(st.c.toLowerCase()) || 'rest';
+      const recent = p.memory && !p.grid ? recentStrokes(strokes, prog, p.memory, voiced.size ? voiceKey : null) : null;
+      const cv = recent ? drawAt(n.drawCache, MAXDIM, recent, p.bg, 1) : drawAt(n.drawCache, MAXDIM, strokes, p.bg, prog);
       // the stroke being painted counts already: it's read while the hand is still moving
-      if(n.drawLive && !replay) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive, null, p.bg);
-      const clear = p.bg === 'transparent';
-      const image = {w:MAXDIM, h:MAXDIM, data:cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data, alpha:clear, drawn:true, pixel:p.grid ? {g:p.grid, bg:clear ? null : hexToRgb(p.bg)} : null};
+      if(n.drawLive && !replay && n.lastPage === p.page) commitStroke(cv.getContext('2d'), MAXDIM, n.drawLive, null, p.bg);
+      const clear = p.bg === 'transparent', anim = drawAnimNow(p);
+      n.lastAnim = anim ? anim.u : null;
+      const raw = cv.getContext('2d').getImageData(0, 0, MAXDIM, MAXDIM).data;
+      const image = {w:MAXDIM, h:MAXDIM, data:anim ? tileImage(raw, MAXDIM, MAXDIM, anim) : raw, alpha:clear, drawn:true, pixel:p.grid ? {g:p.grid, gy:p.gridY || p.grid, bg:clear ? null : hexToRgb(p.bg), centre:!!p.animRot} : null};
+      const list = recent || strokes, out = {image, notes:null, trace:null};
+      const wired = port=> links.some(l=> l.from === n.id && l.fromPort === port);
+      if(wired('trace')) out.trace = lastStrokePath(list);
+      const ports = ['notes'].concat(p.voices.map(v=> voicePort(v.prog))).filter(wired);
+      if(!ports.length) return out;
       // the built-in Edges + Scan, only when something listens
-      const wired = links.some(l=> l.from === n.id && l.fromPort === 'notes');
-      const notes = wired ? scanCompute(p, {field:edgesCompute({method:'gradient'}, {image}).field, scale, curve, path}, n).notes : null;
-      return {image, notes};
+      const field = edgesCompute({method:'gradient'}, {image}).field;
+      const colours = [...new Set(strokeColors(list).concat([...voiced.keys()]))];
+      const byLight = p.lightOct && !p.grid;
+      const octaves = new Set(byLight ? colours.map(colourOctave) : [0]);
+      const owner = p.voices.length || octaves.size > 1 ? colourOwners(field, colours, clear ? null : hexToRgb(p.bg)) : null;
+      const readOne = (keep, over, of)=>{
+        const f = owner ? Object.assign({}, field, {mask:field.mask.map((m, i)=> m && owner[i] && keep(colours[owner[i] - 1]) ? 1 : 0)}) : field;
+        const q = Object.assign({}, p, over);
+        if(q.read !== 'gesture') return scanCompute(q, {field:f, scale, curve, path}, n).notes;
+        return gestureNotes(list.filter(st=> of(st.c.toLowerCase())), recent ? 1 : prog, scale, q, curve, f);
+      };
+      // one reading per octave present, each note moved to its colour's octave
+      const read = (keep, over, of)=>{
+        const groups = byLight ? [...new Set(colours.filter(keep).map(colourOctave))] : [0];
+        const parts = groups.map(o=>{
+          const part = readOne(c=> keep(c) && (!byLight || colourOctave(c) === o), over, c=> of(c) && (!byLight || colourOctave(c) === o));
+          return part && withNotes(part, part.notes.map(nt=> Object.assign({}, nt, {midi:octaveNote(nt.midi, o)})));
+        }).filter(Boolean);
+        if(!parts.length) return readOne(keep, over, of);
+        // in Pixel a painted cell is a note, always
+        return withNotes(parts[0], thinNotes(uniqueNotes(parts.flatMap(q=> q.notes)), p.grid ? 0 : p.perStep));
+      };
+      if(ports.includes('notes')) out.notes = read(c=> !voiced.has(c), {}, c=> !voiced.has(c));
+      p.voices.forEach(v=>{
+        const port = voicePort(v.prog), of = c=> v.colors.includes(c);
+        if(ports.includes(port)) out[port] = read(of, {steps:v.steps || p.steps, dir:v.dir || p.dir}, of);
+      });
+      return out;
     },
-    summary:n=> t('drawSum').replace('{n}', n.params.strokes.length)
+    summary:n=>{
+      const pages = n.params.pages.length, sum = t('drawSum').replace('{n}', n.params.strokes.length);
+      return pages > 1 ? sum + ' · ' + t('pageSum').replace('{a}', n.params.page + 1).replace('{b}', pages) : sum;
+    }
   },
   srcGen: {
     cat:'catSource', thumb:'image', outputs:[{id:'image', type:'image'}],
@@ -1472,7 +1828,7 @@ const NODE_DEFS = {
       const root = parseInt(p.root) || 0;
       return {scale:{pitches:scalePitches(p.scale, root, p.octLow, p.octHigh), scale:p.scale, root}};
     },
-    summary:(n)=>{ const s = n.out && n.out.scale; return s ? s.pitches.length + ' ' + t('notesWord') : ''; }
+    summary:(n)=>{ const s = n.out && n.out.scale; return s ? countOf(s.pitches.length, 'notesWord') : ''; }
   },
   scan: {
     cat:'catMusic', thumb:'scan',
@@ -1493,7 +1849,7 @@ const NODE_DEFS = {
       else if(o.field.thresh != null) via.push(t('viaSens') + ' (' + o.field.thresh + '%)');
       if(o.pathModel) via.push(t('viaPath'));
       if(o.customPts) via.push(t('viaCurve'));
-      return [o.notes.length + ' ' + t('notesWord')].concat(via).join(' · ');
+      return [countOf(o.notes.length, 'notesWord')].concat(via).join(' · ');
     }
   },
   curve: {
@@ -1556,7 +1912,7 @@ const NODE_DEFS = {
       const name = p.name || ((NODE_INSTR.find(g=> String(g.prog) === p.program) || {})[LANG] || t('trackDefault'));
       return {track:Object.assign({}, src, {name, program:parseInt(p.program) || 0, color:p.color, mute:!!p.mute, id:n.id})};
     },
-    summary:(n)=>{ const o = n.out && n.out.track; return o ? o.notes.length + ' ' + t('notesWord') : ''; }
+    summary:(n)=>{ const o = n.out && n.out.track; return o ? countOf(o.notes.length, 'notesWord') : ''; }
   },
   loop: {
     cat:'catOut', inputs:[{id:'tracks', type:'track', multi:true, label:'in_tracks'}], outputs:[], thumb:'loop', wide:true, custom:'loop',
@@ -1571,7 +1927,7 @@ const NODE_DEFS = {
     },
     summary:(n)=>{
       const L = n.out && n.out._loop; if(!L) return '';
-      return L.tracks.length + ' ' + t('tracksWord') + ' · ' + L.tracks.reduce((a,tr)=> a + tr.notes.length, 0) + ' ' + t('notesWord');
+      return countOf(L.tracks.length, 'tracksWord') + ' · ' + countOf(L.tracks.reduce((a,tr)=> a + tr.notes.length, 0), 'notesWord');
     }
   },
   // live Web MIDI out of one notes wire to a virtual port (IAC on macOS), on
@@ -1606,6 +1962,8 @@ function modParams(def, p, inp){
   });
   return q;
 }
+// the order they're offered in: the quickest to get a sound from come first
+const TEMPLATE_KEYS = ['draw', 'pixel', 'flip', 'anim', 'starter', 'spin', 'breathe', 'rhythm', 'midi', 'logic'];
 const ADD_MENU = [
   ['catSource', ['srcImage', 'srcDraw', 'srcVideo', 'srcWebcam', 'srcMesh', 'srcGen', 'srcMidi', 'srcMic']],
   ['catImage', ['crop', 'tone', 'blur', 'invert', 'flip', 'blend', 'rgbaSplit', 'rgbaCombine']],
@@ -1811,13 +2169,16 @@ function scheduleRun(all){
   requestAnimationFrame(()=>{
     runQueued = false;
     nodes.forEach(n=> evalNode(n));
-    let again = false;
+    let again = false, moved = false;
     nodes.forEach(n=>{
       if(!n.thumbDirty) return;
+      const was = n.thumb && n.thumb.classList.contains('empty');
       drawThumb(n); updateSummary(n); n.thumbDirty = false;
+      moved = moved || (n.thumb && n.thumb.classList.contains('empty')) !== was;
       if(n.id === selectedId) again = true;
     });
     if(again) paintPreview();
+    if(moved) drawWires();      // a thumbnail appearing moves the ports below it
     syncTransport();
   });
 }
@@ -1841,6 +2202,11 @@ function buildNodeEl(n){
   head.querySelector('.title').textContent = t('n_' + n.type);
   head.querySelector('.nodeDel').addEventListener('click', e=>{ e.stopPropagation(); removeNode(n.id); });
   const fold = head.querySelector('.nodeFold');
+  if(def.note){
+    const info = document.createElement('span');
+    info.className = 'nodeInfo'; info.textContent = 'i'; info.title = t(def.note); info.setAttribute('aria-label', info.title);
+    head.insertBefore(info, fold);
+  }
   fold.textContent = n.params.folded ? '▸' : '▾';
   fold.title = t('foldTitle'); fold.setAttribute('aria-label', fold.title); fold.setAttribute('aria-expanded', !n.params.folded);
   fold.addEventListener('click', e=>{
@@ -1877,12 +2243,12 @@ function buildNodeEl(n){
     if(def.thumbPointer) def.thumbPointer(n, c);
     if(def.pick) c.addEventListener('click', e=> pickColorFromThumb(n, e));
     if(def.thumb === 'loop') c.addEventListener('click', ()=> togglePlay(n));
+    if(def.custom === 'draw'){ c.title = t('btnDraw'); c.addEventListener('click', ()=> openDrawEditor(n)); }
   }
   if(def.custom === 'loop') buildLoopControls(n, body);
   if(def.custom === 'midi') buildMidiControls(n, body);
   if(def.custom === 'sens') buildSensControls(n, body);
   if(def.custom === 'scale') buildScaleControls(n, body);
-  if(def.note){ const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t(def.note); body.appendChild(p); }
   const sum = document.createElement('div'); sum.className = 'nodeNote summary'; body.appendChild(sum);
   const err = document.createElement('div'); err.className = 'nodeErr'; err.hidden = true; body.appendChild(err);
   el.appendChild(body);
@@ -2129,10 +2495,14 @@ function drawThumb(n){
   const def = NODE_DEFS[n.type], c = n.thumb;
   if(!c) return;
   const kind = def.thumb;
+  c.classList.remove('empty');
   if(kind === 'image'){
     const im = n.out.image;
     if(!im){ emptyThumb(c); return; }
-    blitRGBA(sizeThumb(c, im.w, im.h), c, im.w, im.h, im.data);
+    const ctx = sizeThumb(c, im.w, im.h);
+    // transparent paper: on the thumbnail's black, a black stroke wouldn't show
+    if(im.alpha){ ctx.fillStyle = '#e4e4e4'; ctx.fillRect(0, 0, c.width, c.height); }
+    blitRGBA(ctx, c, im.w, im.h, im.data);
   } else if(kind === 'signal'){
     const ctx = sizeThumb(c, 3, 1), W = c.width, H = c.height, s = n.out.sig;
     ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, W, H);
@@ -2183,9 +2553,9 @@ function drawThumb(n){
     ctx.globalAlpha = 1;
   } else if(kind === 'roll'){
     const o = n.out.notes || n.out.track;
+    if(!o || !o.notes.length){ emptyThumb(c); return; }
     const ctx = sizeThumb(c, 3, 1);
     ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, c.width, c.height);
-    if(!o || !o.notes.length) return;
     drawRoll(ctx, 0, 0, c.width, c.height, [{notes:o.notes, steps:o.steps, curve:'linear', color:n.out.track ? o.color : typeColor('notes')}], 0.8);
   } else if(kind === 'loop'){
     drawLoopThumb(n);
@@ -2206,10 +2576,7 @@ function drawThumb(n){
     drawPathThumb(n);
   }
 }
-function emptyThumb(c){
-  const ctx = sizeThumb(c, 3, 1);
-  ctx.fillStyle = '#06100f'; ctx.fillRect(0, 0, c.width, c.height);
-}
+function emptyThumb(c){ c.classList.add('empty'); }
 // note rects positioned by curve-warped time (linear for single-scan rolls)
 function drawRoll(ctx, x, y, w, h, tracks, gate){
   let lo = 127, hi = 0;
@@ -2649,6 +3016,7 @@ setInterval(()=>{
   nodes.forEach(n=>{
     if((n.type === 'srcVideo' || n.type === 'srcWebcam') && !n.frozen && grabFrame(n)) markDirty(n.id);
     else if(drawReplay && drawReplay.n === n) markDirty(n.id);
+    else if(n.type === 'srcDraw' && (n.lastPage !== drawPageIdx(n.params) || (animOn(n.params) && (playing || n.lastAnim) && n.lastAnim !== drawAnimNow(n.params).u))) markDirty(n.id);
     else if((n.type === 'srcMesh' || n.type === 'srcGen' || n.type === 'srcDraw') && n.params.turns && n.lastPhase !== meshPhase()) markDirty(n.id);
     else if(n.type === 'srcMic') readMic(n);
     else if(NODE_DEFS[n.type].sigSource && (playing || n.sigLive) && drivesSignal(n)){
@@ -2923,7 +3291,7 @@ function meshPhase(){
 const drivesSignal = n=> links.some(l=> l.from === n.id && outputDef(n, l.fromPort).type === 'signal');
 function bakeSpin(loopNode){
   const base = evalNode(loopNode)._loop;
-  const spin = [...nodes.values()].filter(m=> ((m.type === 'srcMesh' || m.type === 'srcGen' || m.type === 'srcDraw') && m.params.turns) || (NODE_DEFS[m.type].sigSource && drivesSignal(m)));
+  const spin = [...nodes.values()].filter(m=> ((m.type === 'srcMesh' || m.type === 'srcGen' || m.type === 'srcDraw') && m.params.turns) || (m.type === 'srcDraw' && animOn(m.params)) || (NODE_DEFS[m.type].sigSource && drivesSignal(m)));
   if(!base || !spin.length) return base;
   const seen = new Map();
   const tracksAt = phase=>{
@@ -3143,9 +3511,38 @@ function strokeLayer(S){
 // itself doesn't darken it, like a real pass of the brush
 // a block of cells, from its top-left cell: edges rounded the same way on both sides,
 // so cells meet without a seam at any size
-function fillCells(ctx, S, g, cx, cy, z){
-  const x0 = Math.floor(cx*S/g), y0 = Math.floor(cy*S/g);
-  ctx.fillRect(x0, y0, Math.floor((cx + z)*S/g) - x0, Math.floor((cy + z)*S/g) - y0);
+function fillCells(ctx, S, g, cx, cy, z, gy = g){
+  const x0 = Math.floor(cx*S/g), y0 = Math.floor(cy*S/gy);
+  ctx.fillRect(x0, y0, Math.floor((cx + z)*S/g) - x0, Math.floor((cy + z)*S/gy) - y0);
+}
+// where a stroke lands: itself, its mirrors (m: 1 left-right, 2 top-bottom, 3 both) and its
+// repeats (k copies along the time axis, ka = vertical). Kept on the stroke, so undo and
+// the replay treat them as one gesture
+function strokeMaps(st){
+  let maps = [(x, y)=> [x, y]];
+  const flip = fn=> maps.map(f=> (x, y)=> fn(...f(x, y)));
+  if(st.m & 1) maps = maps.concat(flip((x, y)=> [1 - x, y]));
+  if(st.m & 2) maps = maps.concat(flip((x, y)=> [x, 1 - y]));
+  const k = st.k || 1, base = maps;
+  for(let j=1;j<k;j++) maps = maps.concat(base.map(f=> (x, y)=>{
+    const [a, b] = f(x, y), o = j/k;
+    return st.ka ? [a, (b + o) % 1] : [(a + o) % 1, b];
+  }));
+  return maps;
+}
+// a copy that goes off one edge comes back on the other: it starts again there, no line
+// across the canvas. A repeat wraps when it moves differently from the stroke; a stroke
+// painted on a moving drawing (w) wraps in its own points. A fast gesture isn't a wrap
+function stampCopies(ctx, S, st, states, maps, x, y, p){
+  maps.forEach((f, i)=>{
+    const [a, b] = f(x, y);
+    let s = states[i] || (states[i] = {});
+    const wrapped = s.started && (st.w ? Math.abs(a - s.x) > 0.5 || Math.abs(b - s.y) > 0.5
+      : Math.abs(Math.abs(a - s.x) - Math.abs(x - s.sx)) > 0.25 || Math.abs(Math.abs(b - s.y) - Math.abs(y - s.sy)) > 0.25);
+    if(wrapped) s = states[i] = {};
+    stampTo(ctx, S, st, s, a, b, p);
+    s.sx = x; s.sy = y;
+  });
 }
 const cellAnchor = (c, z)=> c - Math.floor((z - 1)/2);      // the block sits on the cell under the pointer
 function commitStroke(ctx, S, st, limit, bg){
@@ -3163,19 +3560,24 @@ function commitStroke(ctx, S, st, limit, bg){
     ctx.globalAlpha = 1;
     ctx.fillStyle = st.c;
     if(erase) ctx.globalCompositeOperation = 'destination-out';
-    for(let i=0;i<n;i++) fillCells(ctx, S, st.g, cellAnchor(Math.floor(pts[i*3]*st.g), z), cellAnchor(Math.floor(pts[i*3+1]*st.g), z), z);
+    const gy = st.gy || st.g, maps = strokeMaps(st);
+    for(let i=0;i<n;i++) maps.forEach(f=>{
+      const [x, y] = f(pts[i*3], pts[i*3+1]);
+      fillCells(ctx, S, st.g, cellAnchor(Math.floor(x*st.g), z), cellAnchor(Math.floor(y*gy), z), z, gy);
+    });
     ctx.globalCompositeOperation = 'source-over';
     return;
   }
   if(st.t === 's'){
-    const pts = strokePoints(st), state = {}, n = limit == null ? pts.length/3 : limit;
-    for(let i=0;i<n;i++) stampTo(ctx, S, st, state, pts[i*3], pts[i*3+1], pts[i*3+2]);
+    // the smudge works on the canvas itself, each copy dragging its own bit of paint
+    const pts = strokePoints(st), states = [], maps = strokeMaps(st), n = limit == null ? pts.length/3 : limit;
+    for(let i=0;i<n;i++) stampCopies(ctx, S, st, states, maps, pts[i*3], pts[i*3+1], pts[i*3+2]);
     ctx.globalAlpha = 1;
     return;
   }
-  const pts = strokePoints(st), layer = strokeLayer(S), lc = layer.getContext('2d'), state = {}, n = limit == null ? pts.length/3 : limit;
+  const pts = strokePoints(st), layer = strokeLayer(S), lc = layer.getContext('2d'), states = [], maps = strokeMaps(st), n = limit == null ? pts.length/3 : limit;
   lc.clearRect(0, 0, S, S);
-  for(let i=0;i<n;i++) stampTo(lc, S, st, state, pts[i*3], pts[i*3+1], pts[i*3+2]);
+  for(let i=0;i<n;i++) stampCopies(lc, S, st, states, maps, pts[i*3], pts[i*3+1], pts[i*3+2]);
   lc.globalAlpha = 1;
   ctx.globalAlpha = st.o;
   if(erase) ctx.globalCompositeOperation = 'destination-out';
@@ -3185,12 +3587,21 @@ function commitStroke(ctx, S, st, limit, bg){
 }
 // the picture at a point of the replay (0..1, by points drawn). Finished strokes
 // stay on a cached base: going forward only adds what's new
-function recentStrokes(strokes, prog, count){
+// keyOf: the memory is counted per voice, so painting on with one colour doesn't silence
+// the instruments of the others. Without voices, one count for the whole drawing
+function recentStrokes(strokes, prog, count, keyOf){
   let total = 0;
   strokes.forEach(st=>{ total += strokePoints(st).length/3; });
   let left = Math.round(clamp(prog, 0, 1)*total), i = 0;
   while(i < strokes.length && left > 0){ left -= strokePoints(strokes[i]).length/3; i++; }
-  return strokes.slice(Math.max(0, i - count), i);
+  if(!keyOf) return strokes.slice(Math.max(0, i - count), i);
+  const seen = new Map(), kept = [];
+  for(let k=i-1;k>=0;k--){
+    const key = keyOf(strokes[k]), c = seen.get(key) || 0;
+    seen.set(key, c + 1);
+    if(c < count) kept.unshift(strokes[k]);
+  }
+  return kept;
 }
 function drawAt(cache, S, strokes, bg, prog){
   if(!cache.out || cache.S !== S){
@@ -3273,6 +3684,8 @@ function replayFrame(){
 }
 
 let drawEd = null;      // {n, cv, ctx, cache, cur, state, redo, ring, replay}
+let drawFolds = {};     // section id -> folded
+try{ drawFolds = JSON.parse(localStorage.getItem('dessons.drawFolds') || '{}') || {}; }catch(e){}
 let brush = {size:28, opacity:100, hard:75, press:60, color:'#231F20', tool:'brush', pxSize:1, gridOn:true};
 try{ brush = Object.assign(brush, JSON.parse(localStorage.getItem('dessons.brush') || '{}')); }catch(e){}
 const saveBrush = ()=>{ try{ localStorage.setItem('dessons.brush', JSON.stringify(brush)); }catch(e){} };
@@ -3280,6 +3693,113 @@ function drawChanged(){
   const n = drawEd.n;
   markDirty(n.id); saveSoon();
   syncDrawButtons();
+  paintPageThumb(n.params.page);
+  renderVoices();
+}
+/* ---- pages: a flipbook read by the Loop, one page per pass (see drawPageIdx) ---- */
+function storePage(p){
+  p.pages = p.pages.length ? p.pages.slice() : [p.strokes];
+  p.pages[p.page] = p.strokes;
+}
+const pageCache = {};
+function paintPageThumb(i){
+  const d = drawEd, c = d && d.strip.querySelector('[data-page="' + i + '"] canvas');
+  if(!c) return;
+  const p = d.n.params, x = c.getContext('2d');
+  x.clearRect(0, 0, c.width, c.height);
+  x.drawImage(drawAt(pageCache, 104, pageStrokes(p, i), p.bg, 1), 0, 0, c.width, c.height);
+}
+function renderPageStrip(){
+  const d = drawEd, n = d.n, p = n.params, list = document.createElement('div'), count = pageCount(p);
+  list.className = 'pageList';
+  for(let i=0;i<count;i++){
+    const b = document.createElement('button'), c = document.createElement('canvas'), num = document.createElement('span');
+    b.type = 'button'; b.className = 'pageBtn' + (i === p.page ? ' on' : ''); b.dataset.page = i;
+    b.title = t('pageN').replace('{n}', i + 1); b.setAttribute('aria-label', b.title);
+    c.width = c.height = 104; num.textContent = i + 1;
+    b.append(c, num);
+    b.addEventListener('click', ()=> setDrawPage(i));
+    list.appendChild(b);
+  }
+  const tools = document.createElement('div'); tools.className = 'pageTools';
+  const tool = (text, title, fn, off)=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn'; b.textContent = text; b.title = t(title); b.setAttribute('aria-label', b.title); b.disabled = !!off;
+    b.addEventListener('click', fn);
+    tools.appendChild(b);
+  };
+  tool('+', 'pageAdd', ()=> addDrawPage(false), count >= MAX_PAGES);
+  tool('⧉', 'pageCopy', ()=> addDrawPage(true), count >= MAX_PAGES);
+  tool('←', 'pageLeft', ()=> moveDrawPage(-1), p.page === 0);
+  tool('→', 'pageRight', ()=> moveDrawPage(1), p.page === count - 1);
+  tool('×', 'pageDel', removeDrawPage, count < 2);
+  const skin = document.createElement('label'), box = document.createElement('input'), lab = document.createElement('span');
+  skin.className = 'prm'; skin.style.gridTemplateColumns = 'auto auto';
+  box.type = 'checkbox'; box.checked = brush.onion !== false; lab.textContent = t('pageOnion');
+  box.addEventListener('change', ()=>{ brush.onion = box.checked; saveBrush(); drawOnionSkin(); });
+  skin.append(box, lab);
+  d.strip.innerHTML = '';
+  d.strip.append(list, tools);
+  if(count > 1) d.strip.appendChild(skin);
+  for(let i=0;i<count;i++) paintPageThumb(i);
+  d.box.querySelectorAll('.pageOpt').forEach(el=>{ el.hidden = count < 2; });
+  d.heard = -1;
+}
+// the page before, under the one you're on: how a flipbook is drawn
+function drawOnionSkin(){
+  const d = drawEd, p = d.n.params, c = d.onion, x = c.getContext('2d');
+  c.hidden = brush.onion === false || p.page === 0 || playing;
+  if(c.hidden) return;
+  x.clearRect(0, 0, c.width, c.height);
+  x.drawImage(drawAt(d.onionCache, 512, pageStrokes(p, p.page - 1), 'transparent', 1), 0, 0);
+}
+function pageShown(quiet){
+  const d = drawEd;
+  d.redo = [];
+  markDirty(d.n.id);
+  if(!quiet) saveSoon();
+  refreshDrawEditor(); drawOnionSkin();
+}
+// quiet: the playhead turned the page. Not an edit, it stays out of the undo history
+function setDrawPage(i, quiet){
+  const d = drawEd, p = d.n.params;
+  if(d.cur || i === p.page || i < 0 || i >= pageCount(p)) return;
+  stopReplay();
+  storePage(p);
+  p.page = i; p.strokes = p.pages[i];
+  d.strip.querySelectorAll('.pageBtn').forEach(b=> b.classList.toggle('on', +b.dataset.page === i));
+  d.strip.querySelectorAll('.pageTools .miniBtn')[2].disabled = i === 0;
+  d.strip.querySelectorAll('.pageTools .miniBtn')[3].disabled = i === pageCount(p) - 1;
+  pageShown(quiet);
+}
+function addDrawPage(copy){
+  const d = drawEd, p = d.n.params;
+  if(d.cur || pageCount(p) >= MAX_PAGES) return;
+  stopReplay();
+  storePage(p);
+  p.strokes = copy ? p.strokes : [];
+  p.pages.splice(++p.page, 0, p.strokes);
+  renderPageStrip(); pageShown();
+}
+function moveDrawPage(by){
+  const d = drawEd, p = d.n.params, to = p.page + by;
+  if(d.cur || to < 0 || to >= pageCount(p)) return;
+  storePage(p);
+  [p.pages[p.page], p.pages[to]] = [p.pages[to], p.pages[p.page]];
+  p.page = to;
+  renderPageStrip(); pageShown();
+}
+function removeDrawPage(){
+  const d = drawEd, p = d.n.params;
+  if(d.cur || pageCount(p) < 2) return;
+  if(p.strokes.length){ if(!confirm(t('pageConfirm'))) return; autosave(); }
+  stopReplay();
+  storePage(p);
+  p.pages.splice(p.page, 1);
+  p.page = Math.min(p.page, p.pages.length - 1);
+  p.strokes = p.pages[p.page];
+  if(p.pages.length < 2) p.pages = [];
+  renderPageStrip(); pageShown();
 }
 function showDraw(d, cv){
   d.ctx.globalAlpha = 1;
@@ -3293,42 +3813,75 @@ function refreshDrawEditor(){
 }
 function syncDrawButtons(){
   const d = drawEd;
-  d.undo.disabled = !d.n.params.strokes.length; d.clear.disabled = d.undo.disabled; d.replayBtn.disabled = d.undo.disabled;
+  d.undo.disabled = !d.n.params.strokes.length; d.replayBtn.disabled = d.undo.disabled;
+  const p = d.n.params;
+  d.clear.disabled = d.undo.disabled && p.pages.length < 2 && !p.voices.length && p.bg === 'transparent';
+  d.empty.hidden = !d.undo.disabled || d.watch;
   d.redoBtn.disabled = !d.redo.length;
 }
 function ringSize(){
   const d = drawEd, g = d.n.params.grid, w = d.cv.getBoundingClientRect().width;
   const px = g ? brush.pxSize/g*w : brush.size/DRAW_RES*w;
   d.ring.classList.toggle('square', !!g);
-  d.ring.style.width = d.ring.style.height = Math.max(3, px) + 'px';
+  d.ring.style.width = Math.max(3, px) + 'px';
+  d.ring.style.height = Math.max(3, g ? brush.pxSize/(d.n.params.gridY || g)*w : px) + 'px';
 }
 // in pixel mode the cursor is the block it will fill, sitting on the grid
 function moveRing(e){
   const d = drawEd, g = d.n.params.grid;
   if(!g){ d.ring.style.left = e.clientX + 'px'; d.ring.style.top = e.clientY + 'px'; return; }
-  const r = d.cv.getBoundingClientRect(), z = brush.pxSize;
-  const cell = v=> Math.min(g - 1, Math.max(0, Math.floor(v*g)));
-  const ax = cellAnchor(cell((e.clientX - r.left)/r.width), z), ay = cellAnchor(cell((e.clientY - r.top)/r.height), z);
+  const r = d.cv.getBoundingClientRect(), z = brush.pxSize, gy = d.n.params.gridY || g;
+  const cell = (v, c)=> Math.min(c - 1, Math.max(0, Math.floor(v*c)));
+  const ax = cellAnchor(cell((e.clientX - r.left)/r.width, g), z), ay = cellAnchor(cell((e.clientY - r.top)/r.height, gy), z);
   d.ring.style.left = r.left + (ax + z/2)/g*r.width + 'px';
-  d.ring.style.top = r.top + (ay + z/2)/g*r.height + 'px';
+  d.ring.style.top = r.top + (ay + z/2)/gy*r.height + 'px';
 }
+const noteName = m=> NOTE_NAMES[m % 12] + (Math.floor(m/12) - 1);
+// the score's staff: cells, beats and bars on the time axis, and each row's note, with
+// the root's rows lit. Only when the reading runs along a side of the page
 function drawGridLines(){
-  const d = drawEd, g = d.n.params.grid, c = d.gridCv;
+  const d = drawEd, p = d.n.params, g = p.grid, gy = p.gridY || g, c = d.gridCv;
   c.hidden = !g || !brush.gridOn;
   if(c.hidden) return;
-  const x = c.getContext('2d'), W = c.width;
+  const x = c.getContext('2d'), W = c.width, upright = p.dir === 'tb' || p.dir === 'bt', straight = upright || p.dir === 'lr' || p.dir === 'rl';
+  const lp = loopOfDrawing(d.n), beats = (lp ? lp.params.bars : 2)*4, steps = upright ? gy : g, perBeat = steps/beats;
   x.clearRect(0, 0, W, W);
-  for(let i=1;i<g;i++){
-    const p = Math.round(i*W/g) + 0.5, major = i % 8 === 0;
-    x.strokeStyle = major ? 'rgba(128,128,128,.65)' : 'rgba(128,128,128,.32)';
-    x.beginPath(); x.moveTo(p, 0); x.lineTo(p, W); x.moveTo(0, p); x.lineTo(W, p); x.stroke();
+  const rule = (i, count, vertical, timed)=>{
+    const u = i/perBeat, beat = timed && Math.abs(u - Math.round(u)) < 1e-6, bar = beat && Math.round(u) % 4 === 0;
+    const q = Math.round(i*W/count) + 0.5;
+    x.strokeStyle = bar ? 'rgba(0,160,70,.95)' : beat ? 'rgba(0,160,70,.55)' : 'rgba(128,128,128,.3)';
+    x.lineWidth = bar ? 2.5 : 1;
+    x.beginPath(); if(vertical){ x.moveTo(q, 0); x.lineTo(q, W); } else { x.moveTo(0, q); x.lineTo(W, q); } x.stroke();
+  };
+  for(let i=1;i<g;i++) rule(i, g, true, straight && !upright);
+  for(let i=1;i<gy;i++) rule(i, gy, false, upright);
+  if(!straight) return;
+  const scale = d.n.inp && d.n.inp.scale, rows = upright ? g : gy, pitches = pixelPitches(scale, rows), dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
+  const cell = W/rows, root = pitches[0] % 12, size = Math.min(cell*0.72, 20);
+  x.font = size + 'px monospace'; x.textBaseline = 'middle'; x.textAlign = 'left';
+  for(let i=0;i<rows;i++){
+    const rho = upright ? dir.fwd((i + 0.5)/g, 0.5)[1] : dir.fwd(0.5, (i + 0.5)/gy)[1], m = pitches[clamp(Math.floor(rho*rows), 0, rows - 1)];
+    if(m % 12 === root){
+      x.fillStyle = 'rgba(0,200,90,.13)';
+      if(upright) x.fillRect(i*cell, 0, cell, W); else x.fillRect(0, i*cell, W, cell);
+    }
+    if(size < 9) continue;
+    const tx = upright ? i*cell + 2 : 4, ty = upright ? size : (i + 0.5)*cell;
+    x.lineWidth = 3; x.strokeStyle = 'rgba(255,255,255,.85)'; x.fillStyle = m % 12 === root ? '#006b2e' : '#333';
+    x.strokeText(noteName(m), tx, ty); x.fillText(noteName(m), tx, ty);
   }
 }
+const gridKey = ()=>{
+  const d = drawEd, p = d.n.params, sc = d.n.inp && d.n.inp.scale, lp = loopOfDrawing(d.n);
+  return [p.grid, p.gridY, p.dir, lp && lp.params.bars, sc && sc.pitches[0], sc && sc.pitches.length, brush.gridOn].join();
+};
 // the mode belongs to the drawing; strokes keep the grid they were made on
 function setDrawGrid(g){
   const d = drawEd;
-  d.n.params.grid = g; saveSoon();
+  // the grid is the score: the notes change with it, even if no stroke does
+  if(d.n.params.grid !== g){ d.n.params.grid = g; markDirty(d.n.id); saveSoon(); }
   if(g && drawEd.tool === 'smudge') setDrawTool('brush');
+  d.box.querySelector('.lightOct').hidden = !!g;
   d.box.querySelectorAll('.drawMode').forEach(b=> b.classList.toggle('primary', (b.dataset.mode === 'pixel') === !!g));
   d.box.querySelectorAll('.pxOnly').forEach(el=>{ el.hidden = !g; });
   ['brSize', 'brOpacity', 'brHard', 'brPress'].forEach(id=>{ $(id).closest('.prm').hidden = !!g; });
@@ -3336,12 +3889,197 @@ function setDrawGrid(g){
   d.box.querySelectorAll('.drawThresh, .drawMemory').forEach(el=>{ el.hidden = !!g; });
   d.box.querySelector('.drawTool[data-tool=brush]').hidden = false;
   if(g) $('pxGrid').value = g;
-  ringSize(); drawGridLines();
+  syncSquare(); ringSize(); drawGridLines();
+  renderVoices();
+}
+function setDrawRows(rows){
+  const d = drawEd, p = d.n.params;
+  if(p.gridY !== rows){ p.gridY = rows; markDirty(d.n.id); saveSoon(); }
+  $('pxRows').value = rows;
+  syncSquare(); ringSize(); drawGridLines();
+}
+function syncSquare(){
+  const p = drawEd.n.params;
+  $('pxSquare').hidden = !p.grid || !p.gridY || p.gridY === p.grid;
 }
 function drawPoint(e){
-  const r = drawEd.cv.getBoundingClientRect();
+  const d = drawEd, r = d.cv.getBoundingClientRect();
+  const x = clamp((e.clientX - r.left)/r.width, 0, 1), y = clamp((e.clientY - r.top)/r.height, 0, 1);
+  // on a moving drawing a stroke is laid where the picture was when it began, and moves with it
+  const [sx, sy] = d.cur && d.cur.anim ? animSource(d.cur.anim, x, y) : [x, y];
   // a mouse has no pressure to give: only a pen's counts
-  return [clamp((e.clientX - r.left)/r.width, 0, 1), clamp((e.clientY - r.top)/r.height, 0, 1), e.pointerType === 'pen' ? clamp(e.pressure, 0.02, 1) : 1];
+  return [sx, sy, e.pointerType === 'pen' ? clamp(e.pressure, 0.02, 1) : 1];
+}
+/* ---- the sounding brush: the tip plays the note under it, like a string under a finger ---- */
+function previewNote(program, midi, vel, sec){
+  if(!audioSupported()) return;
+  ensureAudio();
+  if(ac.state === 'suspended') ac.resume();
+  makeVoiceRoom();
+  const when = ac.currentTime + 0.005;
+  const v = playVoice(ac, bus.master, program, midi, vel, when, sec);
+  voices.add(v);
+  v.osc.onended = ()=> voices.delete(v);
+}
+function colourProgram(n, c){
+  const v = voiceOf(n, c);
+  if(v) return parseInt(v.prog) || 0;
+  const l = links.find(x=> x.from === n.id && x.fromPort === 'notes' && nodes.get(x.to).type === 'track');
+  return l ? parseInt(nodes.get(l.to).params.program) || 0 : 0;
+}
+function brushNote(n, x, y){
+  const p = n.params, scale = n.inp && n.inp.scale, dir = DIR_DEFS[p.dir] || DIR_DEFS.lr, rho = p.read === 'gesture' ? 1 - y : dir.fwd(x, y)[1];
+  const upright = p.dir === 'tb' || p.dir === 'bt';
+  const pitches = p.grid ? pixelPitches(scale, upright ? p.grid : (p.gridY || p.grid)) : scale ? scale.pitches : scalePitches(DEFAULT_SCALE.scale, DEFAULT_SCALE.root, DEFAULT_SCALE.octLow, DEFAULT_SCALE.octHigh);
+  return pitches[clamp(Math.floor(rho*pitches.length), 0, pitches.length - 1)];
+}
+function brushSound(x, y, pr){
+  const d = drawEd, st = d.cur.st, now = performance.now();
+  if(brush.sound === false || st.e || st.t === 's' || (playing && sink === 'midi')) return;
+  const midi = brushNote(d.n, x, y);
+  if(midi === undefined || midi === d.cur.midi || now - (d.cur.soundAt || 0) < 45) return;
+  d.cur.midi = midi; d.cur.soundAt = now;
+  const p = d.n.params, played = p.lightOct && !p.grid ? octaveNote(midi, colourOctave(st.c)) : midi;
+  previewNote(colourProgram(d.n, st.c), played, Math.round(35 + 75*pr), 0.22);
+}
+/* ---- instruments: each groups its colours on one output and one Track ---- */
+const voiceOf = (n, c)=> n.params.voices.find(v=> v.colors.includes(c.toLowerCase()));
+const portTargets = (n, port)=> links.filter(l=> l.from === n.id && l.fromPort === port).map(l=> nodes.get(l.to));
+const voiceTrack = (n, v)=> portTargets(n, voicePort(v.prog)).find(m=> m.type === 'track');
+function addVoice(n, prog, c){
+  const loop = loopOfDrawing(n), port = voicePort(prog);
+  n.params.voices = n.params.voices.concat([{prog, colors:[c], steps:0, dir:''}]);
+  buildNodeEl(n);
+  // under what's already there, so the graph stays readable
+  const all = [...nodes.values()], tracks = all.filter(m=> m.type === 'track');
+  const x = tracks.length ? tracks[0].x : n.x + 300, bottom = all.filter(m=> m.x >= x - 10).reduce((a, m)=> Math.max(a, m.y + m.el.offsetHeight), n.y);
+  const tr = addNode('track', x, bottom + 30, {program:prog, color:c});
+  connect(n.id, port, tr.id, 'notes');
+  if(loop) connect(tr.id, 'track', loop.id, 'tracks');
+  // a drawing sent to Logic keeps going there: this instrument gets its own channel
+  if(portTargets(n, 'notes').some(m=> m.type === 'midiOut')) connect(n.id, port, addNode('midiOut', x + 260, bottom + 30).id, 'notes');
+}
+// an instrument left without a colour goes, with its Track and its Logic node
+function pruneVoices(n){
+  n.params.voices.filter(v=> !v.colors.length).forEach(v=>{
+    const port = voicePort(v.prog);
+    portTargets(n, port).filter(m=> m.type === 'track' || m.type === 'midiOut').forEach(m=> removeNode(m.id));
+    links = links.filter(l=> !(l.from === n.id && l.fromPort === port));
+  });
+  n.params.voices = n.params.voices.filter(v=> v.colors.length);
+}
+// program '' = back to the main track, on purpose: it won't be given an instrument again
+function setVoiceProgram(n, colour, program){
+  const p = n.params, c = colour.toLowerCase(), was = voiceOf(n, c);
+  if(was ? was.prog === program : !program && p.free.includes(c)) return;
+  if(was) p.voices = p.voices.map(v=> v === was ? Object.assign({}, v, {colors:v.colors.filter(x=> x !== c)}) : v);
+  p.free = p.free.filter(x=> x !== c).concat(program ? [] : [c]);
+  if(program){
+    const to = p.voices.find(v=> v.prog === program);
+    if(to) p.voices = p.voices.map(v=> v === to ? Object.assign({}, v, {colors:v.colors.concat([c])}) : v);
+    else addVoice(n, program, c);
+  }
+  pruneVoices(n);
+  buildNodeEl(n); drawWires(); markDirty(n.id); saveSoon();
+}
+// a whole instrument changed: onto an existing one its colours join it, otherwise it's renamed
+function setVoiceInstrument(n, v, program){
+  if(v.prog === program) return;
+  if(n.params.voices.some(x=> x.prog === program)){ [...v.colors].forEach(c=> setVoiceProgram(n, c, program)); return; }
+  const from = voicePort(v.prog), tr = voiceTrack(n, v);
+  links.forEach(l=>{ if(l.from === n.id && l.fromPort === from) l.fromPort = voicePort(program); });
+  n.params.voices = n.params.voices.map(x=> x === v ? Object.assign({}, x, {prog:program}) : x);
+  if(tr){ tr.params.program = program; buildNodeEl(tr); markDirty(tr.id); }
+  buildNodeEl(n); drawWires(); markDirty(n.id); saveSoon();
+}
+// a colour's suggested instrument: Kandinsky's correspondences (Concerning the Spiritual in
+// Art) where he gives one, by hue and by how light the colour looks, so a colour picked off
+// the screen gets one too. The neutrals are ours: dark is low, pale is light and soft
+function suggestInstrument(hex){
+  const [r, g, b] = hexToRgb(hex), max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const y = (0.299*r + 0.587*g + 0.114*b)/255, l = (max + min)/510, sat = max === min ? 0 : (max - min)/(255 - Math.abs(max + min - 255));
+  const hue = rgbToHue(r, g, b), PIANO = '0', VIBES = '11', BASS = '38';
+  if(y < 0.16 && sat < 0.35) return BASS;
+  if(sat < 0.14) return l > 0.82 ? VIBES : PIANO;
+  if(hue >= 8 && hue < 45 && y < 0.36) return PIANO;                  // the browns
+  if(hue >= 170 && hue < 255){
+    if(y > 0.5) return '73';                                           // light blue: a flute
+    if(y > 0.3) return '42';                                           // darker: a cello
+    return y > 0.17 ? '43' : '19';                                     // a double bass, then the organ
+  }
+  if(l > 0.8) return VIBES;
+  if(hue >= 70 && hue < 170) return '40';                              // green: the middle of a violin
+  if(hue >= 255 && hue < 345) return y > 0.28 ? '69' : '70';           // violet: English horn, bassoon
+  return hue >= 345 || hue < 12 ? '116' : '56';                        // vermilion: a drum; warm reds and yellows: trumpets
+}
+function suggestVoices(n){
+  const p = n.params, used = [...new Set(Array.from({length:pageCount(p)}, (_, i)=> strokeColors(pageStrokes(p, i))).flat())];
+  p.free = [];
+  used.filter(c=> !voiceOf(n, c)).forEach(c=> setVoiceProgram(n, c, suggestInstrument(c)));
+  renderVoices();
+}
+// every colour has its instrument: what's on the main output has nothing left to play. It
+// folds rather than goes, so a new colour is heard straight away (and unfolds it)
+function syncMainVoice(n){
+  const p = n.params, colours = Array.from({length:pageCount(p)}, (_, i)=> strokeColors(pageStrokes(p, i))).flat();
+  const idle = p.voices.length > 0 && colours.every(c=> voiceOf(n, c));
+  links.filter(l=> l.from === n.id && l.fromPort === 'notes').map(l=> nodes.get(l.to)).filter(m=> m.type === 'track' || m.type === 'midiOut').forEach(m=>{
+    if(idle === !!m.params.idleFold) return;
+    if(idle && m.params.folded) return;      // folded by hand: stays the user's
+    m.params.idleFold = idle; m.params.folded = idle;
+    buildNodeEl(m);
+    requestAnimationFrame(drawWires);
+  });
+}
+function renderVoices(){
+  const d = drawEd, n = d.n, p = n.params, box = d.voiceBox;
+  const used = [...new Set(Array.from({length:pageCount(p)}, (_, i)=> strokeColors(pageStrokes(p, i))).flat())];
+  // once there are instruments, a new colour joins its family straight away
+  if(p.voices.length) used.filter(c=> !voiceOf(n, c) && !p.free.includes(c)).forEach(c=> setVoiceProgram(n, c, suggestInstrument(c)));
+  syncMainVoice(n);
+  if(!box) return;
+  const key = used.join() + '|' + JSON.stringify(p.voices) + '|' + p.free.join() + '|' + !!p.grid + LANG;
+  if(box.dataset.key === key) return;
+  box.dataset.key = key; box.innerHTML = '';
+  d.fillPalette();
+  if(!used.length){ const e = document.createElement('div'); e.className = 'nodeNote'; e.textContent = t('voiceNone'); box.appendChild(e); return; }
+  const sel = (opts, value, label, fn)=>{
+    const s = document.createElement('select');
+    opts.forEach(([v, txt])=> s.appendChild(new Option(txt, v)));
+    s.value = value; s.setAttribute('aria-label', label); s.title = label;
+    s.addEventListener('change', ()=> fn(s.value));
+    return s;
+  };
+  const instruments = NODE_INSTR.map(g=> [String(g.prog), g[LANG]]);
+  // a colour: its swatch, with the real menu invisible on top to send it to another instrument
+  const swatches = colours=>{
+    const row = document.createElement('div'); row.className = 'voiceColors';
+    colours.forEach(c=>{
+      const sw = document.createElement('span'), v = voiceOf(n, c);
+      sw.className = 'voiceSw'; sw.style.background = c;
+      sw.appendChild(sel([['', t('voiceMain')]].concat(instruments), v ? v.prog : '', colorName(c) + ' · ' + t('voiceMove'), val=>{ setVoiceProgram(n, c, val); renderVoices(); }));
+      row.appendChild(sw);
+    });
+    return row;
+  };
+  p.voices.forEach(v=>{
+    const row = document.createElement('div'), mine = v.colors.filter(c=> used.includes(c));
+    row.className = 'voiceRow';
+    row.append(sel(instruments, v.prog, t('p_instr'), val=>{ setVoiceInstrument(n, v, val); renderVoices(); }), swatches(mine));
+    const set = (k, val)=>{ n.params.voices = n.params.voices.map(x=> x === v ? Object.assign({}, x, {[k]:val}) : x); markDirty(n.id); saveSoon(); renderVoices(); };
+    const opt = document.createElement('div'); opt.className = 'voiceOpt';
+    if(!p.grid) opt.appendChild(sel([[0, t('voiceSteps')]].concat([4, 6, 8, 12, 16, 24, 32].map(k=> [k, k + ' ' + t('p_steps').toLowerCase()])), v.steps, t('p_steps'), val=> set('steps', +val)));
+    opt.appendChild(sel([['', t('voiceDir')]].concat(DIR_KEYS.map(k=> [k, DIR_LABELS[k]])), v.dir, t('p_dir'), val=> set('dir', val)));
+    row.appendChild(opt);
+    box.appendChild(row);
+  });
+  const rest = used.filter(c=> !voiceOf(n, c));
+  if(rest.length){
+    const row = document.createElement('div'), lab = document.createElement('div');
+    row.className = 'voiceRow'; lab.className = 'dirLabel'; lab.textContent = t('voiceMain');
+    row.append(lab, swatches(rest));
+    box.appendChild(row);
+  }
 }
 function drawPaintView(){
   const d = drawEd;
@@ -3371,14 +4109,18 @@ function cellsBetween(ax, ay, bx, by){
 }
 function drawAdd(e){
   const d = drawEd, [x, y, p] = drawPoint(e);
+  brushSound(x, y, p);
   if(d.cur.st.t === 'p'){
-    const st = d.cur.st, g = st.g, cx = Math.min(g - 1, Math.floor(x*g)), cy = Math.min(g - 1, Math.floor(y*g)), last = d.cur.cell;
+    const st = d.cur.st, g = st.g, gy = st.gy || g, cx = Math.min(g - 1, Math.floor(x*g)), cy = Math.min(gy - 1, Math.floor(y*gy)), last = d.cur.cell;
     if(last && last[0] === cx && last[1] === cy) return;
     d.ctx.globalAlpha = 1; d.ctx.fillStyle = st.c;
     if(st.e && d.n.params.bg === 'transparent') d.ctx.globalCompositeOperation = 'destination-out';
     (last ? cellsBetween(last[0], last[1], cx, cy).slice(1) : [[cx, cy]]).forEach(([a, b])=>{
-      d.cur.pts.push(Math.round((a + 0.5)/g*10000), Math.round((b + 0.5)/g*10000), 100);
-      fillCells(d.ctx, DRAW_RES, g, cellAnchor(a, st.z), cellAnchor(b, st.z), st.z);
+      d.cur.pts.push(Math.round((a + 0.5)/g*10000), Math.round((b + 0.5)/gy*10000), 100);
+      d.cur.maps.forEach(f=>{
+        const [u, v] = f((a + 0.5)/g, (b + 0.5)/gy);
+        fillCells(d.ctx, DRAW_RES, g, cellAnchor(Math.floor(u*g), st.z), cellAnchor(Math.floor(v*gy), st.z), st.z, gy);
+      });
     });
     d.ctx.globalCompositeOperation = 'source-over';
     d.cur.cell = [cx, cy];
@@ -3393,9 +4135,9 @@ function drawAdd(e){
     d.n.drawLive = Object.assign({}, d.cur.st, {pts:d.cur.pts.join(',')});
     markDirty(d.n.id);
   }
-  if(d.cur.st.t === 's'){ stampTo(d.ctx, DRAW_RES, d.cur.st, d.cur.state, x, y, p); return; }
+  if(d.cur.st.t === 's'){ stampCopies(d.ctx, DRAW_RES, d.cur.st, d.cur.states, d.cur.maps, x, y, p); return; }
   const lc = strokeLayer(DRAW_RES).getContext('2d');
-  stampTo(lc, DRAW_RES, d.cur.st, d.cur.state, x, y, p);
+  stampCopies(lc, DRAW_RES, d.cur.st, d.cur.states, d.cur.maps, x, y, p);
   lc.globalAlpha = 1;
   if(!d.raf) d.raf = requestAnimationFrame(drawPaintView);
 }
@@ -3410,6 +4152,19 @@ function replayDrawing(){
     if(u < 1) d.replay = requestAnimationFrame(frame); else d.replay = 0;
   };
   d.replay = requestAnimationFrame(frame);
+}
+// back to a clean sheet: strokes, pages, paper, and the Tracks and Logic nodes the
+// instruments added. The node's own chain and its settings stay, so it still sounds
+function resetDrawing(n){
+  const p = n.params;
+  stopReplay();
+  p.voices = p.voices.map(v=> Object.assign({}, v, {colors:[]}));
+  pruneVoices(n);
+  p.free = []; p.pages = []; p.page = 0; p.strokes = []; p.bg = 'transparent';
+  drawEd.redo = [];
+  buildNodeEl(n); drawWires();
+  renderPageStrip(); drawOnionSkin();
+  drawChanged(); refreshDrawEditor();
 }
 function drawUndo(){
   const d = drawEd, st = d.n.params.strokes;
@@ -3430,6 +4185,8 @@ function drawKey(e){
   const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
   if(e.key === 'Escape'){ if(drawEd.watch) stopPlayback(); closeDrawEditor(); return true; }
   if(drawEd.watch) return e.key !== ' ';
+  if(!cmd && !e.target.closest('input, select') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){ e.preventDefault(); setDrawPage(drawEd.n.params.page + (e.key === 'ArrowLeft' ? -1 : 1)); return true; }
+  if(!cmd && !e.target.closest('input') && key === 'n'){ addDrawPage(false); return true; }
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
   if(!cmd && !e.target.closest('input') && (key === 'b' || key === 's' || key === 'i' || key === 'e')){ setDrawTool({b:'brush', s:drawEd.n.params.grid ? 'brush' : 'smudge', i:'pick', e:'erase'}[key]); return true; }
   if(!cmd && !e.target.closest('input, select') && key === 'p'){ setDrawGrid(drawEd.n.params.grid ? 0 : (brush.lastGrid || 32)); return true; }
@@ -3488,6 +4245,7 @@ function brushSlider(id, label, min, max, key, fmt){
   input.refresh = ()=>{ val.textContent = fmt(brush[key]); };
   input.refresh();
   input.addEventListener('input', ()=>{ brush[key] = +input.value; input.refresh(); if(key === 'size' || key === 'pxSize') ringSize(); saveBrush(); });
+  if(key === 'size' || key === 'pxSize') row.title = t(label) + ' ([ ])';
   row.append(lab, input, val);
   return row;
 }
@@ -3534,7 +4292,7 @@ function syncDrawLayers(){
 // what reads this drawing: the node itself, and any Scan still wired to its image
 const readers = n=> [n, ...scansOf(n)];
 // the notes being played from it, to show them on the painting
-const noteSources = n=> [n.out && n.out.notes, ...scansOf(n).map(s=> s.out && s.out.notes)].filter(Boolean);
+const noteSources = n=> [n.out && n.out.notes, ...n.params.voices.map(v=> n.out && n.out[voicePort(v.prog)]), ...scansOf(n).map(s=> s.out && s.out.notes)].filter(Boolean);
 // the reading direction from the painting screen: set on all of them, so the nodes and
 // the screen can't disagree
 function buildDirPicker(n, tools){
@@ -3575,8 +4333,6 @@ function buildLayerList(n, tools){
   const list = layerNodes(n);
   if(!list.length) return;
   const box = document.createElement('div'); box.className = 'layerList';
-  const h = document.createElement('h3'); h.textContent = t('drLayers');
-  box.appendChild(h);
   const count = {};
   list.forEach(m=>{
     count[m.type] = (count[m.type] || 0) + 1;
@@ -3600,6 +4356,14 @@ function buildLayerList(n, tools){
   box.appendChild(hint);
   tools.appendChild(box);
 }
+// where the playhead is on the image at a moment of the loop: steps are evenly spaced on
+// the image and curved in time, so it follows the notes and speeds up and slows down with them
+function curvedTau(o, pos){
+  let k = 0;
+  while(k < o.steps - 1 && stepFrac(o, k + 1) <= pos) k++;
+  const a = stepFrac(o, k), b = stepFrac(o, k + 1);
+  return (k + (b > a ? clamp((pos - a)/(b - a), 0, 1) : 0))/o.steps;
+}
 function drawOverlay(){
   const d = drawEd;
   if(!d) return;
@@ -3613,6 +4377,27 @@ function drawOverlay(){
   const all = L ? L.tracks.reduce((a, tr)=> a + (tr.mute ? 0 : tr.notes.length), 0) : 0;
   const text = t('drNotes').replace('{a}', mine).replace('{b}', all);
   if(d.count && d.count.textContent !== text) d.count.textContent = text;
+  // the easel follows the Loop, except under a stroke: it lands on the page it began on
+  const prm = d.n.params, heard = playing && pagesChained(prm) && !d.watch ? Math.floor(Math.floor(loopPosNow())/prm.pageLoops) % prm.pages.length : -1;
+  if(heard !== d.heard){
+    d.heard = heard;
+    d.strip.querySelectorAll('.pageBtn').forEach(b=> b.classList.toggle('heard', +b.dataset.page === heard));
+    drawOnionSkin();
+  }
+  if(heard >= 0) setDrawPage(heard, true);
+  const staff = gridKey();
+  if(staff !== d.gridKey){ d.gridKey = staff; drawGridLines(); }
+  // a moving drawing: what's read, in place of the still painting
+  const moving = playing && animOn(prm) && !d.watch, im = d.n.out && d.n.out.image;
+  d.move.hidden = !moving;
+  d.move.style.imageRendering = prm.grid ? 'pixelated' : 'auto';
+  d.cv.style.opacity = moving ? 0 : '';
+  if(moving && im && d.moveShown !== im){
+    d.moveShown = im;
+    const mx = d.move.getContext('2d');
+    mx.clearRect(0, 0, MAXDIM, MAXDIM);
+    mx.putImageData(new ImageData(new Uint8ClampedArray(im.data), im.w, im.h), 0, 0);
+  }
   if(!playing) return;
   const pos = loopPosNow() % 1;
   noteSources(d.n).forEach(o=>{
@@ -3620,14 +4405,15 @@ function drawOverlay(){
     let k = 0;
     while(k < o.steps - 1 && stepFrac(o, k + 1) <= pos) k++;
     x.strokeStyle = x.fillStyle = '#fff';
-    if(!o.pathModel){
-      const [ax, ay] = dir.inv(pos, 0), [bx, by] = dir.inv(pos, 1);
+    if(!o.pathModel && !o.gesture){
+      const tau = curvedTau(o, pos), [ax, ay] = dir.inv(tau, 0), [bx, by] = dir.inv(tau, 1);
       x.lineWidth = 2;
       x.beginPath(); x.moveTo(ax*W, ay*W); x.lineTo(bx*W, by*W); x.stroke();
     }
     o.notes.forEach(nt=>{
-      if(nt.step !== k) return;
-      const [nx, ny] = nt.px != null ? [nt.px, nt.py] : dir.inv((nt.step + 0.5)/o.steps, (nt.row + 0.5)/o.rows);
+      if(k < nt.step || k >= nt.step + (nt.len || 1)) return;
+      // a held note goes along its line with the playhead
+      const [nx, ny] = nt.px != null && !(nt.len > 1 && o.pixel) ? [nt.px, nt.py] : dir.inv((k + 0.5)/o.steps, (nt.row + 0.5)/o.rows);
       x.beginPath(); x.arc(nx*W, ny*W, 3 + 6*nt.vel/127, 0, Math.PI*2); x.fill();
     });
   });
@@ -3641,24 +4427,54 @@ function openDrawEditor(n, watch){
   const frame = document.createElement('div'); frame.className = 'drawFrame';
   const held = document.createElement('div'); held.className = 'drawLayers';
   const gridCv = document.createElement('canvas'); gridCv.id = 'drawGrid'; gridCv.width = gridCv.height = 1024; gridCv.hidden = true;
-  frame.append(cv, held, gridCv, scan);
-  area.appendChild(frame);
+  const empty = document.createElement('div'); empty.className = 'drawEmpty'; empty.textContent = t('drEmpty');
+  const onion = document.createElement('canvas'); onion.id = 'drawOnion'; onion.width = onion.height = 512; onion.hidden = true;
+  const move = document.createElement('canvas'); move.id = 'drawMove'; move.width = move.height = MAXDIM; move.hidden = true;
+  frame.append(cv, move, held, onion, gridCv, scan, empty);
+  const stageBox = document.createElement('div'); stageBox.className = 'drawStage';
+  stageBox.appendChild(frame);
+  const strip = document.createElement('div'); strip.className = 'pageStrip';
+  area.append(stageBox, strip);
   const tools = document.createElement('div'); tools.className = 'drawTools';
+  const scroll = document.createElement('div'); scroll.className = 'drawScroll';
+  // one group per question: what do I paint with, in which colour, how is it read.
+  // All open until someone folds one, and the browser remembers
+  const section = (id, label)=>{
+    const sec = document.createElement('details'), head = document.createElement('summary'), body = document.createElement('div');
+    sec.className = 'drawSec'; sec.open = drawFolds[id] !== true;
+    head.textContent = t(label); body.className = 'drawSecBody';
+    sec.addEventListener('toggle', ()=>{
+      drawFolds[id] = !sec.open;
+      try{ localStorage.setItem('dessons.drawFolds', JSON.stringify(drawFolds)); }catch(e){}
+    });
+    sec.append(head, body); scroll.appendChild(sec);
+    return body;
+  };
+  const toolSec = section('tool', 'secTool'), colorSec = section('color', 'secColor'), voiceSec = section('voices', 'secVoices'), readSec = section('read', 'secRead'), animSec = section('anim', 'secAnim');
+  const voiceBox = document.createElement('div'); voiceBox.className = 'voiceList';
+  const voiceHint = document.createElement('div'); voiceHint.className = 'nodeNote'; voiceHint.textContent = t('voiceHint');
+  const suggest = document.createElement('button');
+  suggest.type = 'button'; suggest.className = 'miniBtn'; suggest.textContent = t('voiceSuggest'); suggest.title = t('voiceSuggestTitle');
+  suggest.addEventListener('click', ()=> suggestVoices(n));
+  const lightRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'lightOct'), true);
+  lightRow.classList.add('switchRow', 'lightOct');
+  voiceSec.append(lightRow, voiceBox, suggest, voiceHint);
   const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
   const pct = v=> v + '%';
   const modeRow = document.createElement('div'); modeRow.className = 'btnRow';
   [['normal', 'modeNormal'], ['pixel', 'modePixel']].forEach(([id, label])=>{
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'miniBtn drawMode'; b.dataset.mode = id; b.textContent = t(label);
+    b.type = 'button'; b.className = 'miniBtn drawMode'; b.dataset.mode = id; b.textContent = t(label); b.title = t(label) + ' (P)';
     b.addEventListener('click', ()=> setDrawGrid(id === 'pixel' ? (n.params.grid || brush.lastGrid || 32) : 0));
     modeRow.appendChild(b);
   });
-  tools.appendChild(modeRow);
+  toolSec.appendChild(modeRow);
   const gridRow = document.createElement('label'); gridRow.className = 'prm full pxOnly';
   const gridLab = document.createElement('span'), gridSel = document.createElement('select');
   gridLab.textContent = t('pxGrid'); gridSel.id = 'pxGrid';
   PIXEL_GRIDS.filter(Boolean).forEach(g=> gridSel.appendChild(new Option(g + ' × ' + g, g)));
-  gridSel.addEventListener('change', ()=>{ brush.lastGrid = +gridSel.value; saveBrush(); setDrawGrid(+gridSel.value); });
+  // a new grid starts square: pitches set for the old one would quietly stretch its cells
+  gridSel.addEventListener('change', ()=>{ brush.lastGrid = +gridSel.value; saveBrush(); setDrawRows(0); setDrawGrid(+gridSel.value); });
   gridRow.append(gridLab, gridSel);
   const showRow = document.createElement('label'); showRow.className = 'prm full pxOnly';
   const showLab = document.createElement('span'), showBox = document.createElement('input');
@@ -3667,36 +4483,86 @@ function openDrawEditor(n, watch){
   showRow.append(showLab, showBox);
   const pxSlider = brushSlider('pxSizeIn', 'pxSize', 1, 16, 'pxSize', v=> v);
   pxSlider.classList.add('pxOnly');
-  tools.append(gridRow, pxSlider, showRow);
+  const rowsRow = document.createElement('label'); rowsRow.className = 'prm full pxOnly';
+  const rowsLab = document.createElement('span'), rowsSel = document.createElement('select');
+  rowsLab.textContent = t('pxRows'); rowsSel.id = 'pxRows';
+  const scaleRows = n.inp && n.inp.scale ? n.inp.scale.pitches.length : 0;
+  rowsSel.appendChild(new Option(t('pxRowsSame'), 0));
+  [...new Set([8, 12, 16, 24, 32, 64, scaleRows, n.params.gridY].filter(v=> v >= 4))].sort((a, b)=> a - b).forEach(v=> rowsSel.appendChild(new Option(v === scaleRows ? v + ' (' + t('pxRowsScale') + ')' : v, v)));
+  rowsSel.value = n.params.gridY;
+  rowsSel.addEventListener('change', ()=> setDrawRows(+rowsSel.value));
+  rowsRow.append(rowsLab, rowsSel);
+  // rectangular cells are a choice: it shows, and one click undoes it
+  const squareBtn = document.createElement('button');
+  squareBtn.type = 'button'; squareBtn.id = 'pxSquare'; squareBtn.className = 'miniBtn'; squareBtn.textContent = t('pxSquare');
+  squareBtn.addEventListener('click', ()=> setDrawRows(0));
+  const holdRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'hold'), true);
+  holdRow.classList.add('pxOnly');
+  toolSec.append(gridRow, rowsRow, squareBtn, pxSlider, showRow, holdRow);
   const toolRow = document.createElement('div'); toolRow.className = 'btnRow';
-  [['brush', 'toolBrush'], ['smudge', 'toolSmudge'], ['erase', 'toolErase'], ['pick', 'toolPick']].forEach(([id, label])=>{
+  [['brush', 'toolBrush', 'B'], ['smudge', 'toolSmudge', 'S'], ['erase', 'toolErase', 'E'], ['pick', 'toolPick', 'I']].forEach(([id, label, key])=>{
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'miniBtn drawTool'; b.dataset.tool = id; b.textContent = t(label);
+    b.type = 'button'; b.className = 'miniBtn drawTool'; b.dataset.tool = id; b.textContent = t(label); b.title = t(label) + ' (' + key + ')';
     b.addEventListener('click', ()=> setDrawTool(id));
     toolRow.appendChild(b);
   });
-  tools.appendChild(toolRow);
-  tools.append(brushSlider('brSize', 'brSize', 1, 300, 'size', v=> v), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
+  toolSec.appendChild(toolRow);
+  toolSec.append(brushSlider('brSize', 'brSize', 1, 300, 'size', v=> v), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
     brushSlider('brHard', 'brHard', 0, 100, 'hard', pct), brushSlider('brPress', 'brPress', 0, 100, 'press', pct));
+  // mirrors and repeats: a shape drawn once, a phrase answered
+  const symRow = document.createElement('div'); symRow.className = 'btnRow';
+  [[1, '⇆', 'mirrorX'], [2, '⇅', 'mirrorY']].forEach(([bit, glyph, label])=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn' + ((brush.mirror || 0) & bit ? ' primary' : ''); b.textContent = glyph; b.title = t(label); b.setAttribute('aria-label', b.title);
+    b.addEventListener('click', ()=>{
+      brush.mirror = (brush.mirror || 0) ^ bit; saveBrush();
+      b.classList.toggle('primary', !!(brush.mirror & bit));
+      frame.classList.toggle('mirX', !!(brush.mirror & 1)); frame.classList.toggle('mirY', !!(brush.mirror & 2));
+    });
+    symRow.appendChild(b);
+  });
+  frame.classList.toggle('mirX', !!((brush.mirror || 0) & 1)); frame.classList.toggle('mirY', !!((brush.mirror || 0) & 2));
+  const repSel = document.createElement('select');
+  [1, 2, 3, 4, 6, 8].forEach(k=> repSel.appendChild(new Option(k === 1 ? t('repOff') : '× ' + k, k)));
+  repSel.value = brush.rep || 1; repSel.title = t('repTitle'); repSel.setAttribute('aria-label', repSel.title);
+  repSel.addEventListener('change', ()=>{ brush.rep = +repSel.value; saveBrush(); });
+  symRow.appendChild(repSel);
+  const soundRow = document.createElement('label'); soundRow.className = 'prm full';
+  const soundLab = document.createElement('span'), soundBox = document.createElement('input');
+  soundLab.textContent = t('brSound'); soundBox.type = 'checkbox'; soundBox.checked = brush.sound !== false; soundBox.style.justifySelf = 'start';
+  soundBox.addEventListener('change', ()=>{ brush.sound = soundBox.checked; saveBrush(); });
+  soundRow.append(soundLab, soundBox);
+  toolSec.append(symRow, soundRow);
   const name = document.createElement('div'); name.className = 'nyName';
   const grid = document.createElement('div'); grid.className = 'nyGrid';
+  // what the colour will play: its instrument, the one it'll join, or the main track's
+  const heardBy = hex=>{
+    const p = n.params, v = voiceOf(n, hex);
+    if(v) return v.prog;
+    return p.voices.length && !p.free.includes(hex.toLowerCase()) ? suggestInstrument(hex) : String(colourProgram(n, hex));
+  };
   const showName = ()=>{
     const c = NY_PALETTE.find(x=> x[1].toLowerCase() === brush.color.toLowerCase());
     name.innerHTML = '<i></i><span></span>';
     name.firstChild.style.background = brush.color;
-    name.lastChild.textContent = c ? 'NY_' + c[0] : brush.color;
-    grid.querySelectorAll('button').forEach(b=> b.classList.toggle('on', c ? b.title === 'NY_' + c[0] : false));
+    name.lastChild.textContent = (c ? 'NY_' + c[0] : brush.color) + ' · ' + instrName(heardBy(brush.color));
+    grid.querySelectorAll('button').forEach(b=> b.classList.toggle('on', c ? b.dataset.name === c[0] : false));
   };
   NY_PALETTE.forEach(([nm, hex])=>{
     const b = document.createElement('button');
-    b.type = 'button'; b.title = 'NY_' + nm; b.setAttribute('aria-label', 'NY_' + nm); b.style.background = hex;
-    b.addEventListener('click', ()=>{
-      brush.color = hex; saveBrush(); showName();
-    });
+    b.type = 'button'; b.dataset.name = nm; b.dataset.hex = hex; b.style.background = hex;
+    b.addEventListener('click', ()=>{ brush.color = hex; saveBrush(); showName(); });
     grid.appendChild(b);
   });
-  showName();
-  tools.append(name, grid);
+  // the tooltips follow the instruments
+  const fillPalette = ()=>{
+    grid.querySelectorAll('button').forEach(b=>{
+      b.title = 'NY_' + b.dataset.name + ' · ' + instrName(heardBy(b.dataset.hex));
+      b.setAttribute('aria-label', b.title);
+    });
+    showName();
+  };
+  colorSec.append(name, grid);
   const btn = (label, fn, primary)=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'miniBtn' + (primary ? ' primary' : ''); b.textContent = t(label);
@@ -3704,31 +4570,58 @@ function openDrawEditor(n, watch){
     return b;
   };
   const undo = btn('drUndo', drawUndo), redoBtn = btn('drRedo', drawRedo);
+  undo.textContent = '↶'; undo.title = t('drUndo') + ' (Cmd+Z)'; undo.setAttribute('aria-label', undo.title);
+  redoBtn.textContent = '↷'; redoBtn.title = t('drRedo') + (LANG === 'fr' ? ' (Maj+Cmd+Z)' : ' (Shift+Cmd+Z)'); redoBtn.setAttribute('aria-label', redoBtn.title);
   const replayBtn = btn('drReplay', replayDrawing);
   const clear = btn('drClear', ()=>{
     if(!confirm(t('drConfirm'))) return;
     autosave();
-    stopReplay();
-    drawEd.redo = []; n.params.strokes = [];
-    drawChanged(); refreshDrawEditor();
+    resetDrawing(n);
   });
   const bgBtn = btn('drBg', ()=>{ stopReplay(); n.params.bg = brush.color; drawChanged(); refreshDrawEditor(); });
   const noBg = btn('drNoBg', ()=>{ stopReplay(); n.params.bg = 'transparent'; drawChanged(); refreshDrawEditor(); });
-  const row1 = document.createElement('div'), row2 = document.createElement('div');
-  row1.className = row2.className = 'btnRow';
-  row1.append(undo, redoBtn); row2.append(bgBtn, noBg);
+  const bgLab = document.createElement('div'), bgRow = document.createElement('div');
+  bgLab.className = 'dirLabel'; bgLab.textContent = t('secBg'); bgRow.className = 'btnRow';
+  bgRow.append(bgBtn, noBg);
+  colorSec.append(bgLab, bgRow);
   const count = document.createElement('div'); count.className = 'nodeNote';
-  tools.appendChild(count);
-  buildDirPicker(n, tools);
-  buildThreshSlider(n, tools);
+  readSec.appendChild(count);
+  buildDirPicker(n, readSec);
+  buildThreshSlider(n, readSec);
   const stepRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'steps'), true);
   stepRow.classList.add('drawMemory');
-  tools.appendChild(stepRow);
+  readSec.appendChild(stepRow);
   const memRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'memory'), true);
   memRow.classList.add('drawMemory');
-  tools.appendChild(memRow);
-  buildLayerList(n, tools);
-  tools.append(row1, row2, clear, replayBtn, btn('drDone', closeDrawEditor, true));
+  readSec.appendChild(memRow);
+  const perRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'perStep'), true);
+  perRow.classList.add('drawMemory');
+  readSec.appendChild(perRow);
+  ['pageChain', 'pageLoops'].forEach(id=>{
+    const row = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === id), true);
+    row.classList.add('pageOpt');
+    readSec.appendChild(row);
+  });
+  const readRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'read'), true);
+  readSec.insertBefore(readRow, readSec.children[1]);
+  const animSwitch = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'animGo'), true);
+  animSwitch.classList.add('switchRow');
+  animSec.appendChild(animSwitch);
+  ['animX', 'animY', 'animRot', 'animLoops'].forEach(id=> animSec.appendChild(paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === id), true)));
+  const animHint = document.createElement('div'); animHint.className = 'nodeNote'; animHint.textContent = t('animHint');
+  animSec.appendChild(animHint);
+  readSec.insertBefore(paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'curve'), true), readRow.nextSibling);
+  const expRow = document.createElement('div'); expRow.className = 'btnRow';
+  expRow.appendChild(btn('drExportReplay', ()=> exportReplay(n)));
+  readSec.appendChild(expRow);
+  if(layerNodes(n).length) buildLayerList(n, section('layers', 'drLayers'));
+  const head = document.createElement('div'), title = document.createElement('div'), foot = document.createElement('div');
+  head.className = 'drawHead'; title.className = 'drawName'; title.textContent = t('n_srcDraw'); foot.className = 'drawFoot';
+  head.append(title, undo, redoBtn, btn('drDone', closeDrawEditor, true));
+  foot.append(replayBtn, clear);
+  tools.append(head, scroll, foot);
+  // a click shouldn't leave the focus on a button, or Space would press it again instead of playing
+  tools.addEventListener('click', e=>{ if(e.detail && e.target.closest('button, summary')) document.activeElement.blur(); });
   const time = document.createElement('div'), bar = document.createElement('div');
   if(watch){
     // the replay: only its clock. Clicking the bar jumps through the painting
@@ -3744,13 +4637,14 @@ function openDrawEditor(n, watch){
   box.append(area, tools);
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, raf:0, replay:0, watch:!!watch, count, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv};
+  document.body.classList.add('drawing');
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, empty, voiceBox, fillPalette, move, strip, onion, onionCache:{}, heard:-1, raf:0, replay:0, watch:!!watch, count, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv};
   drawEd.scanRaf = requestAnimationFrame(drawOverlay);
   refreshDrawEditor();
-  if(!watch){ setDrawTool(brush.tool); setDrawGrid(n.params.grid); }
-  else return;
+  if(!watch){ setDrawTool(brush.tool); setDrawGrid(n.params.grid); renderPageStrip(); drawOnionSkin(); }
+  else { strip.hidden = true; return; }
   syncDrawLayers();
-  cv.addEventListener('pointerenter', ()=>{ ring.hidden = false; ringSize(); });
+  cv.addEventListener('pointerenter', e=>{ ring.hidden = false; ringSize(); moveRing(e); });
   cv.addEventListener('pointerleave', ()=>{ if(!drawEd.cur) ring.hidden = true; });
   cv.addEventListener('pointerdown', e=>{
     if(e.button) return;
@@ -3761,10 +4655,15 @@ function openDrawEditor(n, watch){
     const lc = strokeLayer(DRAW_RES).getContext('2d');
     lc.clearRect(0, 0, DRAW_RES, DRAW_RES);
     const st = {c:brush.color, s:brush.size, o:brush.opacity/100, h:brush.hard/100, r:brush.press/100, pts:''};
-    if(n.params.grid){ st.t = 'p'; st.g = n.params.grid; st.z = brush.pxSize; st.o = 1; st.h = 1; st.r = 0; }
+    if(n.params.grid){ st.t = 'p'; st.g = n.params.grid; st.z = brush.pxSize; st.o = 1; st.h = 1; st.r = 0; if(n.params.gridY && n.params.gridY !== st.g) st.gy = n.params.gridY; }
     else if(brush.tool === 'smudge') st.t = 's';
     if(brush.tool === 'erase'){ st.e = 1; if(n.params.bg !== 'transparent') st.c = n.params.bg; }
-    drawEd.cur = {st, pts:[], state:{}};
+    if(brush.mirror) st.m = brush.mirror;
+    if(brush.rep > 1){ st.k = brush.rep; if(n.params.dir === 'tb' || n.params.dir === 'bt') st.ka = 1; }
+    const anim = playing ? drawAnimNow(n.params) : null;
+    if(anim) st.w = 1;
+    drawEd.cur = {st, pts:[], states:[], maps:strokeMaps(st), anim};
+    drawEd.empty.hidden = true;
     drawAdd(e);
   });
   cv.addEventListener('pointermove', e=>{
@@ -3799,6 +4698,7 @@ function closeDrawEditor(){
   if(drawReplay){ const n = drawReplay.n; drawReplay = null; markDirty(n.id); }
   drawEd.box.remove(); drawEd.ring.remove();
   drawEd = null;
+  document.body.classList.remove('drawing');
 }
 
 /* ---- Microphone: an analyser on the mic, never connected to the speakers ---- */
@@ -3887,9 +4787,38 @@ function buildLoopControls(n, body){
   row.append(play, exp);
   body.appendChild(row);
 }
+// what the Loop plays over a whole cycle of pages: one baked pass after another
+function bakePasses(loopNode, count, before){
+  const passes = [];
+  for(let i=0;i<count;i++){ before(i); passes.push(bakeSpin(loopNode)); }
+  return Object.assign({}, passes[0], {passes});
+}
+function bakeLoop(loopNode){
+  // pages and animation each have their cycle: the file holds them until they meet again
+  const gcd = (x, y)=> y ? gcd(y, x % y) : x, lcm = (x, y)=> x*y/gcd(x, y);
+  const cycle = p=> lcm(pagesChained(p) ? p.pages.length*p.pageLoops : 1, animOn(p) ? p.animLoops : 1);
+  const paged = [...nodes.values()].filter(n=> n.type === 'srcDraw' && cycle(n.params) > 1);
+  if(!paged.length) return bakeSpin(loopNode);
+  const count = Math.min(256, paged.reduce((m, n)=> lcm(m, cycle(n.params)), 1));
+  try{ return bakePasses(loopNode, count, i=>{ pagePassOverride = i; paged.forEach(n=> markDirty(n.id)); }); }
+  finally { pagePassOverride = null; paged.forEach(n=> markDirty(n.id)); }
+}
 function exportLoop(n){
-  const L = bakeSpin(n);
+  const L = bakeLoop(n);
   if(L && L.tracks.length) downloadBlob(new Blob([buildLoopMidi(L)], {type:'audio/midi'}), 'dessons-nodes.mid');
+}
+// the replay as a piece: the Loop going round while the painting builds up, over the
+// length chosen, pass by pass (at most 600: past that, a pass covers more of the painting)
+function bakeReplay(n){
+  const loop = loopOfDrawing(n), L = loop && evalNode(loop)._loop;
+  if(!L || !L.tracks.length) return null;
+  const count = clamp(Math.ceil(n.params.replayMin*60000/loopMsOf(L)), 1, 600);
+  try{ return bakePasses(loop, count, i=>{ replayBake = {n, u:(i + 1)/count}; markDirty(n.id); }); }
+  finally { replayBake = null; markDirty(n.id); }
+}
+function exportReplay(n){
+  const L = bakeReplay(n);
+  if(L) downloadBlob(new Blob([buildLoopMidi(L)], {type:'audio/midi'}), 'dessons-replay.mid');
 }
 
 // one track per wired Track node, in wiring order; same tick math as the
@@ -3897,16 +4826,21 @@ function exportLoop(n){
 function buildLoopMidi(L){
   const PPQ = 480, totalTicks = L.bars*4*PPQ;
   const tracks = [midiTempoTrack(L.tempo)];
-  L.tracks.forEach((tr, i)=>{
-    const chan = i % 16, events = [{tick:0, bytes:[0xC0|chan, tr.program & 0x7F]}];
-    tr.notes.forEach(nt=>{
-      const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + (nt.len || 1));
-      const on = Math.round(totalTicks*f0);
-      const off = Math.round(totalTicks*f0 + Math.max(10, totalTicks*(f1 - f0)*L.gate));
-      events.push({tick:on, bytes:[0x90|chan, nt.midi & 0x7F, nt.vel & 0x7F]});
-      events.push({tick:off, bytes:[0x80|chan, nt.midi & 0x7F, 0]});
+  L.tracks.forEach((first, i)=>{
+    const chan = i % 16, events = [{tick:0, bytes:[0xC0|chan, first.program & 0x7F]}];
+    // a cycle of pages or a replay is several passes, one after the other
+    (L.passes || [L]).forEach((P, pass)=>{
+      const tr = P.tracks[i], at = pass*totalTicks;
+      if(!tr) return;
+      tr.notes.forEach(nt=>{
+        const f0 = stepFrac(tr, nt.step), f1 = stepFrac(tr, nt.step + (nt.len || 1));
+        const on = at + Math.round(totalTicks*f0);
+        const off = at + Math.round(totalTicks*f0 + Math.max(10, totalTicks*(f1 - f0)*L.gate));
+        events.push({tick:on, bytes:[0x90|chan, nt.midi & 0x7F, nt.vel & 0x7F]});
+        events.push({tick:off, bytes:[0x80|chan, nt.midi & 0x7F, 0]});
+      });
     });
-    tracks.push(midiTrack(tr.name, events));
+    tracks.push(midiTrack(first.name, events));
   });
   return midiFile(tracks, PPQ);
 }
@@ -3979,6 +4913,108 @@ function playPluckVoice(ac, dest, midi, vel, whenSec, durSec){
   src.start(t0);
   src.stop(end + 0.02);
   return { osc: src, g, sub: null };
+}
+/* ---- modelled instruments: what makes one instrument recognisable isn't its waveform
+   alone. Each has its own spectrum (harmonic amplitudes, a PeriodicWave), the resonances of
+   its body (fixed in Hz whatever the note: that's what a formant is), its attack, and how it
+   moves once it speaks: a bow's vibrato, a trumpet opening up. wave = harmonics 1, 2, 3...;
+   body = [Hz, Q, dB]; cut = top of the spectrum at full velocity. ---- */
+const INSTR_MODELS = {
+  // strings: every harmonic, falling slowly; the wooden body does the rest
+  40:{wave:[1,.72,.58,.5,.42,.36,.3,.26,.22,.18,.15,.12,.1,.08], body:[[290,2.5,5],[1100,1.8,4],[3000,1.5,6]], atk:.075, dec:.1, sus:.85, rel:.16, cut:7000, vib:[5.6,17,.16], bow:.03, gain:.19},
+  42:{wave:[1,.8,.62,.5,.4,.33,.27,.22,.18,.14,.11,.09], body:[[220,2.5,6],[560,2,5],[1400,1.5,3]], atk:.09, dec:.12, sus:.85, rel:.2, cut:4200, vib:[5,14,.18], bow:.025, gain:.18},
+  43:{wave:[1,.85,.6,.42,.3,.22,.16,.12,.09,.06], body:[[110,2,7],[300,2,4]], atk:.12, dec:.15, sus:.82, rel:.26, cut:1900, vib:[4.4,9,.22], bow:.02, gain:.2},
+  // brass: strong harmonics that open up with the breath, and a note that lands from just below
+  56:{wave:[.6,.85,1,1,.92,.82,.72,.62,.52,.44,.36,.3,.24,.19,.15,.12], body:[[1300,1.2,4],[2700,1.5,6]], atk:.035, dec:.09, sus:.8, rel:.09, cut:9000, open:.07, scoop:-35, vib:[5.2,6,.3], gain:.16},
+  // double reeds: a weak fundamental, nasal formants; the English horn sits higher than the bassoon
+  69:{wave:[.55,1,.8,.7,.48,.4,.3,.22,.17,.12,.09,.07], body:[[1050,4,10],[2400,3,5]], atk:.04, dec:.07, sus:.82, rel:.1, cut:4800, vib:[4.8,7,.26], gain:.2},
+  70:{wave:[.45,.8,1,.72,.52,.4,.32,.25,.19,.14,.1,.08], body:[[470,4,11],[1150,3,6]], atk:.045, dec:.08, sus:.8, rel:.11, cut:3400, vib:[4.6,5,.3], gain:.24},
+  // drum: a skin struck, the pitch falling onto the note, no sustain
+  116:{wave:[1], body:[[180,1,5]], atk:.002, dec:.3, sus:0, rel:.14, cut:2600, drop:2.1, hit:.28, gain:.62}
+};
+const modelCache = new WeakMap();     // per AudioContext: periodic waves and the noise
+function modelParts(ac){
+  if(!modelCache.has(ac)){
+    const noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), d = noise.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = Math.random()*2 - 1;
+    modelCache.set(ac, {noise, waves:new Map()});
+  }
+  return modelCache.get(ac);
+}
+function modelWave(ac, program){
+  const parts = modelParts(ac);
+  if(!parts.waves.has(program)){
+    const h = INSTR_MODELS[program].wave, re = new Float32Array(h.length + 1), im = new Float32Array(h.length + 1);
+    h.forEach((a, i)=>{ im[i + 1] = a; });
+    parts.waves.set(program, ac.createPeriodicWave(re, im));
+  }
+  return parts.waves.get(program);
+}
+// same contract as playSynthVoice(): {osc, g, sub}
+function playModelVoice(ac, dest, program, midi, vel, whenSec, durSec){
+  const m = INSTR_MODELS[program], freq = 440*Math.pow(2, (midi - 69)/12), v = Math.max(0.06, vel/127);
+  const t0 = Math.max(whenSec, ac.currentTime + 0.003), amp = m.gain*v;
+  const off = Math.max(t0 + durSec, t0 + m.atk + 0.03), end = off + m.rel, decEnd = Math.min(t0 + m.atk + m.dec, off);
+  const osc = ac.createOscillator();
+  osc.setPeriodicWave(modelWave(ac, program));
+  osc.frequency.setValueAtTime(m.drop ? freq*m.drop : freq, t0);
+  if(m.drop) osc.frequency.exponentialRampToValueAtTime(freq, t0 + 0.07);
+  if(m.scoop){ osc.detune.setValueAtTime(m.scoop, t0); osc.detune.linearRampToValueAtTime(0, t0 + 0.05); }
+  // louder is brighter, and a brass note opens from dark to bright
+  const top = ac.createBiquadFilter(), cut = Math.min(m.cut*(0.5 + 0.5*v), ac.sampleRate/2 - 800);
+  top.type = 'lowpass'; top.Q.value = 0.5;
+  if(m.open){ top.frequency.setValueAtTime(Math.min(cut, freq*2), t0); top.frequency.exponentialRampToValueAtTime(cut, t0 + m.open); }
+  else top.frequency.setValueAtTime(cut, t0);
+  const g = ac.createGain(), susLvl = Math.max(0.0002, amp*m.sus);
+  g.gain.setValueAtTime(0.0002, t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0003, amp), t0 + m.atk);
+  g.gain.exponentialRampToValueAtTime(susLvl, decEnd);
+  if(decEnd < off) g.gain.setValueAtTime(susLvl, off);
+  g.gain.exponentialRampToValueAtTime(0.0002, end);
+  let last = osc;
+  m.body.forEach(([hz, q, db])=>{
+    const f = ac.createBiquadFilter();
+    f.type = 'peaking'; f.frequency.value = hz; f.Q.value = q; f.gain.value = db;
+    last.connect(f); last = f;
+  });
+  last.connect(top); top.connect(g); g.connect(dest);
+  // vibrato comes in once the note has settled: [rate Hz, depth cents, delay s]
+  if(m.vib && off - t0 > m.vib[2] + 0.08){
+    const lfo = ac.createOscillator(), depth = ac.createGain();
+    lfo.frequency.value = m.vib[0];
+    depth.gain.setValueAtTime(0, t0 + m.vib[2]);
+    depth.gain.linearRampToValueAtTime(m.vib[1], t0 + m.vib[2] + 0.15);
+    lfo.connect(depth); depth.connect(osc.detune);
+    lfo.start(t0); lfo.stop(end + 0.05);
+  }
+  // air: the hair on the string, the stick on the skin
+  if(m.bow || m.hit){
+    const n = ac.createBufferSource(), band = ac.createBiquadFilter(), ng = ac.createGain(), lvl = amp*(m.bow || m.hit);
+    n.buffer = modelParts(ac).noise; n.loop = true;
+    band.type = 'bandpass'; band.frequency.value = m.bow ? 2800 : 1400; band.Q.value = 0.7;
+    ng.gain.setValueAtTime(lvl, t0);
+    if(m.hit) ng.gain.exponentialRampToValueAtTime(0.0002, t0 + 0.05);
+    else ng.gain.setValueAtTime(lvl, off);
+    n.connect(band); band.connect(ng); ng.connect(g);
+    n.start(t0); n.stop(m.hit ? t0 + 0.06 : end);
+  }
+  osc.start(t0);
+  osc.stop(end + 0.05);
+  return {osc, g, sub:null};
+}
+// at the cap the oldest voice fades out: it's on its way out anyway, and dropping the new
+// note instead silently lost a fifth of a dense drawing
+function makeVoiceRoom(){
+  while(voices.size >= MAX_VOICES){
+    const v = voices.values().next().value;
+    voices.delete(v);
+    fadeOutVoice(ac, v);
+  }
+}
+function playVoice(ac, dest, program, midi, vel, whenSec, durSec){
+  if(program === PIZZ_PROGRAM) return playPluckVoice(ac, dest, midi, vel, whenSec, durSec);
+  if(INSTR_MODELS[program]) return playModelVoice(ac, dest, program, midi, vel, whenSec, durSec);
+  return playSynthVoice(ac, dest, program, midi, vel, whenSec, durSec, false);
 }
 let playing = false, playingLoopId = null, schedTimer = null, rafId = null;
 // position held in loop fractions (2.25 = a quarter into the 3rd pass), so a
@@ -4063,6 +5099,7 @@ function refreshLoopButtons(){
   syncTransport();
 }
 function scheduler(){
+  syncDrawPages();
   const L = currentLoop();     // re-read every tick: edits are heard live
   if(!playing || !L){ stopPlayback(); return; }
   const now = performance.now();
@@ -4070,7 +5107,9 @@ function scheduler(){
   const horizon = now + LOOKAHEAD_MS;
   if(schedAt >= horizon) return;
   const loopMs = loopMsOf(L);
-  const endPos = schedPos + (horizon - schedAt)/loopMs;
+  // never planned across a page turn: the next pass waits for its page, on the next tick
+  const turn = pagedDraws().length ? Math.floor(schedPos) + 1 : Infinity;
+  const endPos = Math.min(schedPos + (horizon - schedAt)/loopMs, turn);
   const audioEpoch = sink === 'synth' ? ac.currentTime - now/1000 : 0;
   // synth: the Loop's tracks. MIDI: each Logic node clocked by this Loop, with
   // the notes on its own input (no instrument: Logic's track decides the sound)
@@ -4096,18 +5135,17 @@ function scheduler(){
           midiNoteOn(target, nt.midi & 0x7F, nt.vel & 0x7F, at, dur);
           continue;
         }
-        if(voices.size >= MAX_VOICES) return;
+        makeVoiceRoom();
         const when = audioEpoch + at/1000;
-        const v = tr.program === PIZZ_PROGRAM
-          ? playPluckVoice(ac, bus.master, nt.midi, nt.vel, when, dur/1000)
-          : playSynthVoice(ac, bus.master, tr.program, nt.midi, nt.vel, when, dur/1000, false);
+        const v = playVoice(ac, bus.master, tr.program, nt.midi, nt.vel, when, dur/1000);
         voices.add(v);
         v.osc.onended = ()=> voices.delete(v);
       }
     });
   });
   if(sink === 'midi') flushNoteOffs(horizon);
-  schedPos = endPos; schedAt = horizon;
+  schedAt = endPos === turn ? schedAt + (endPos - schedPos)*loopMs : horizon;
+  schedPos = endPos;
   if(midiAccess) sendControllers();
 }
 
@@ -4382,6 +5420,7 @@ window.addEventListener('pagehide', ()=>{
    ============================================================ */
 function applyView(){
   world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+  $('zoomBtn').textContent = Math.round(view.z*100) + '%';
   stage.style.backgroundPosition = `${view.x}px ${view.y}px`;
   stage.style.backgroundSize = `${24*view.z}px ${24*view.z}px`;
 }
@@ -4882,11 +5921,28 @@ document.addEventListener('pointerdown', e=>{ if(!e.target.closest('.catWrap')) 
 // the Settings panel: the selected node's sliders, through the same paramEl() as on the node
 function renderProps(){
   const n = nodes.get(selectedId), body = $('propBody');
-  $('propTitle').textContent = n ? t('n_' + n.type) : '';
+  $('propTitle').textContent = t(n ? 'n_' + n.type : 'startTitle');
   body.innerHTML = '';
-  const list = n ? (NODE_DEFS[n.type].params || []).filter(d=> d.kind !== 'hidden') : [];
+  if(!n){ renderStart(body); return; }
+  const def = NODE_DEFS[n.type], list = (def.params || []).filter(d=> d.kind !== 'hidden');
+  const note = text=>{ const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = text; body.appendChild(p); };
+  if(def.note) note(t(def.note));
   list.forEach(d=> body.appendChild(paramEl(n, d, true)));
-  if(!list.length){ const p = document.createElement('div'); p.className = 'nodeNote'; p.textContent = t(n ? 'propsEmpty' : 'propsNone'); body.appendChild(p); }
+  if(!list.length && !def.note) note(t('propsEmpty'));
+}
+// the panel's idle state: the templates, one line each, and how to add a node
+function renderStart(body){
+  const list = document.createElement('div'); list.className = 'startList';
+  TEMPLATE_KEYS.forEach(k=>{
+    const b = document.createElement('button'), name = document.createElement('b'), what = document.createElement('span');
+    b.type = 'button'; b.className = 'startTpl';
+    name.textContent = t('tpl_' + k); what.textContent = t('tplDesc_' + k);
+    b.append(name, what);
+    b.addEventListener('click', ()=> loadTemplate(k));
+    list.appendChild(b);
+  });
+  const hint = document.createElement('div'); hint.className = 'nodeNote'; hint.textContent = t('startHint');
+  body.append(list, hint);
 }
 // the selected node's thumbnail, drawn again at the panel's size
 function paintPreview(){
@@ -4936,11 +5992,87 @@ function fitView(){
   applyView(); saveSoon();
 }
 $('fitBtn').addEventListener('click', fitView);
+/* ---- Arrange: columns in the order of the signal, each node level with what feeds it ---- */
+function arrangeGraph(){
+  const list = [...nodes.values()];
+  if(!list.length) return;
+  const box = n=> ({w:n.el.offsetWidth, h:n.el.offsetHeight});
+  const inFrame = frames.map(f=> ({f, members:list.filter(n=>{
+    const {w, h} = box(n), cx = n.x + w/2, cy = n.y + h/2;
+    return cx > f.x && cx < f.x + f.w && cy > f.y && cy < f.y + f.h;
+  })}));
+  const ins = new Map(list.map(n=> [n.id, []])), outs = new Map(list.map(n=> [n.id, []]));
+  links.forEach(l=>{ if(ins.has(l.to) && outs.has(l.from)){ ins.get(l.to).push(l.from); outs.get(l.from).push(l.to); } });
+  const col = new Map();
+  const depth = id=>{
+    if(!col.has(id)){ col.set(id, 0); col.set(id, ins.get(id).reduce((a, p)=> Math.max(a, depth(p) + 1), 0)); }
+    return col.get(id);
+  };
+  list.forEach(n=> depth(n.id));
+  const last = Math.max(...col.values());
+  // outputs line up at the end; a source sits just before what it feeds, its wire stays short
+  list.forEach(n=>{ if(ins.get(n.id).length && !outs.get(n.id).length) col.set(n.id, last); });
+  list.forEach(n=>{ if(!ins.get(n.id).length && outs.get(n.id).length) col.set(n.id, Math.min(...outs.get(n.id).map(c=> col.get(c))) - 1); });
+  const shift = Math.min(...col.values());
+  const columns = Array.from({length:last - shift + 1}, ()=> []);
+  [...list].sort((a, b)=> a.y - b.y).forEach(n=> columns[col.get(n.id) - shift].push(n));
+  // order inside a column: by the average place of the neighbours, a few sweeps both ways
+  const rank = new Map();
+  const index = ()=> columns.forEach(c=> c.forEach((n, i)=> rank.set(n.id, i)));
+  const mean = ids=> ids.reduce((a, id)=> a + rank.get(id), 0)/ids.length;
+  index();
+  for(let sweep=0; sweep<4; sweep++){
+    const by = sweep % 2 ? outs : ins;
+    columns.forEach(c=>{
+      c.sort((a, b)=> (by.get(a.id).length ? mean(by.get(a.id)) : rank.get(a.id)) - (by.get(b.id).length ? mean(by.get(b.id)) : rank.get(b.id)));
+      c.forEach((n, i)=> rank.set(n.id, i));
+    });
+  }
+  // height: level with the neighbours, never overlapping
+  const GAP_X = 90, GAP_Y = 30, mid = new Map();
+  let x = 0;
+  const place = (c, near)=>{
+    let y = -Infinity;
+    c.forEach(n=>{
+      const {h} = box(n), ids = near(n).filter(id=> mid.has(id));
+      const want = ids.length ? ids.reduce((a, id)=> a + mid.get(id), 0)/ids.length - h/2 : y;
+      n.y = Math.round(Math.max(want, y === -Infinity ? want : y));
+      if(n.y === -Infinity) n.y = 0;
+      y = n.y + h + GAP_Y;
+      mid.set(n.id, n.y + h/2);
+    });
+  };
+  columns.forEach(c=>{
+    place(c, n=> ins.get(n.id));
+    c.forEach(n=>{ n.x = x; });
+    x += Math.max(0, ...c.map(n=> box(n).w)) + GAP_X;
+  });
+  // what has no input comes level with what it feeds
+  [...columns].reverse().forEach(c=> place(c, n=> ins.get(n.id).length ? [n.id] : outs.get(n.id)));
+  list.forEach(n=>{ n.el.style.left = n.x + 'px'; n.el.style.top = n.y + 'px'; });
+  // a frame follows its nodes
+  inFrame.forEach(({f, members})=>{
+    if(!members.length) return;
+    const pad = 26, top = 46;
+    f.x = Math.min(...members.map(n=> n.x)) - pad; f.y = Math.min(...members.map(n=> n.y)) - top;
+    f.w = Math.max(...members.map(n=> n.x + box(n).w)) - f.x + pad; f.h = Math.max(...members.map(n=> n.y + box(n).h)) - f.y + pad;
+    f.el.style.left = f.x + 'px'; f.el.style.top = f.y + 'px'; f.el.style.width = f.w + 'px'; f.el.style.height = f.h + 'px';
+  });
+  drawWires(); fitView(); saveSoon();
+}
+$('arrangeBtn').addEventListener('click', arrangeGraph);
+// back to 100%, around the middle of the view
+$('zoomBtn').addEventListener('click', ()=>{
+  const r = stage.getBoundingClientRect(), [cx, cy] = [r.width/2, r.height/2];
+  view.x = cx - (cx - view.x)/view.z; view.y = cy - (cy - view.y)/view.z; view.z = 1;
+  applyView(); drawWires(); saveSoon();
+});
 
 /* ============================================================
    Persistence: localStorage + .json files
    ============================================================ */
-const GRAPH_KEY = location.search === '?test' ? 'dessons.graph.test' : 'dessons.graph';    // tests/ leaves your graph alone
+const DRAW_MODE = location.search === '?draw';     // the drawing as a mode: straight to the easel, its own graph
+const GRAPH_KEY = location.search === '?test' ? 'dessons.graph.test' : DRAW_MODE ? 'dessons.graph.draw' : 'dessons.graph';    // tests/ leaves your graph alone
 function serialize(){
   return {
     app:'dessons-nodes', v:1,
@@ -5217,10 +6349,41 @@ function cleanParams(type, raw){
       && out.lanes.every(ty=> ty === null || (typeof ty === 'string' && own(TYPE_VAR, ty) && ty !== 'any')))) delete out.lanes;
   return out;
 }
-function validateGraph(g){
-  if(!isPlain(g) || g.app !== 'dessons-nodes' || !Array.isArray(g.nodes)) throw new Error('bad graph');
-  if(g.links !== undefined && !Array.isArray(g.links)) throw new Error('bad links');
-  if(g.frames !== undefined && !Array.isArray(g.frames)) throw new Error('bad frames');
+// drawings from when each colour had its own output: colours join under their instrument.
+// The first Track and Logic node of an instrument stay, the wires move to its output
+function migrateVoices(g){
+  if(!Array.isArray(g.nodes) || !Array.isArray(g.links)) return g;
+  const byId = new Map(g.nodes.filter(isPlain).map(s=> [s.id, s])), drop = new Set();
+  let links = g.links.filter(isPlain), changed = false;
+  const nodesOut = g.nodes.map(s=>{
+    const list = isPlain(s) && s.type === 'srcDraw' && isPlain(s.params) && Array.isArray(s.params.voices) ? s.params.voices : [];
+    if(!list.some(v=> isPlain(v) && typeof v.c === 'string')) return s;
+    changed = true;
+    const groups = new Map();
+    list.forEach(v=>{
+      if(!isPlain(v) || typeof v.c !== 'string') return;
+      const c = v.c.toLowerCase(), port = 'c' + c.slice(1), mine = links.filter(l=> l.from === s.id && l.fromPort === port);
+      const track = mine.map(l=> byId.get(l.to)).find(m=> m && m.type === 'track');
+      if(!track){ links = links.filter(l=> !mine.includes(l)); return; }      // no instrument after all: main track
+      const prog = String(isPlain(track.params) ? track.params.program : 0), first = !groups.has(prog);
+      if(first) groups.set(prog, {prog, colors:[], steps:v.steps, dir:v.dir});
+      groups.get(prog).colors.push(c);
+      mine.forEach(l=>{
+        if(first) l.fromPort = 'v' + prog;
+        else if(byId.get(l.to) && ['track', 'midiOut'].includes(byId.get(l.to).type)) drop.add(l.to);
+      });
+      if(first && isPlain(track.params)) track.params.name = '';
+    });
+    return Object.assign({}, s, {params:Object.assign({}, s.params, {voices:[...groups.values()]})});
+  });
+  if(!changed) return g;
+  return Object.assign({}, g, {nodes:nodesOut.filter(s=> !isPlain(s) || !drop.has(s.id)), links:links.filter(l=> !drop.has(l.from) && !drop.has(l.to))});
+}
+function validateGraph(raw){
+  if(!isPlain(raw) || raw.app !== 'dessons-nodes' || !Array.isArray(raw.nodes)) throw new Error('bad graph');
+  if(raw.links !== undefined && !Array.isArray(raw.links)) throw new Error('bad links');
+  if(raw.frames !== undefined && !Array.isArray(raw.frames)) throw new Error('bad frames');
+  const g = migrateVoices(raw);
   const seen = new Set(), list = [];
   g.nodes.forEach(s=>{
     if(!isPlain(s) || typeof s.id !== 'string' || !s.id || s.id.length > 64 || seen.has(s.id)) return;
@@ -5298,12 +6461,16 @@ function finishGraph(){
 }
 const wired = (a, ap, b, bp)=> links.push({from:a.id, fromPort:ap, to:b.id, toPort:bp});
 // starting points that sound straight away: only the MIDI one needs a file
-function drawTemplate(drawP){
+function drawTemplate(drawP, loopP){
   clearGraph();
   const draw = addNode('srcDraw', 0, 60, drawP), scale = addNode('scale', -280, 60);
-  const tr = addNode('track', 300, 60, {program:'11'}), loop = addNode('loop', 560, 60), out = addNode('midiOut', 300, 420);
+  const tr = addNode('track', 300, 60, {program:'11'}), loop = addNode('loop', 560, 60, loopP), out = addNode('midiOut', 300, 420);
   wired(scale,'scale', draw,'scale'); wired(draw,'notes', tr,'notes'); wired(tr,'track', loop,'tracks'); wired(draw,'notes', out,'notes');
   finishGraph();
+}
+function loadTemplate(k){
+  if(!confirm(t('confirmNew'))) return;
+  autosave(); TEMPLATES[k](); saveSoon();
 }
 const TEMPLATES = {
   starter:defaultGraph,
@@ -5353,6 +6520,22 @@ const TEMPLATES = {
   draw(){ drawTemplate({turns:0, reveal:100, memory:8}); },
   // pixel art: the grid is the score, a painted cell is a note
   pixel(){ drawTemplate({turns:0, reveal:100, grid:16}); },
+  // a phrase on a grid scrolling up one tile in eight loops: it climbs through the scale
+  anim(){
+    const g = 16, cells = [[0,12],[2,10],[4,12],[6,7],[8,12],[10,10],[12,5],[14,3]], pts = [];
+    cells.forEach(([x, y])=> pts.push(Math.round((x + 0.5)/g*10000), Math.round((y + 0.5)/g*10000), 100));
+    drawTemplate({turns:0, reveal:100, grid:g, animY:-1, animLoops:8, strokes:[{c:'#231F20', s:28, o:1, h:1, r:0, pts:pts.join(','), t:'p', g, z:1}]}, {bars:1});
+  },
+  // a verse of four pages, each one a bar: climbing, falling, a wave, a call and answer
+  flip(){
+    const g = 16, page = (y, c)=>{
+      const pts = [];
+      for(let x=0;x<g;x+=2) pts.push(Math.round((x + 0.5)/g*10000), Math.round((y(x) + 0.5)/g*10000), 100);
+      return [{c, s:28, o:1, h:1, r:0, pts:pts.join(','), t:'p', g, z:1}];
+    };
+    const pages = [page(x=> 13 - x*0.75 | 0, '#231F20'), page(x=> 3 + x*0.75 | 0, '#2FA8E0'), page(x=> 8 + Math.round(5*Math.sin(x/2.3)), '#E83E8C'), page(x=> x % 4 ? 3 : 12, '#F7941D')];
+    drawTemplate({turns:0, reveal:100, grid:g, pages, page:0, strokes:pages[0]}, {bars:1});
+  },
   logic(){
     clearGraph();
     const gen = addNode('srcGen', 0, 60, {kind:'noise', detail:10}), edges = addNode('edges', 260, 60);
@@ -5367,10 +6550,10 @@ const TEMPLATES = {
 function buildTemplateMenu(){
   const list = $('tplList');
   list.innerHTML = '';
-  Object.keys(TEMPLATES).forEach(k=>{
+  TEMPLATE_KEYS.forEach(k=>{
     const b = document.createElement('button');
-    b.type = 'button'; b.textContent = t('tpl_' + k);
-    b.addEventListener('click', ()=>{ closeFileMenu(); if(confirm(t('confirmNew'))){ autosave(); TEMPLATES[k](); saveSoon(); } });
+    b.type = 'button'; b.textContent = t('tpl_' + k); b.title = t('tplDesc_' + k);
+    b.addEventListener('click', ()=>{ closeFileMenu(); loadTemplate(k); });
     list.appendChild(b);
   });
 }
@@ -5458,12 +6641,14 @@ try{
   const s = localStorage.getItem(GRAPH_KEY);
   if(s){ loadGraph(JSON.parse(s)); restored = true; }
 }catch(e){ console.warn('stored graph unreadable', e); }
+if(DRAW_MODE && !(restored && [...nodes.values()].some(n=> n.type === 'srcDraw'))){ TEMPLATES.draw(); restored = true; }
 if(!restored) defaultGraph();
 applyView();
 setLang(LANG);
 historyCommit();
 autoLast = snapshot();
 restoreAutoFile();
+if(DRAW_MODE) openDrawEditor([...nodes.values()].find(n=> n.type === 'srcDraw'));
 </script>
 
 <!-- grain overlay, same as index.html -->

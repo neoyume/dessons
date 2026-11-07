@@ -438,7 +438,7 @@ test('Sortie notes : identique à Contours + Balayage en externe', ()=>{
   const px = {c:'#E6267A', s:1, o:1, h:1, r:0, t:'p', g:16, z:1, pts:[1562,1562,100, 4687,7812,100].join(',')};
   [[{strokes:[ln('#231F20', 3000), ln('#E6267A', 7000)]}, 'normal'], [{grid:16, strokes:[px]}, 'pixel']].forEach(([P, name])=>{
     clearGraph();
-    const opts = Object.assign({turns:0, thresh:60, steps:16, dir:'tb'}, P);
+    const opts = Object.assign({turns:0, thresh:60, steps:16, dir:'tb', lightOct:false, perStep:0}, P);
     const d = addNode('srcDraw', 0, 0, opts), tr = addNode('track', 500, 0), sc = addNode('scale', 0, 300, {scale:'major'});
     const e = addNode('edges', 200, 200), s = addNode('scan', 400, 200, {thresh:60, steps:16, dir:'tb'});
     connect(sc.id, 'scale', d.id, 'scale'); connect(d.id, 'notes', tr.id, 'notes');
@@ -528,6 +528,556 @@ test('Export d’un .mid importé : durées gardées', ()=>{
   connect(n.id, 'notes', tr.id, 'notes'); connect(tr.id, 'track', lo.id, 'tracks');
   eq(parseMidi(buildLoopMidi(evalNode(lo)._loop).buffer).notes[0].beatEnd, 4);
 });
+
+/* ---- interface ---- */
+test('Modèles : la liste proposée les couvre tous', ()=>{
+  eq([...TEMPLATE_KEYS].sort(), Object.keys(TEMPLATES).sort());
+  TEMPLATE_KEYS.forEach(k=> ok(I18N.fr['tplDesc_' + k] && I18N.en['tplDesc_' + k], k));
+});
+test('Rien de sélectionné : le panneau propose les modèles', ()=>{
+  selectNode(null);
+  eq(document.querySelectorAll('#propBody .startTpl').length, TEMPLATE_KEYS.length);
+});
+test('Un node sans image ne montre pas de vignette vide', ()=>{
+  clearGraph();
+  const e = addNode('edges', 0, 0);
+  evalNode(e); drawThumb(e);
+  ok(e.thumb.classList.contains('empty'));
+  const g = addNode('srcGen', -300, 0);
+  connect(g.id, 'image', e.id, 'image');
+  evalNode(e); drawThumb(e);
+  ok(!e.thumb.classList.contains('empty'));
+});
+test('Dessin : un trait noir se voit dans la vignette', ()=>{
+  clearGraph();
+  const n = addNode('srcDraw', 0, 0);
+  evalNode(n); drawThumb(n);
+  const px = n.thumb.getContext('2d').getImageData(4, 4, 1, 1).data;
+  ok(px[0] > 200, 'papier clair');
+  ok(n.thumb.classList.contains('open'));
+});
+test('Dessin : Terminer reste visible, même sur une fenêtre basse', ()=>{
+  clearGraph();
+  const n = addNode('srcDraw', 0, 0);
+  openDrawEditor(n);
+  const scroll = document.querySelector('.drawScroll'), done = document.querySelector('.drawHead .miniBtn.primary');
+  ok(done && !scroll.contains(done));
+  ok(document.body.classList.contains('drawing'));
+  ok(!document.querySelector('.drawEmpty').hidden, 'invite affichée');
+  closeDrawEditor();
+  ok(!document.body.classList.contains('drawing'));
+});
+test('Dessin : un mode Pixel garde ses réglages à la bonne place', ()=>{
+  clearGraph();
+  const n = addNode('srcDraw', 0, 0);
+  openDrawEditor(n);
+  setDrawGrid(16);
+  ok($('brSize').closest('.prm').hidden);
+  ok(document.querySelector('.drawThresh').hidden);
+  ok(!$('pxGrid').closest('.prm').hidden);
+  setDrawGrid(0);
+  ok($('pxGrid').closest('.prm').hidden);
+  closeDrawEditor();
+});
+test('Pixel : changer de grille recalcule les notes tout de suite', ()=>{
+  clearGraph();
+  const n = addNode('srcDraw', 0, 0, {grid:32}), tr = addNode('track', 300, 0);
+  connect(n.id, 'notes', tr.id, 'notes');
+  // four cells of a 32 grid, none of them under the centre of a 16 cell
+  const pts = [[5,5],[9,20],[20,9],[26,26]].flatMap(([a, b])=> [Math.round((a + 0.5)/32*10000), Math.round((b + 0.5)/32*10000), 100]).join(',');
+  n.params.strokes = [{c:'#231F20', s:28, o:1, h:1, r:0, pts, t:'p', g:32, z:1}];
+  markDirty(n.id);
+  openDrawEditor(n);
+  eq(evalNode(n).notes.notes.length, 4);
+  setDrawGrid(16);
+  const o = evalNode(n).notes;
+  eq([o.steps, o.rows, o.notes.length], [16, 16, 4]);
+  o.notes.forEach(m=> ok(Math.abs(m.px*16 % 1 - 0.5) < 1e-9, 'au centre d’une case'));
+  setDrawGrid(8);
+  eq(evalNode(n).notes.steps, 8);
+  closeDrawEditor();
+});
+test('Pixel : une case peinte ne déborde pas sur sa voisine', ()=>{
+  [8, 16, 32, 64, 128].forEach(g=>{
+    clearGraph();
+    const n = addNode('srcDraw', 0, 0, {grid:g}), tr = addNode('track', 300, 0);
+    connect(n.id, 'notes', tr.id, 'notes');
+    n.params.strokes = [{c:'#231F20', s:28, o:1, h:1, r:0, pts:[3,3,100].map((v, i)=> i < 2 ? Math.round(3.5/g*10000) : v).join(','), t:'p', g, z:1}];
+    markDirty(n.id);
+    eq(evalNode(n).notes.notes.length, 1, g);
+  });
+});
+// the tests run inside the page's frame: their helpers have to live there too
+test('Aides du dessin', ()=>{
+  window.ink = (y, c = '#231F20', g = 16)=> ({c, s:28, o:1, h:1, r:0, pts:[...Array(g)].flatMap((_, x)=> [Math.round((x + 0.5)/g*10000), Math.round((y + 0.5)/g*10000), 100]).join(','), t:'p', g, z:1});
+  window.cellAt = (x, y, g = 16)=> ({c:'#231F20', s:28, o:1, h:1, r:0, pts:[Math.round((x + 0.5)/g*10000), Math.round((y + 0.5)/g*10000), 100].join(','), t:'p', g, z:1});
+  window.drawing = params=>{
+    clearGraph();
+    const n = addNode('srcDraw', 0, 0, Object.assign({turns:0}, params)), tr = addNode('track', 300, 0), lo = addNode('loop', 600, 0, {bars:1});
+    connect(n.id, 'notes', tr.id, 'notes'); connect(tr.id, 'track', lo.id, 'tracks');
+    return {n, tr, lo};
+  };
+});
+test('Pages : chaque boucle lit sa page, entière', ()=>{
+  const {n, lo} = drawing({grid:16, hold:false, pages:[[cellAt(0, 3), cellAt(8, 3)], [cellAt(4, 5)]], page:0, strokes:[cellAt(0, 3), cellAt(8, 3)]});
+  const L = bakeLoop(lo);
+  eq(L.passes.map(P=> P.tracks[0].notes.length), [2, 1]);
+  n.params.pageChain = false;
+  ok(!bakeLoop(lo).passes, 'sans enchaînement, une seule page');
+});
+test('Pages : le .mid les met bout à bout', ()=>{
+  const {lo} = drawing({grid:16, pages:[[cellAt(0, 3)], [cellAt(0, 5)], [cellAt(0, 7)]], page:0, strokes:[cellAt(0, 3)], pageLoops:2});
+  eq(parseMidi(buildLoopMidi(bakeLoop(lo)).buffer).notes.map(x=> x.beat), [0, 4, 8, 12, 16, 20]);
+});
+test('Pages : rien n’est planifié à cheval sur un changement de page', ()=>{
+  const {n} = drawing({grid:16, pages:[[cellAt(0, 3)], [cellAt(0, 5)]], page:0, strokes:[cellAt(0, 3)]});
+  pagePassOverride = 1; eq(drawPageIdx(n.params), 1);
+  pagePassOverride = 2; eq(drawPageIdx(n.params), 0);
+  pagePassOverride = null;
+});
+test('Pages : ajouter, dupliquer, supprimer sans perdre un trait', ()=>{
+  const {n} = drawing({strokes:[cellAt(1, 1)]});
+  openDrawEditor(n);
+  addDrawPage(false); eq([n.params.pages.length, n.params.page, n.params.strokes.length], [2, 1, 0]);
+  setDrawPage(0); addDrawPage(true); eq(n.params.strokes.length, 1);
+  n.params.strokes = []; setDrawPage(0); setDrawPage(1); eq(n.params.strokes.length, 0, 'page vide gardée');
+  removeDrawPage(); removeDrawPage(); eq(n.params.pages.length, 0); eq(n.params.strokes.length, 1);
+  closeDrawEditor();
+});
+test('Pages : une page corrompue est écartée à l’ouverture', ()=>{
+  const c = cleanParams('srcDraw', {pages:[[{c:'javascript', pts:'1'}], 'x'], page:9});
+  eq([c.pages.map(p=> p.length), c.page], [[0, 0], 0]);
+});
+test('Couleurs : chacune a sa sortie et ses notes', ()=>{
+  const blue = '#2fa8e0', {n, lo} = drawing({grid:16, hold:false, strokes:[ink(3), ink(9, blue)]});
+  eq(evalNode(n).notes.notes.length, 16*2);
+  openDrawEditor(n); setVoiceProgram(n, blue, '38'); closeDrawEditor();
+  eq(evalNode(n).notes.notes.length, 16);
+  eq(evalNode(n)[voicePort('38')].notes.length, 16);
+  eq(evalNode(lo)._loop.tracks.map(tr=> tr.program), [0, 38]);
+  setVoiceProgram(n, blue, '');
+  eq(evalNode(lo)._loop.tracks.length, 1);
+  eq(evalNode(n).notes.notes.length, 32);
+});
+test('Couleurs : chacune peut avoir son nombre de pas', ()=>{
+  const blue = '#2fa8e0', ln = (y, c)=> ({c, s:40, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, y, 100]).flat().join(',')});
+  const {n} = drawing({strokes:[ln(3000, '#231f20'), ln(7000, blue)]});
+  setVoiceProgram(n, blue, '38'); n.params.voices[0].steps = 6; markDirty(n.id);
+  eq([evalNode(n).notes.steps, evalNode(n)[voicePort('38')].steps], [16, 6]);
+});
+test('Couleurs : les fils survivent à un rechargement', ()=>{
+  const blue = '#2fa8e0', {n} = drawing({strokes:[ink(3, blue)], grid:16});
+  setVoiceProgram(n, blue, '38');
+  loadGraph(JSON.parse(JSON.stringify(serialize())));
+  eq(links.filter(l=> l.fromPort === voicePort('38')).length, 1);
+});
+test('Pixel : une ligne horizontale est une note tenue', ()=>{
+  const {n} = drawing({grid:16, hold:true, strokes:[ink(3)]});
+  eq(evalNode(n).notes.notes.map(x=> [x.step, x.len]), [[0, 16]]);
+  n.params.hold = false; markDirty(n.id);
+  eq(evalNode(n).notes.notes.length, 16);
+});
+test('Pixel : tenue jusque dans le .mid', ()=>{
+  const {lo} = drawing({grid:16, hold:true, strokes:[ink(3)]});
+  evalNode(lo)._loop.gate = 1;
+  eq(parseMidi(buildLoopMidi(evalNode(lo)._loop).buffer).notes.length, 1);
+});
+test('Pixel : grille non carrée, une hauteur par note de la gamme', ()=>{
+  const scale = {pitches:[60,62,64,67,69]}, {n} = drawing({grid:32, gridY:5});
+  const sc = addNode('scale', -300, 0); connect(sc.id, 'scale', n.id, 'scale');
+  n.params.strokes = [0, 1, 2, 3, 4].map(r=> ({c:'#231F20', s:28, o:1, h:1, r:0, pts:[Math.round((r*6 + 0.5)/32*10000), Math.round((r + 0.5)/5*10000), 100].join(','), t:'p', g:32, gy:5, z:1}));
+  markDirty(n.id);
+  const o = evalNode(n).notes;
+  eq([o.steps, o.rows, o.notes.length, new Set(o.notes.map(x=> x.midi)).size], [32, 5, 5, 5]);
+  ok(scale);
+});
+test('Pixel : toute note reste dans la gamme, quelle que soit la grille', ()=>{
+  [[8, 12], [32, 12], [16, 64], [128, 128]].forEach(([g, gy])=>{
+    const cls = new Set(scaleLadder(null).map(m=> m % 12));
+    pixelPitches(null, gy).forEach(m=> ok(cls.has(m % 12)));
+  });
+});
+test('Pinceau sonore : la note sous la pointe est dans la gamme', ()=>{
+  const {n} = drawing({}), cls = new Set(scaleLadder(null).map(m=> m % 12));
+  for(let y=0;y<=1;y+=0.05) ok(cls.has(brushNote(n, 0.5, y) % 12));
+  ok(brushNote(n, 0.5, 0.05) > brushNote(n, 0.5, 0.95), 'le haut est aigu');
+});
+test('Miroir et répétition : le dessin les rend, un seul trait', ()=>{
+  const {n} = drawing({grid:16, hold:false, strokes:[Object.assign(cellAt(2, 3), {m:1})]});
+  eq(evalNode(n).notes.notes.map(x=> x.step), [2, 13]);
+  n.params.strokes = [Object.assign(cellAt(1, 3), {k:4})]; markDirty(n.id);
+  eq(evalNode(n).notes.notes.map(x=> x.step), [1, 5, 9, 13]);
+  n.params.strokes = [Object.assign(cellAt(2, 3), {m:2})]; markDirty(n.id);
+  eq(evalNode(n).notes.notes.length, 2);
+});
+test('Un geste rapide reste un seul trait', ()=>{
+  const st = {c:'#000000', s:30, o:1, h:.9, r:0, pts:[1000,5000,100, 9000,5000,100].join(',')}, c = document.createElement('canvas');
+  c.width = c.height = 200;
+  commitStroke(c.getContext('2d'), 200, st, null, 'transparent');
+  ok(c.getContext('2d').getImageData(100, 100, 1, 1).data[3] > 200, 'le milieu est peint');
+});
+test('Répétition : pas de trait à travers le canvas quand une copie fait le tour', ()=>{
+  const st = {c:'#000000', s:10, o:1, h:.9, r:0, k:2, pts:Array.from({length:21}, (_, i)=> [3000 + i*150, 2000, 100]).flat().join(',')}, c = document.createElement('canvas');
+  c.width = c.height = 200;
+  commitStroke(c.getContext('2d'), 200, st, null, 'transparent');
+  ok(c.getContext('2d').getImageData(20, 40, 1, 1).data[3] > 100, 'la copie revient à gauche');
+});
+test('Le trait comme mélodie suit l’ordre du geste', ()=>{
+  const up = {c:'#000000', s:10, o:1, h:1, r:0, pts:Array.from({length:50}, (_, i)=> [5000, 9000 - i*160, 100]).flat().join(',')};
+  const {n} = drawing({read:'gesture', steps:8, strokes:[up]});
+  const m = evalNode(n).notes.notes.map(x=> x.midi);
+  eq(m, [...m].sort((a, b)=> a - b));
+  ok(m.length > 3);
+});
+test('Le dernier trait sert de trajet', ()=>{
+  const {n} = drawing({strokes:[{c:'#000000', s:10, o:1, h:1, r:0, pts:[1000,1000,100, 9000,9000,100].join(',')}]}), s = addNode('scan', 0, 800);
+  ok(connect(n.id, 'trace', s.id, 'path'));
+  eq(evalNode(n).trace.points.length, 2);
+});
+test('Animation : le cycle retombe sur ses pieds', ()=>{
+  const d = new Uint8ClampedArray(16*16*4).map((_, i)=> i*7);
+  const p = {animGo:true, animX:2, animY:-1, animRot:0, animLoops:4, grid:0, gridY:0};
+  pagePassOverride = 4; meshPhaseOverride = 0;
+  const a = drawAnimNow(p);
+  pagePassOverride = null; meshPhaseOverride = null;
+  ok(tileImage(d, 16, 16, a) === d, 'position 4 = position 0');
+});
+test('Animation : une grille se déplace case par case, sans note en plus', ()=>{
+  const {n, lo} = drawing({grid:16, hold:false, animY:-1, animLoops:4, strokes:[cellAt(0, 12), cellAt(4, 10), cellAt(8, 5), cellAt(12, 3)]});
+  bakeLoop(lo).passes.forEach(P=> eq(P.tracks[0].notes.length, 4));
+  eq(bakeLoop(lo).passes.length, 4);
+  ok(n);
+});
+test('Animation : la musique change d’une boucle à l’autre', ()=>{
+  const {lo} = drawing({grid:16, hold:false, animY:-1, animLoops:4, strokes:[cellAt(0, 12)]});
+  const m = bakeLoop(lo).passes.map(P=> P.tracks[0].notes[0].midi);
+  eq(new Set(m).size, 4);
+});
+test('Animation : à l’arrêt, le dessin est à sa place', ()=>{
+  const {n} = drawing({animX:2, animRot:1, strokes:[cellAt(1, 1)]});
+  ok(evalNode(n).image.data);
+  eq(drawAnimNow(n.params).u, 0);
+});
+test('Replay en .mid : la peinture se construit', ()=>{
+  const ln = y=> ({c:'#231F20', s:40, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, y, 100]).flat().join(',')});
+  const {n} = drawing({memory:0, replayMin:0.5, strokes:[ln(2000), ln(5000), ln(8000)]});
+  const counts = bakeReplay(n).passes.map(P=> P.tracks[0].notes.length);
+  ok(counts.length > 3 && counts[0] < counts[counts.length - 1], counts.join());
+});
+test('Dessin : le cadre reste carré, même en portrait', ()=>{
+  const {n} = drawing({grid:16});
+  openDrawEditor(n);
+  const stage = document.querySelector('.drawStage'), frame = document.querySelector('.drawFrame');
+  [[200, 500], [500, 200], [300, 300]].forEach(([w, h])=>{
+    stage.style.cssText = `flex:none; width:${w}px; height:${h}px`;
+    const r = frame.getBoundingClientRect();
+    eq([Math.round(r.width), Math.round(r.height)], [Math.min(w, h), Math.min(w, h)]);
+  });
+  closeDrawEditor();
+});
+test('Pixel : changer de grille repart sur des cases carrées', ()=>{
+  const {n} = drawing({grid:32, gridY:12});
+  openDrawEditor(n);
+  ok(!$('pxSquare').hidden, 'cases rectangulaires signalées');
+  $('pxGrid').value = '16'; $('pxGrid').dispatchEvent(new Event('change'));
+  eq([n.params.grid, n.params.gridY, $('pxRows').value], [16, 0, '0']);
+  ok($('pxSquare').hidden);
+  closeDrawEditor();
+});
+test('Pixel : Remettre des cases carrées, en un clic', ()=>{
+  const {n} = drawing({grid:32, gridY:12});
+  openDrawEditor(n);
+  $('pxSquare').click();
+  eq([n.params.gridY, evalNode(n).notes.rows], [0, 32]);
+  closeDrawEditor();
+});
+test('Instruments modélisés : chacun joue la bonne note', async ()=>{
+  const sr = 44100, N = 8192;
+  const pitch = (x, midi)=>{
+    const exp = 440*2**((midi - 69)/12), a = Math.floor(sr*0.3), lo = Math.floor(sr/(exp*1.12)), hi = Math.ceil(sr/(exp*0.89));
+    let best = 0, lag = lo;
+    for(let l=lo;l<=hi;l++){ let s = 0; for(let i=0;i<N;i++) s += x[a+i]*x[a+i+l]; if(s > best){ best = s; lag = l; } }
+    return 1200*Math.log2(sr/lag/exp);
+  };
+  for(const prog of Object.keys(INSTR_MODELS).filter(p=> p !== '116')) for(const midi of [48, 72]){
+    const c = new OfflineAudioContext(1, sr*1.2, sr);
+    playVoice(c, c.destination, +prog, midi, 100, 0.01, 0.9);
+    ok(Math.abs(pitch((await c.startRendering()).getChannelData(0), midi)) < 25, prog + ' / ' + midi);
+  }
+});
+test('Instruments modélisés : un .mid garde leur numéro General MIDI', ()=>{
+  const {tr, lo} = drawing({grid:16, strokes:[ink(3)]});
+  tr.params.program = '56'; markDirty(tr.id);
+  eq(parseMidi(buildLoopMidi(evalNode(lo)._loop).buffer).layers[0].program, 56);
+});
+test('Instruments suggérés : les correspondances de Kandinsky', ()=>{
+  const name = hex=> NODE_INSTR.find(g=> String(g.prog) === suggestInstrument(hex)).en;
+  eq(['#2AABE2', '#5244CD', '#072B47', '#00FF00', '#F29325', '#E72728', '#662E93'].map(name), ['Flute', 'Cello', 'Organ', 'Violin', 'Trumpet', 'Drum', 'English Horn']);
+  eq(['#231F20', '#FFFFFF', '#808080'].map(name), ['Synth Bass', 'Vibraphone', 'Acoustic Piano']);
+});
+test('Instruments suggérés : toute la palette a un instrument existant', ()=>{
+  NY_PALETTE.forEach(([nm, hex])=> ok(NODE_INSTR.some(g=> String(g.prog) === suggestInstrument(hex)), nm));
+});
+test('Instruments suggérés : un choix déjà fait n’est pas écrasé', ()=>{
+  const blue = '#2aabe2', red = '#e72728', {n, lo} = drawing({grid:16, strokes:[ink(3, blue), ink(9, red)]});
+  openDrawEditor(n);
+  setVoiceProgram(n, blue, '38');
+  suggestVoices(n);
+  eq(evalNode(lo)._loop.tracks.map(tr=> tr.program).sort((a, b)=> a - b), [0, 38, 116]);
+  closeDrawEditor();
+});
+test('Notes tenues : décochées par défaut', ()=>{
+  const {n} = drawing({grid:16, strokes:[ink(3)]});
+  eq(evalNode(n).notes.notes.length, 16);
+});
+test('Plafond de voix : la note nouvelle n’est jamais perdue', ()=>{
+  ensureAudio();
+  const old = voices;
+  voices = new Set(Array.from({length:MAX_VOICES}, ()=> playVoice(ac, bus.master, 0, 60, 90, ac.currentTime + 5, 0.1)));
+  const first = voices.values().next().value;
+  makeVoiceRoom();
+  eq(voices.size, MAX_VOICES - 1);
+  ok(!voices.has(first), 'la plus ancienne part');
+  voices.forEach(v=> fadeOutVoice(ac, v));
+  voices = old;
+});
+test('Tête de lecture : elle suit la courbe', ()=>{
+  const lin = {steps:16, curve:'linear'};
+  [0, 0.25, 0.7].forEach(p=> ok(Math.abs(curvedTau(lin, p) - p) < 1e-9));
+  ['accel', 'decel', 'pulse', 'swing'].forEach(curve=>{
+    const o = {steps:16, curve};
+    for(let k=0;k<16;k++) ok(Math.abs(curvedTau(o, stepFrac(o, k)) - k/16) < 1e-9, curve + ' pas ' + k);
+    let last = -1;
+    for(let p=0;p<1;p+=0.01){ const v = curvedTau(o, p); ok(v >= last, curve + ' recule'); last = v; }
+  });
+});
+test('Tête de lecture : la courbe se règle dans l’écran de dessin', ()=>{
+  const {n} = drawing({});
+  openDrawEditor(n);
+  ok(document.querySelector('.drawTools [data-param="' + n.id + ':curve"]'));
+  closeDrawEditor();
+});
+test('Piste principale : repliée sans rien à jouer, rouverte par une couleur qui y revient', ()=>{
+  const blue = '#2aabe2', {n, tr} = drawing({grid:16, strokes:[ink(3, blue), ink(9, '#e72728')]});
+  openDrawEditor(n);
+  suggestVoices(n);
+  ok(tr.params.folded, 'repliée');
+  setVoiceProgram(n, '#e72728', ''); renderVoices();
+  ok(!tr.params.folded, 'rouverte');
+  closeDrawEditor();
+});
+test('Piste principale : un repli à la main est respecté', ()=>{
+  const blue = '#2aabe2', {n, tr} = drawing({grid:16, strokes:[ink(3, blue)]});
+  tr.params.folded = true;
+  openDrawEditor(n);
+  suggestVoices(n);
+  setVoiceProgram(n, blue, ''); renderVoices();
+  ok(tr.params.folded);
+  closeDrawEditor();
+});
+test('Arranger : les fils vont à droite et rien ne se chevauche', ()=>{
+  TEMPLATES.rhythm();
+  arrangeGraph();
+  links.forEach(l=>{ const a = nodes.get(l.from), b = nodes.get(l.to); ok(a.x < b.x, a.type + ' > ' + b.type); });
+  const list = [...nodes.values()];
+  list.forEach(a=> list.forEach(b=>{
+    if(a === b) return;
+    ok(a.x + a.el.offsetWidth <= b.x || b.x + b.el.offsetWidth <= a.x || a.y + a.el.offsetHeight <= b.y || b.y + b.el.offsetHeight <= a.y, a.type + ' / ' + b.type);
+  }));
+});
+test('Arranger : un node sans fil ne casse rien, et ça s’annule', ()=>{
+  clearGraph();
+  const a = addNode('edges', 500, 500);
+  arrangeGraph();
+  ok(Number.isFinite(a.x) && Number.isFinite(a.y));
+});
+test('Estompe : le miroir et la répétition s’appliquent aussi', ()=>{
+  const size = 200, bar = {c:'#000000', s:60, o:1, h:1, r:0, pts:[1000,5000,100, 9000,5000,100].join(',')};
+  const line = x=> Array.from({length:40}, (_, i)=> [x, 4600 - i*80, 100]).flat().join(',');
+  const render = st=>{
+    const c = document.createElement('canvas'), x = c.getContext('2d', {willReadFrequently:true});
+    c.width = c.height = size;
+    commitStroke(x, size, bar, null, 'transparent');
+    commitStroke(x, size, st, null, 'transparent');
+    return (u, v)=> x.getImageData(u*size, v*size, 1, 1).data[3];
+  };
+  const smudge = {c:'#000000', s:40, o:1, h:.7, r:0, t:'s', pts:line(2500)};
+  const one = render(smudge), both = render(Object.assign({}, smudge, {m:1})), rep = render(Object.assign({}, smudge, {k:2}));
+  ok(one(0.25, 0.3) > 20, 'le trait tire la peinture');
+  eq(one(0.75, 0.3), 0);
+  ok(both(0.75, 0.3) > 20, 'le miroir aussi');
+  ok(rep(0.75, 0.3) > 20, 'la répétition aussi');
+});
+test('Mémoire : peindre une couleur ne fait pas taire les autres', ()=>{
+  const ln = (y, c)=> ({c, s:40, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, y, 100]).flat().join(',')});
+  const strokes = [ln(1500, '#e72728'), ln(2500, '#00ff00')];
+  for(let i=0;i<9;i++) strokes.push(ln(4000 + i*500, '#2aabe2'));
+  const {n, lo} = drawing({memory:3, strokes});
+  openDrawEditor(n); suggestVoices(n); closeDrawEditor();
+  const heard = evalNode(lo)._loop.tracks.filter(tr=> tr.notes.length).length;
+  eq(heard, 3);
+  eq(recentStrokes(strokes, 1, 3).length, 3, 'sans voix : un seul compte');
+  eq(recentStrokes(strokes, 1, 3, st=> st.c).length, 5);
+});
+test('Instruments : deux bleus, une seule piste', ()=>{
+  const {n, lo} = drawing({grid:16, hold:false, strokes:[ink(3, '#2aabe2'), ink(9, '#86e0ff')]});
+  openDrawEditor(n);
+  setVoiceProgram(n, '#2aabe2', '73'); setVoiceProgram(n, '#86e0ff', '73');
+  closeDrawEditor();
+  eq(n.params.voices.length, 1);
+  const tracks = evalNode(lo)._loop.tracks.filter(tr=> tr.program === 73);
+  eq([tracks.length, tracks[0].notes.length], [1, 32]);
+});
+test('Instruments : une couleur change d’instrument, le vide disparaît', ()=>{
+  const {n} = drawing({grid:16, strokes:[ink(3, '#2aabe2'), ink(9, '#e72728')]});
+  const count = ()=> [...nodes.values()].filter(m=> m.type === 'track').length;
+  setVoiceProgram(n, '#2aabe2', '73'); setVoiceProgram(n, '#e72728', '116');
+  eq(count(), 3);
+  setVoiceProgram(n, '#e72728', '73');
+  eq([n.params.voices.length, n.params.voices[0].colors.length, count()], [1, 2, 2]);
+});
+test('Instruments : une nouvelle couleur rejoint sa famille', ()=>{
+  const {n} = drawing({grid:16, strokes:[ink(3, '#2aabe2')]});
+  openDrawEditor(n); suggestVoices(n);
+  n.params.strokes = n.params.strokes.concat([ink(9, '#c9e8f4')]);
+  renderVoices();
+  eq([n.params.voices.length, n.params.voices[0].prog, n.params.voices[0].colors.length], [1, '73', 2]);
+  closeDrawEditor();
+});
+test('Instruments : renvoyée à la piste principale, une couleur y reste', ()=>{
+  const {n} = drawing({grid:16, strokes:[ink(3, '#2aabe2'), ink(9, '#e72728')]});
+  openDrawEditor(n); suggestVoices(n);
+  setVoiceProgram(n, '#e72728', ''); renderVoices();
+  eq(voiceOf(n, '#e72728'), undefined);
+  ok(n.params.free.includes('#e72728'));
+  closeDrawEditor();
+});
+test('Instruments : changer l’instrument d’un groupe garde ses fils', ()=>{
+  const {n, lo} = drawing({grid:16, strokes:[ink(3, '#2aabe2')]});
+  setVoiceProgram(n, '#2aabe2', '73');
+  setVoiceInstrument(n, n.params.voices[0], '40');
+  eq(evalNode(lo)._loop.tracks.map(tr=> tr.program).sort((a, b)=> a - b), [0, 40]);
+  eq(evalNode(n)[voicePort('40')].notes.length > 0, true);
+});
+test('Instruments : un ancien dessin, une sortie par couleur, est regroupé', ()=>{
+  const g = {app:'dessons-nodes', nodes:[
+    {id:'n1', type:'srcDraw', x:0, y:0, params:{voices:[{c:'#2AABE2', steps:6, dir:'rl'}, {c:'#C9E8F4', steps:0, dir:''}, {c:'#E72728', steps:0, dir:''}]}},
+    {id:'n2', type:'track', x:0, y:0, params:{program:'73', name:'blue'}}, {id:'n3', type:'track', x:0, y:0, params:{program:'73'}}, {id:'n4', type:'track', x:0, y:0, params:{program:'116'}},
+    {id:'n5', type:'loop', x:0, y:0, params:{}}],
+    links:[{from:'n1', fromPort:'c2aabe2', to:'n2', toPort:'notes'}, {from:'n1', fromPort:'cc9e8f4', to:'n3', toPort:'notes'}, {from:'n1', fromPort:'ce72728', to:'n4', toPort:'notes'},
+      {from:'n2', fromPort:'track', to:'n5', toPort:'tracks'}, {from:'n3', fromPort:'track', to:'n5', toPort:'tracks'}, {from:'n4', fromPort:'track', to:'n5', toPort:'tracks'}]};
+  loadGraph(g);
+  const d = nodes.get('n1');
+  eq(d.params.voices.map(v=> [v.prog, v.colors, v.steps, v.dir]), [['73', ['#2aabe2', '#c9e8f4'], 6, 'rl'], ['116', ['#e72728'], 0, '']]);
+  ok(!nodes.has('n3'), 'la piste en double est retirée');
+  eq(evalNode(nodes.get('n5'))._loop.tracks.map(tr=> tr.program), [73, 116]);
+  ok(!nodes.get('n2').params.name, 'la piste prend le nom de son instrument');
+});
+test('Instruments : un fichier piégé dans les voix est écarté', ()=>{
+  const c = cleanParams('srcDraw', {voices:[{prog:'999', colors:['#000000']}, {prog:'73', colors:['x', '#AABBCC']}, {prog:'73', colors:[]}, 3], free:['y']});
+  eq([c.voices.map(v=> [v.prog, v.colors]), c.free], [[['73', ['#aabbcc']]], []]);
+});
+test('Nuancier : l’ordre d’origine, et l’instrument de la couleur affiché', ()=>{
+  const {n} = drawing({strokes:[ink(3, '#2aabe2')]});
+  brush.color = '#2AABE2';
+  openDrawEditor(n);
+  eq([...document.querySelectorAll('.nyGrid button')].map(b=> b.dataset.name), NY_PALETTE.map(c=> c[0]));
+  suggestVoices(n);
+  ok(document.querySelector('.nyName').textContent.includes(instrName('73')), document.querySelector('.nyName').textContent);
+  ok(document.querySelector('.nyGrid button.on'), 'la couleur choisie reste marquée');
+  closeDrawEditor();
+});
+test('Animation : l’interrupteur coupe sans perdre les réglages', ()=>{
+  const {n, lo} = drawing({grid:16, hold:false, animY:-1, animLoops:4, strokes:[cellAt(0, 12)]});
+  eq(bakeLoop(lo).passes.length, 4);
+  n.params.animGo = false; markDirty(n.id);
+  ok(!bakeLoop(lo).passes, 'plus de cycle');
+  eq(drawAnimNow(n.params), null);
+  eq([n.params.animY, n.params.animLoops], [-1, 4]);
+  n.params.animGo = true; markDirty(n.id);
+  eq(bakeLoop(lo).passes.length, 4);
+});
+test('Clarté : foncé grave, clair aigu, même note de la gamme', ()=>{
+  eq(['#072B47', '#3A318D', '#2AABE2', '#C9E8F4'].map(colourOctave), [-2, -1, 0, 1]);
+  const ln = c=> [{c, s:40, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, 5000, 100]).flat().join(',')}];
+  const pitch = c=>{ const {n} = drawing({strokes:ln(c), memory:0}); return evalNode(n).notes.notes.map(x=> x.midi); };
+  const dark = pitch('#072B47'), mid = pitch('#2AABE2'), light = pitch('#C9E8F4');
+  ok(mid.length > 0);
+  eq(Math.min(...mid) - Math.min(...dark), 24);
+  eq(Math.min(...light) - Math.min(...mid), 12);
+});
+test('Clarté : deux couleurs d’un même instrument jouent à deux octaves', ()=>{
+  const ln = (y, c)=> ({c, s:40, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, y, 100]).flat().join(',')});
+  const {n, lo} = drawing({memory:0, strokes:[ln(5000, '#2aabe2'), ln(5000 + 1, '#c9e8f4')]});
+  n.params.strokes = [ln(3000, '#2aabe2'), ln(3000, '#c9e8f4')].map((st, i)=> Object.assign(st, {pts:Array.from({length:30}, (_, k)=> [i ? 5200 + k*130 : 1000 + k*130, 3000, 100]).flat().join(',')}));
+  setVoiceProgram(n, '#2aabe2', '73'); setVoiceProgram(n, '#c9e8f4', '73');
+  const m = evalNode(lo)._loop.tracks.find(tr=> tr.program === 73).notes.map(x=> x.midi);
+  eq(Math.max(...m) - Math.min(...m), 12);
+});
+test('Clarté : aucune note hors gamme', ()=>{
+  const cls = new Set(scaleLadder(null).map(m=> m % 12));
+  const ln = (y, c)=> ({c, s:40, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, y, 100]).flat().join(',')});
+  const {n} = drawing({memory:0, strokes:[ln(1500, '#072b47'), ln(4000, '#3a318d'), ln(6000, '#2aabe2'), ln(8000, '#ffffff')]});
+  evalNode(n).notes.notes.forEach(x=> ok(cls.has(x.midi % 12)));
+});
+test('Clarté : l’interrupteur coupe, et le mode Pixel n’est pas touché', ()=>{
+  const ln = c=> [{c, s:40, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, 5000, 100]).flat().join(',')}];
+  const {n} = drawing({memory:0, lightOct:false, strokes:ln('#072b47')});
+  const off = evalNode(n).notes.notes.map(x=> x.midi);
+  n.params.lightOct = true; markDirty(n.id);
+  eq(evalNode(n).notes.notes.map(x=> x.midi), off.map(m=> m - 24));
+  const dark = evalNode(drawing({grid:16, strokes:[ink(3, '#072b47')]}).n).notes.notes[0].midi;
+  eq(dark, evalNode(drawing({grid:16, strokes:[ink(3, '#2aabe2')]}).n).notes.notes[0].midi);
+});
+test('Notes par pas : la limite tient et la silhouette reste', ()=>{
+  const list = Array.from({length:18}, (_, i)=> ({step:4, midi:50 + i, vel:127}));
+  const kept = thinNotes(list, 3).map(x=> x.midi);
+  eq(kept.length, 3);
+  ok(kept[0] < 56 && kept[1] >= 56 && kept[1] < 62 && kept[2] >= 62, 'grave, médium, aigu : ' + kept);
+  eq(thinNotes(list, 0).length, 18);
+  eq(thinNotes(list.slice(0, 2), 3).length, 2);
+});
+test('Notes par pas : la plus forte de sa tranche gagne', ()=>{
+  const list = Array.from({length:6}, (_, i)=> ({step:0, midi:60 + i, vel:i === 1 ? 120 : 60}));
+  ok(thinNotes(list, 2).some(x=> x.midi === 61));
+});
+test('Notes par pas : chaque instrument a sa limite', ()=>{
+  const ln = (y, c)=> ({c, s:300, o:1, h:.9, r:0, pts:Array.from({length:30}, (_, i)=> [1000 + i*270, y, 100]).flat().join(',')});
+  const {n, lo} = drawing({memory:0, perStep:2, strokes:[ln(3000, '#2aabe2'), ln(7000, '#f29325')]});
+  openDrawEditor(n); suggestVoices(n); closeDrawEditor();
+  evalNode(lo)._loop.tracks.filter(tr=> tr.notes.length).forEach(tr=>{
+    const per = {}; tr.notes.forEach(x=> per[x.step] = (per[x.step] || 0) + 1);
+    ok(Math.max(...Object.values(per)) <= 2, tr.name);
+  });
+});
+test('Notes par pas : en Pixel, chaque case reste une note', ()=>{
+  const cells = [...Array(16)].map((_, y)=> cellAt(4, y));
+  const {n} = drawing({grid:16, perStep:2, strokes:cells});
+  eq(evalNode(n).notes.notes.length, 16);
+});
+test('Tout effacer : repart d’un dessin propre, la chaîne reste', ()=>{
+  const {n, tr, lo} = drawing({grid:16, strokes:[ink(3, '#2aabe2'), ink(9, '#e72728')], bg:'#ffffff'});
+  const out = addNode('midiOut', 300, 400); connect(n.id, 'notes', out.id, 'notes');
+  openDrawEditor(n); suggestVoices(n); addDrawPage(false);
+  const before = nodes.size;
+  ok(before > 4 && tr.params.folded);
+  resetDrawing(n);
+  eq([n.params.strokes.length, n.params.pages.length, n.params.page, n.params.voices.length, n.params.free.length, n.params.bg], [0, 0, 0, 0, 0, 'transparent']);
+  eq(nodes.size, 4, 'Dessin, Piste, Boucle, Logic');
+  ok(nodes.has(tr.id) && nodes.has(lo.id) && nodes.has(out.id));
+  ok(!tr.params.folded, 'la Piste principale se rouvre');
+  eq(portsOut(n).map(p=> p.id), ['notes', 'image', 'trace']);
+  eq(links.filter(l=> l.from === n.id).length, 2);
+  eq(document.querySelectorAll('.pageBtn').length, 1);
+  closeDrawEditor();
+});
+test('Tout effacer : les réglages du node restent', ()=>{
+  const {n} = drawing({grid:16, animY:-1, tempo:0, strokes:[ink(3)]});
+  openDrawEditor(n); resetDrawing(n);
+  eq([n.params.grid, n.params.animY], [16, -1]);
+  closeDrawEditor();
+});
+test('Résumés : singulier à 1', ()=>{ setLang('fr'); eq([countOf(1, 'tracksWord'), countOf(2, 'notesWord')], ['1 piste', '2 notes']); });
 
 /* ---- every visible string exists in both languages ---- */
 test('Parité FR / EN', ()=>{

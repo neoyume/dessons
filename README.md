@@ -7,7 +7,7 @@
 
 *dessin + sons* (French for "drawing + sounds") — turns an image, a video, a webcam feed or a live painting into a multi-track MIDI file, exported as `.mid` or streamed live into your DAW through a virtual MIDI port. Built for making loops in Logic Pro (or any DAW). It can also render the loop as a vertical video, sound included, to post straight to social platforms.
 
-**New:** [Nodes](https://neoyume.github.io/dessons/nodes.html), the modular version: wire the pipeline your own way, paint live and hear each stroke, replay the painting as a piece. [See below](#nodes-the-modular-version).
+**New:** [Nodes](https://neoyume.github.io/dessons/nodes.html), the modular version: wire the pipeline your own way, paint live and hear each stroke, give each color an instrument, chain pages, animate the drawing, replay the painting as a piece. [See below](#nodes-the-modular-version).
 
 By [neoyume](https://github.com/neoyume). Contributions welcome.
 
@@ -61,7 +61,7 @@ No installation needed. Two options:
 
 **[Open Nodes](https://neoyume.github.io/dessons/nodes.html)**, or the **Nodes** button in the app. The same pipeline, cut into nodes you wire together on a canvas, so you can stack, branch and recombine what the main page does in a fixed order: two layer filters in a row, one scan per layer with its own direction and step count (polyrhythm), one scale shared by several scans.
 
-Start from **File → Templates**: they play straight away, except *Imported MIDI*, which waits for your file.
+Start from a template, offered in the right-hand panel or under **File → Templates**: they play straight away, except *Imported MIDI*, which waits for your file. *Arrange*, at the bottom of the canvas, puts the nodes in order along the signal.
 
 - **Sources**: image, **drawing**, video, webcam, **3D mesh** (built-in shapes or your own `.obj` / `.stl`, kept in the browser), generator (noise, gradient, grid, rings), **MIDI file**, microphone.
 - **Adjust**: crop, tones, blur, invert, mirror / rotate, blend, separate and combine RGBA. A 3D mesh outputs its normals as RGB and its depth as alpha, so *Separate RGBA* can give each its own scan.
@@ -77,16 +77,44 @@ The **Drawing** node is a whole instrument: paint, and the painting plays. It ha
 
 ![Live painting in Nodes: colored strokes and a spiral over a moving noise layer, a playhead reading the painting, the brush settings and NY palette on the right](docs/screenshot-drawing.jpg)
 
-Start from *File → Templates → Live painting* or *Pixel art*, then click **Draw**.
+To start, open **Drawing mode** (a button in the workshop, or `nodes.html?draw`): the drawing opens full screen, with its own graph. You can also start from *File → Templates* (*Live painting*, *Pixel art*, *Flipbook*, *Scrolling drawing*) and click the node's thumbnail. *Done* shows the graph, editable like any other.
 
-- **Tools**: round brush (size, opacity, hardness, pen pressure), smudge, eraser, eyedropper. Keys `B`, `S`, `E`, `I`; `[` and `]` for the size; `Alt`+click to pick a color without changing tool.
-- **Colors**: the NY palette, or anything picked from the screen. A new drawing starts on transparent paper; *Set as background* fills it.
-- **Heard as you paint**: press play and paint. A stroke counts while your hand is still moving, and a playhead on the painting shows what is sounding.
-- **Reading**: direction, steps and sensitivity are on the painting screen. A very soft brush needs a high sensitivity.
-- **Memory**: a full painting ends up filling the grid, and a new stroke has nothing left to add. *Memory* keeps the music on your latest strokes while the painting stays whole. *Live painting* starts at 8 strokes.
-- **Pixel** (`P`): square cells on a visible grid, from 8×8 to 128×128. The grid becomes the score: each painted cell is exactly one note, a column is a step, a row is a degree of the scale. Sensitivity and memory don't apply.
-- **Display layers**: other nodes shown behind the painting, such as a noise moving with the loop or a video. They are visual only: the music reads your drawing alone.
-- **Replay**: every stroke is recorded, point by point. **Replay the drawing** rebuilds the painting over the length you choose (3 minutes by default) with the sound running, and you hear the loops evolve. *Cycles / loop* rebuilds it on each pass of the loop instead.
+#### Painting
+
+- **Tools**: round brush (size, opacity, hardness, pen pressure), smudge, eraser, eyedropper. Keys `B`, `S`, `E`, `I`; `[` and `]` for size; `Alt`+click to pick a color without changing tool.
+- **Sounding brush**: the tip plays the note under it, always in the scale, and pressure sets the volume. Start playback too: a stroke counts while your hand is still moving.
+- **Mirrors and repeat**: a left-right mirror for a palindrome, top-bottom for an inverted melody, a stroke repeated across the width for a rhythmic pattern. The smudge follows them too, and undo and the replay treat it all as one stroke.
+- **Paper**: a new drawing starts on transparent paper; *Brush color* fills it.
+- **Clear all** starts again from a clean sheet: strokes, pages, paper, and the tracks added for instruments. The node's chain and its settings stay, and ↶ in the header undoes it.
+
+#### Colors and instruments
+
+- **One color, one instrument**: the palette shows what the chosen color plays. The *Suggested instruments* button gives each color an instrument after Kandinsky's correspondences: light blue = flute, darker blue = cello, double bass, then organ, green = violin, yellow and orange = trumpet, red = drum, violet = English horn or bassoon. The neutrals are Dessons' own choice.
+- **One instrument, one track**: its colors share an output, a Track wired to the Loop, and a channel if the drawing goes to Logic. Click a swatch to send a color to another instrument. A new color joins its family on its own.
+- **Polyrhythm**: each instrument has its own steps and direction, in a single drawing.
+- **Octave follows lightness**: a dark color plays lower and a light one higher, in whole octaves, so always in the scale. A switch turns it off.
+- **Instruments**: the workshop's 6 are joined by pizzicato, violin, cello, double bass, trumpet, English horn, bassoon and drum, with their real General MIDI numbers. These are light syntheses, not samples: in Logic, the `.mid` opens your own sounds.
+
+#### Playback
+
+- **Direction, steps, sensitivity, curve** are set on the drawing screen. The playhead follows the curve on the painting. A very soft brush needs a high sensitivity.
+- **Notes per step**: each instrument plays at most 3 notes at once by default, spread over the height of the stroke, so a thick stroke stays a chord rather than a block.
+- **Memory**: a full painting ends up filling the grid, and a new stroke has nothing left to add. *Memory* keeps the music on your latest strokes while the painting stays whole. Each instrument has its own: painting elsewhere doesn't silence it. *Live painting* starts at 8 strokes.
+- **The gesture as a melody**: *Reading → Gesture order* plays the strokes in the order you drew them, with no scan. The **last stroke** output serves as a path for a Scan.
+
+#### Pixel
+
+- **Pixel** (`P`): the grid becomes the score, from 8×8 to 128×128. Each painted cell is exactly one note, a column is a step, a row is a degree of the scale. Sensitivity, memory, notes per step and octave by lightness don't apply.
+- **Staff**: note names, beats and bars show on the grid.
+- **Held notes**: when checked, a line of cells on one note becomes one long note.
+- **Pitches** separates rows from columns, for example 32 steps with one row per note of the scale. Cells become rectangular; *Back to square cells* undoes it.
+
+#### Over time
+
+- **Pages**: a flipbook under the drawing (`←` `→` to browse, `N` for a new page), with onion skin. A page turns at the start of a loop, never in the middle, so it is always read whole. The `.mid` plays them end to end.
+- **Animation**: the drawing repeats on its sides and scrolls or turns during playback, over a cycle of several loops. The playhead reads a different passage each loop, the `.mid` holds the whole cycle, and a switch turns it off without losing the settings.
+- **Replay**: every stroke is recorded, point by point. **Replay with music** rebuilds the painting over the length you choose (3 minutes by default), sound included. *Export the replay as .mid* turns it into a piece, loop after loop. *Cycles / loop*, in Settings, rebuilds it on each pass instead.
+- **Display layers**: other nodes shown behind the painting, like noise moving with the loop or a video. They're purely visual: the music only reads your drawing.
 
 The `.json` from **File → Save** keeps the whole drawing and its steps. It doesn't keep the real timing of your gesture: the replay runs at an even pace.
 

@@ -462,15 +462,15 @@
   .actionCol.songAction[hidden]{display:none;}  /* song page on standby, see CLAUDE.md */
 
   /* link to nodes.html — an <a> dressed as the secondary outline button */
-  a#nodesBtn{
+  a#nodesBtn, a#drawBtn{
     width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
     background:transparent; color:var(--cyan); text-decoration:none;
     border:1.5px solid var(--cyan); padding:7px; font-size:12.5px; font-weight:700; letter-spacing:.3px;
     border-radius:7px; white-space:nowrap;
     transition:background-color .15s, color .15s, border-color .15s;
   }
-  a#nodesBtn svg{width:14px; height:14px; flex:none; display:block;}
-  a#nodesBtn:hover{background-color:rgba(77,217,201,.12);}
+  a#nodesBtn svg, a#drawBtn svg{width:14px; height:14px; flex:none; display:block;}
+  a#nodesBtn:hover, a#drawBtn:hover{background-color:rgba(77,217,201,.12);}
 
   button#previewBtn{
     width:100%; background:transparent; color:var(--cyan);
@@ -592,6 +592,12 @@
           <a id="nodesBtn" href="nodes.html">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="5" height="4" rx="1"></rect><rect x="11.5" y="11.5" width="5" height="4" rx="1"></rect><path d="M6.5 4.5c5 0 0 9 5 9"></path></svg>
             <span data-i18n="btnNodes">Mode Nodes</span>
+          </a>
+        </div>
+        <div class="actionCol flowAction">
+          <a id="drawBtn" href="nodes.html?draw">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l1-4 8-8 3 3-8 8z"></path><path d="M10.5 4.5l3 3"></path></svg>
+            <span data-i18n="btnDrawMode">Mode Dessin</span>
           </a>
         </div>
         <div class="actionCol flowAction songAction" hidden>
@@ -983,6 +989,7 @@ const I18N = {
     footerFree: "Dessons est en source ouverte (source-available) et gratuit pour un usage non commercial (licence PolyForm). Mais le fichier MIDI que tu exportes ou joues t'appartient à 100 % ; utilise-le comme bon te semble, commercialement ou non.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
     btnNodes: "Mode Nodes",
+    btnDrawMode: "Mode Dessin",
     btnAddToSong: "Ajouter à la chanson",
     songLink: "Ouvrir la chanson →",
     songScenePrompt: "Nom de cette scène (intro, couplet, refrain…) :",
@@ -1132,6 +1139,7 @@ const I18N = {
     footerFree: "Neoyume's Dessons is source-available and free for non-commercial usage (PolyForm license). However, the MIDI file you export or play is 100% yours; use it however you want, commercially or not.",
     footerKofi: "☕ Support me on Ko-fi",
     btnNodes: "Node mode",
+    btnDrawMode: "Drawing mode",
     btnAddToSong: "Add to song",
     songLink: "Open the song →",
     songScenePrompt: "Name this scene (intro, verse, chorus…):",

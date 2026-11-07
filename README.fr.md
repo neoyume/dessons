@@ -7,7 +7,7 @@
 
 *dessin + sons* — convertit une image, une vidéo, un flux webcam ou une peinture en direct en MIDI multi-pistes, exportable en `.mid` ou envoyé en temps réel dans ton DAW via un port MIDI virtuel. Pensé pour créer des loops dans Logic Pro (ou n'importe quel DAW). Peut aussi rendre la boucle en vidéo verticale, son compris, à poster directement sur les réseaux.
 
-**Nouveau :** [Nodes](https://neoyume.github.io/dessons/nodes.html), la version modulaire : branche le traitement à ta façon, peins en direct et entends chaque trait, rejoue la peinture comme une pièce. [Voir plus bas](#nodes--la-version-modulaire).
+**Nouveau :** [Nodes](https://neoyume.github.io/dessons/nodes.html), la version modulaire : branche le traitement à ta façon, peins en direct et entends chaque trait, donne un instrument à chaque couleur, enchaîne des pages, anime le dessin, rejoue la peinture comme une pièce. [Voir plus bas](#nodes--la-version-modulaire).
 
 Par [neoyume](https://github.com/neoyume). Contributions bienvenues.
 
@@ -61,7 +61,7 @@ Aucune installation nécessaire. Deux options :
 
 **[Ouvrir Nodes](https://neoyume.github.io/dessons/nodes.html)**, ou le bouton **Nodes** dans l'application. Le même traitement, découpé en nodes à relier sur un canvas, pour empiler, brancher et recombiner ce que la page principale fait dans un ordre fixe : deux filtres de calque à la suite, un balayage par calque avec son propre sens et son nombre de pas (polyrythmie), une gamme partagée par plusieurs balayages.
 
-Commence par **Fichier → Modèles** : ils jouent tout de suite, sauf *MIDI importé*, qui attend ton fichier.
+Commence par un modèle, proposé dans le panneau de droite ou dans **Fichier → Modèles** : ils jouent tout de suite, sauf *MIDI importé*, qui attend ton fichier. *Arranger*, en bas du canvas, remet les nodes en ordre dans le sens du signal.
 
 - **Sources** : image, **dessin**, vidéo, webcam, **mesh 3D** (formes intégrées ou ton `.obj` / `.stl`, gardé dans le navigateur), générateur (bruit, dégradé, grille, anneaux), **fichier MIDI**, micro.
 - **Retouche** : recadrage, tons, flou, inverser, miroir / rotation, mélanger, séparer et combiner RVBA. Un mesh 3D sort ses normales en RVB et sa profondeur en alpha : *Séparer RVBA* peut donc donner à chacune son balayage.
@@ -77,16 +77,44 @@ Le node **Dessin** est un instrument complet : tu peins, et la peinture joue. Co
 
 ![Live painting dans Nodes : traits de couleur et spirale sur un calque de bruit qui bouge, une tête de lecture qui lit la peinture, les réglages du pinceau et le nuancier NY à droite](docs/screenshot-drawing.jpg)
 
-Pars de *Fichier → Modèles → Live painting* ou *Pixel art*, puis clique sur **Dessiner**.
+Pour commencer, ouvre le **Mode Dessin** (bouton dans l'atelier, ou `nodes.html?draw`) : le dessin s'ouvre en plein écran, avec son propre graphe. Tu peux aussi partir de *Fichier → Modèles* (*Live painting*, *Pixel art*, *Flipbook*, *Dessin qui défile*) puis cliquer sur la vignette du node. *Terminer* montre le graphe, modifiable comme les autres.
+
+#### Peindre
 
 - **Outils** : pinceau rond (taille, opacité, dureté, pression du stylet), estompe, gomme, pipette. Touches `B`, `S`, `E`, `I` ; `[` et `]` pour la taille ; `Alt`+clic pour prélever une couleur sans changer d'outil.
-- **Couleurs** : le nuancier NY, ou tout ce que tu prélèves à l'écran. Un nouveau dessin démarre sur un fond transparent ; *Mettre en fond* le remplit.
-- **Entendu pendant que tu peins** : lance la lecture et peins. Un trait compte alors que ta main bouge encore, et une tête de lecture sur la peinture montre ce qui sonne.
-- **Lecture** : le sens, les pas et la sensibilité sont dans l'écran de dessin. Un pinceau très doux demande une sensibilité haute.
-- **Mémoire** : une peinture chargée finit par remplir la grille, et un nouveau trait n'a plus rien à ajouter. *Mémoire* garde la musique sur tes derniers traits, la peinture restant entière. *Live painting* démarre à 8 traits.
-- **Pixel** (`P`) : des cases carrées sur une grille visible, de 8×8 à 128×128. La grille devient la partition : chaque case peinte est exactement une note, une colonne est un pas, une ligne est un degré de la gamme. Sensibilité et mémoire ne s'appliquent pas.
+- **Pinceau sonore** : la pointe joue la note sous elle, toujours dans la gamme, et la pression règle le volume. Lance aussi la lecture : un trait compte alors que ta main bouge encore.
+- **Miroirs et répétition** : miroir gauche-droite pour un palindrome, haut-bas pour une mélodie inversée, répétition du trait sur la largeur pour un motif rythmique. L'estompe les suit aussi, et le tout reste un seul trait pour Annuler et le replay.
+- **Fond** : un nouveau dessin démarre sur un fond transparent ; *Couleur du pinceau* le remplit.
+- **Tout effacer** repart d'un dessin propre : traits, pages, fond, et les pistes ajoutées pour les instruments. La chaîne du node et ses réglages restent, et ↶ dans l'en-tête annule.
+
+#### Couleurs et instruments
+
+- **Une couleur, un instrument** : le nuancier affiche ce que joue la couleur choisie. Le bouton *Instruments suggérés* donne un instrument à chaque couleur d'après les correspondances de Kandinsky : bleu clair = flûte, bleu plus sombre = violoncelle, contrebasse, puis orgue, vert = violon, jaune et orange = trompette, rouge = tambour, violet = cor anglais ou basson. Les neutres sont un choix de Dessons.
+- **Un instrument, une piste** : ses couleurs partagent une sortie, une Piste branchée à la Boucle, et un canal si le dessin part vers Logic. Clique sur une pastille pour envoyer une couleur vers un autre instrument. Une nouvelle couleur rejoint sa famille toute seule.
+- **Polyrythmie** : chaque instrument a son nombre de pas et son sens, dans un seul dessin.
+- **Octave selon la clarté** : une couleur foncée joue plus grave, une couleur claire plus aiguë, en octaves entières, donc toujours dans la gamme. Un interrupteur le coupe.
+- **Instruments** : aux 6 de l'atelier s'ajoutent pizzicato, violon, violoncelle, contrebasse, trompette, cor anglais, basson et tambour, avec leur vrai numéro General MIDI. Ce sont des synthèses légères, pas des échantillons : dans Logic, le `.mid` ouvre tes propres sons.
+
+#### Lecture
+
+- **Sens, pas, sensibilité, courbe** se règlent dans l'écran de dessin. La tête de lecture suit la courbe sur la peinture. Un pinceau très doux demande une sensibilité haute.
+- **Notes par pas** : chaque instrument joue au plus 3 notes à la fois par défaut, réparties sur la hauteur du trait, pour qu'un trait épais reste un accord et pas un bloc.
+- **Mémoire** : une peinture chargée finit par remplir la grille, et un nouveau trait n'a plus rien à ajouter. *Mémoire* garde la musique sur tes derniers traits, la peinture restant entière. Chaque instrument a la sienne : peindre ailleurs ne le fait pas taire. *Live painting* démarre à 8 traits.
+- **Le geste comme mélodie** : *Lecture → Ordre du geste* joue les traits dans l'ordre où tu les as tracés, sans balayage. La sortie **dernier trait** sert de trajet à un Balayage.
+
+#### Pixel
+
+- **Pixel** (`P`) : la grille devient la partition, de 8×8 à 128×128. Chaque case peinte est exactement une note, une colonne est un pas, une ligne est un degré de la gamme. Sensibilité, mémoire, notes par pas et octave selon la clarté ne s'appliquent pas.
+- **Portée** : le nom des notes, les temps et les mesures s'affichent sur la grille.
+- **Notes tenues** : une fois cochée, une ligne de cases sur la même note devient une seule note longue.
+- **Hauteurs** sépare les lignes des colonnes, par exemple 32 pas sur une ligne par note de la gamme. Les cases deviennent rectangulaires ; *Remettre des cases carrées* annule ce choix.
+
+#### Dans le temps
+
+- **Pages** : un flipbook sous le dessin (`←` `→` pour naviguer, `N` pour une nouvelle page), avec pelure d'oignon. Une page tourne au début d'une boucle, jamais au milieu : elle est toujours lue en entier. Le `.mid` les met bout à bout.
+- **Animation** : le dessin se répète sur les côtés et défile ou tourne pendant la lecture, sur un cycle de plusieurs boucles. La tête lit un autre passage à chaque boucle, le `.mid` contient le cycle complet, et un interrupteur la coupe sans perdre les réglages.
+- **Replay** : chaque trait est enregistré, point par point. **Rejouer en musique** reconstruit la peinture sur la durée choisie (3 minutes par défaut), son compris. *Exporter le replay en .mid* en fait un morceau, boucle après boucle. *Cycles / boucle*, dans Réglages, la reconstruit plutôt à chaque passage.
 - **Calques d'affichage** : d'autres nodes affichés derrière la peinture, comme un bruit qui bouge avec la boucle ou une vidéo. Ils sont purement visuels : la musique ne lit que ton dessin.
-- **Replay** : chaque trait est enregistré, point par point. **Rejouer le dessin** reconstruit la peinture sur la durée choisie (3 minutes par défaut), son compris, et on entend les boucles évoluer. *Cycles / boucle* la reconstruit plutôt à chaque passage de la boucle.
 
 Le `.json` de **Fichier → Sauver** garde tout le dessin et ses étapes. Il ne garde pas le temps réel de ton geste : le replay avance à vitesse régulière.
 
