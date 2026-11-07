@@ -775,6 +775,100 @@ test('Dessin : le cadre reste carré, même en portrait', ()=>{
   });
   closeDrawEditor();
 });
+const zoomSetup = `
+  window.zoomOpen = (params)=>{
+    const {n} = drawing(params);
+    openDrawEditor(n);
+    const stage = document.querySelector('.drawStage');
+    stage.style.cssText = 'flex:none; width:400px; height:400px';
+    stage.setPointerCapture = ()=>{}; drawEd.cv.setPointerCapture = ()=>{};
+    return {n, stage, cv:drawEd.cv};
+  };
+  window.ptr = (el, type, x, y, o)=> el.dispatchEvent(new PointerEvent(type, Object.assign({bubbles:true, cancelable:true, button:0, buttons:1, clientX:x, clientY:y, pointerId:1}, o)));
+`;
+test('Zoom : le point visé reste sous le pointeur, et le pinceau pose au bon endroit', ()=>{
+  const {stage} = zoomOpen({});
+  const r0 = stage.getBoundingClientRect(), px = r0.left + 300, py = r0.top + 120;
+  const before = drawPoint({clientX:px, clientY:py, pointerType:'mouse'});
+  zoomDrawAt(4, px, py);
+  const after = drawPoint({clientX:px, clientY:py, pointerType:'mouse'});
+  ok(Math.abs(before[0] - after[0]) < 0.002 && Math.abs(before[1] - after[1]) < 0.002, before + ' / ' + after);
+  eq(drawEd.zoomPct.textContent, '400 %');
+  zoomDrawAt(1);
+  eq(drawEd.zoom, {s:1, x:0, y:0});
+  eq(drawEd.frame.style.transform, '');
+  closeDrawEditor();
+});
+test('Zoom : borné, et le cadre ne se perd pas', ()=>{
+  zoomOpen({});
+  zoomDrawAt(100); eq(drawEd.zoom.s, 8);
+  ok(drawEd.zoomInBtn.disabled);
+  drawEd.zoom.x = 1e6; drawEd.zoom.y = -1e6; applyDrawZoom();
+  const f = drawEd.frame.getBoundingClientRect(), r = drawEd.stageBox.getBoundingClientRect();
+  ok(f.left <= r.left + 61 && f.bottom >= r.bottom - 61, 'cadre encore à l’écran');
+  zoomDrawAt(0.1); eq(drawEd.zoom.s, 1);
+  ok(drawEd.zoomOutBtn.disabled);
+  closeDrawEditor();
+});
+test('Outil Zoom : un clic zoome, Alt dézoome, glisser déplace, aucun trait', ()=>{
+  const {n, stage, cv} = zoomOpen({});
+  const r = stage.getBoundingClientRect(), x = r.left + 200, y = r.top + 200;
+  const was = brush.tool;
+  setDrawTool('zoom');
+  eq(brush.tool, was);
+  ptr(cv, 'pointerdown', x, y); ptr(stage, 'pointerup', x, y);
+  eq(drawEd.zoom.s, 2);
+  ptr(cv, 'pointerdown', x, y); ptr(stage, 'pointermove', x + 30, y + 10); ptr(stage, 'pointerup', x + 30, y + 10);
+  eq([drawEd.zoom.s, drawEd.zoom.x, drawEd.zoom.y], [2, 30, 10]);
+  ptr(cv, 'pointerdown', x, y, {altKey:true}); ptr(stage, 'pointerup', x, y, {altKey:true});
+  eq(drawEd.zoom.s, 1);
+  eq([n.params.strokes.length, !!drawEd.cur], [0, false]);
+  setDrawTool(drawEd.back);
+  eq(drawEd.tool, was);
+  closeDrawEditor();
+});
+test('Zoom : un trait se peint normalement une fois zoomé', ()=>{
+  const {n, cv} = zoomOpen({});
+  setDrawTool('brush');
+  zoomDrawAt(2);
+  const r = cv.getBoundingClientRect(), x = r.left + r.width/2, y = r.top + r.height/4;
+  ptr(cv, 'pointerdown', x, y); ptr(cv, 'pointermove', x + 5, y); ptr(cv, 'pointerup', x + 5, y);
+  eq(n.params.strokes.length, 1);
+  const pts = n.params.strokes[0].pts.split(',').map(Number);
+  ok(Math.abs(pts[0] - 5000) < 5 && Math.abs(pts[1] - 2500) < 5, pts.slice(0, 2).join());
+  closeDrawEditor();
+});
+test('Zoom : deux doigts pincent et annulent le trait commencé', ()=>{
+  const {n, stage, cv} = zoomOpen({});
+  setDrawTool('brush');
+  const r = stage.getBoundingClientRect(), x = r.left + 200, y = r.top + 200, touch = {pointerType:'touch'};
+  ptr(cv, 'pointerdown', x - 20, y, touch);
+  ok(drawEd.cur, 'le premier doigt peint');
+  ptr(cv, 'pointerdown', x + 20, y, Object.assign({pointerId:2}, touch));
+  ok(!drawEd.cur, 'trait annulé');
+  ptr(cv, 'pointermove', x + 60, y, Object.assign({pointerId:2}, touch));
+  eq(Math.round(drawEd.zoom.s*100), 200);
+  ptr(cv, 'pointerup', x + 60, y, Object.assign({pointerId:2}, touch)); ptr(cv, 'pointerup', x - 20, y, touch);
+  eq(n.params.strokes.length, 0);
+  closeDrawEditor();
+});
+test('Zoom : molette déplace, Ctrl+molette zoome', ()=>{
+  const {stage} = zoomOpen({});
+  const wheel = o=> stage.dispatchEvent(new WheelEvent('wheel', Object.assign({bubbles:true, cancelable:true}, o)));
+  wheel({deltaY:-50, ctrlKey:true});
+  ok(drawEd.zoom.s > 1.6, 'zoomé');
+  const y = drawEd.zoom.y;
+  wheel({deltaY:20});
+  eq(drawEd.zoom.y, y - 20);
+  closeDrawEditor();
+});
+test('Zoom : la grille gagne en définition, sans changer à 100 %', ()=>{
+  zoomOpen({grid:16});
+  eq(gridRes(), 1024);
+  zoomDrawAt(4); eq(gridRes(), 4096);
+  drawGridLines(); eq(drawEd.gridCv.width, 4096);
+  closeDrawEditor();
+});
 test('Pixel : changer de grille repart sur des cases carrées', ()=>{
   const {n} = drawing({grid:32, gridY:12});
   openDrawEditor(n);
@@ -1093,6 +1187,7 @@ frame.onload = async ()=>{
   w.ok = (v, msg)=>{ if(!v) throw new Error('faux' + (msg ? ' : ' + msg : '')); };
   w.throws = f=>{ try{ f(); }catch(e){ return; } throw new Error('aurait dû échouer'); };
   await new Promise(r=> setTimeout(r, 300));
+  { const tag = w.document.createElement('script'); tag.textContent = zoomSetup; w.document.body.appendChild(tag); tag.remove(); }
   for(const [name, fn] of T){
     let error = null;
     try{

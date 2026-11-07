@@ -133,7 +133,10 @@
   #drawEditor[hidden]{display:none;}
   .drawArea{flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; padding:14px; position:relative; overflow:hidden;}
   /* a container, so the frame can take the smaller of its two sides and stay square */
-  .drawStage{flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; container-type:size;}
+  .drawStage{position:relative; flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; container-type:size; overflow:hidden; touch-action:none;}
+  .drawZoomBar{position:absolute; right:6px; bottom:6px; z-index:7; display:flex; gap:3px;}
+  .drawZoomBar .miniBtn{background:var(--panel); padding:4px 8px;}
+  .drawZoomBar .zoomPct{min-width:58px; font-family:var(--mono);}
   /* the pages: one thumbnail each, the page you're on, the page you hear */
   .pageStrip{flex:none; display:flex; align-items:center; gap:6px; min-height:58px; overflow-x:auto;}
   .pageList{display:flex; gap:5px;}
@@ -165,8 +168,8 @@
   .voiceOpt{display:flex; gap:4px;}
   .voiceOpt select{flex:1;}
   .drawFrame.mirX::before, .drawFrame.mirY::after{content:''; position:absolute; z-index:6; pointer-events:none; background:rgba(0,200,90,.7);}
-  .drawFrame.mirX::before{left:50%; top:0; bottom:0; width:1px;}
-  .drawFrame.mirY::after{top:50%; left:0; right:0; height:1px;}
+  .drawFrame.mirX::before{left:50%; top:0; bottom:0; width:calc(1px / var(--z, 1));}
+  .drawFrame.mirY::after{top:50%; left:0; right:0; height:calc(1px / var(--z, 1));}
   .drawFrame{position:relative; flex:none; width:min(100cqw, 100cqh); aspect-ratio:1;}
   #drawCanvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:none; border-radius:4px; box-shadow:0 6px 24px rgba(0,0,0,.45);}
   #drawEditor.watch #drawCanvas{cursor:default;}
@@ -220,6 +223,9 @@
   .nyName{display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; color:var(--text-dim);}
   .nyName i{width:14px; height:14px; flex:none; border-radius:3px; border:1px solid rgba(255,255,255,.3);}
   #drawEditor.picking #drawCanvas{cursor:crosshair;}
+  #drawEditor.zooming .drawStage, #drawEditor.zooming #drawCanvas{cursor:zoom-in;}
+  #drawEditor.zooming.zoomOut .drawStage, #drawEditor.zooming.zoomOut #drawCanvas{cursor:zoom-out;}
+  #drawEditor.panning .drawStage, #drawEditor.panning #drawCanvas{cursor:grabbing;}
   #workspace{flex:1; display:flex; min-height:0; min-width:0; position:relative;}
   #propsPanel{flex:none; display:flex; flex-direction:column; min-height:0; width:270px; background:var(--panel); border-left:1px solid var(--line);}
   #propsPanel[hidden]{display:none;}
@@ -569,7 +575,7 @@ const I18N = {
     viaPixel:'une note par case', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grille', pxSize:'Taille (cases)', pxShow:'Afficher la grille',
     p_memory:'Mémoire (traits)', memAll:'tout', toolErase:'Gomme', drNoBg:'Transparent', drNotes:'Ce dessin : {a} notes · Boucle : {b}',
-    toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', brForce:'Force',
+    toolBrush:'Pinceau', toolSmudge:'Estompe', toolPick:'Pipette', toolZoom:'Zoom', drZoomIn:'Zoomer (+)', drZoomOut:'Dézoomer (−)', drZoomFit:'Revenir à 100 % (0)', brForce:'Force',
     brSize:'Taille', brOpacity:'Opacité', brHard:'Dureté', brPress:'Pression du stylet', brColor:'Couleur',
     drUndo:'Annuler', drRedo:'Rétablir', drClear:'Tout effacer', drBg:'Couleur du pinceau', drReplay:'Revoir le tracé', drDone:'Terminer', drConfirm:'Repartir de zéro ? Les traits, les pages, le fond et les pistes ajoutées pour les instruments seront effacés.',
     saveFull:'Sauvegarde auto impossible : graphe trop lourd. Sauve-le en .json.',
@@ -584,7 +590,7 @@ const I18N = {
     p_animGo:'Animation active', p_animX:'Défilement X', p_animY:'Défilement Y', p_animRot:'Rotation', p_animLoops:'Cycle (boucles)', animHint:'Le dessin se répète sur les côtés et bouge pendant la lecture : la tête lit un autre passage à chaque boucle.', tpl_anim:'Dessin qui défile', tplDesc_anim:'Un motif qui monte, un passage différent à chaque boucle.',
     btnArrange:'Arranger', arrangeTitle:'Remettre les nodes en ordre, dans le sens du signal',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
-    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, E, I','Pinceau, estompe, gomme, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['P','Mode pixel, dans le dessin'],['← →, N','Changer de page, nouvelle page, dans le dessin'],['?','Cette aide']],
+    helpRows:[['Glisser le fond','Déplacer la vue'],['Pincer, Ctrl+molette','Zoomer'],['Tab, /, double-clic','Ajouter un node'],['Double-clic sur un fil','Poser un reroute'],['Espace','Lecture / stop'],['Maj+clic, Maj+glisser','Sélectionner plusieurs nodes'],['G','Grouper dans un cadre'],['Suppr','Effacer'],['Cmd+Z, Maj+Cmd+Z','Annuler, rétablir'],['Cmd+C, X, V','Copier, couper, coller'],['Cmd+D','Dupliquer'],['Déposer un fichier','Image, vidéo, .obj, .stl, .mid'],['[ et ]','Taille du pinceau, dans le dessin'],['B, S, E, I','Pinceau, estompe, gomme, pipette, dans le dessin'],['Alt+clic','Pipette, sans changer d’outil'],['P','Mode pixel, dans le dessin'],['Z, puis clic ou glisser','Zoomer (Alt : dézoomer), déplacer la vue, dans le dessin'],['+ − 0','Zoom, retour à 100 %, dans le dessin'],['Pincer, Ctrl+molette, molette','Zoom, déplacer la vue, dans le dessin'],['← →, N','Changer de page, nouvelle page, dans le dessin'],['?','Cette aide']],
     confirmNew:'Repartir du graphe par défaut ? Le graphe actuel sera perdu (sauve-le en .json avant si besoin).',
     loadErr:'Impossible de lire ce fichier : ce n\'est pas un graphe Dessons valide.',
     camErr:'Webcam indisponible ou refusée.',
@@ -676,7 +682,7 @@ const I18N = {
     viaPixel:'one note per cell', tpl_pixel:'Pixel art',
     modeNormal:'Normal', modePixel:'Pixel', pxGrid:'Grid', pxSize:'Size (cells)', pxShow:'Show the grid',
     p_memory:'Memory (strokes)', memAll:'all', toolErase:'Eraser', drNoBg:'Transparent', drNotes:'This drawing: {a} notes · Loop: {b}',
-    toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', brForce:'Strength',
+    toolBrush:'Brush', toolSmudge:'Smudge', toolPick:'Eyedropper', toolZoom:'Zoom', drZoomIn:'Zoom in (+)', drZoomOut:'Zoom out (−)', drZoomFit:'Back to 100% (0)', brForce:'Strength',
     brSize:'Size', brOpacity:'Opacity', brHard:'Hardness', brPress:'Pen pressure', brColor:'Color',
     drUndo:'Undo', drRedo:'Redo', drClear:'Clear all', drBg:'Brush color', drReplay:'Review strokes', drDone:'Done', drConfirm:'Start again? The strokes, pages, paper and the tracks added for instruments will be cleared.',
     saveFull:'Autosave failed: the graph is too heavy. Save it as .json.',
@@ -691,7 +697,7 @@ const I18N = {
     p_animGo:'Animation on', p_animX:'Scroll X', p_animY:'Scroll Y', p_animRot:'Rotation', p_animLoops:'Cycle (loops)', animHint:'The drawing repeats on its sides and moves during playback: the playhead reads a different passage each loop.', tpl_anim:'Scrolling drawing', tplDesc_anim:'A rising pattern, a different passage each loop.',
     btnArrange:'Arrange', arrangeTitle:'Put the nodes in order, following the signal',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
-    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, E, I','Brush, smudge, eraser, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['P','Pixel mode, in the drawing'],['← →, N','Change page, new page, in the drawing'],['?','This help']],
+    helpRows:[['Drag the background','Pan'],['Pinch, Ctrl+wheel','Zoom'],['Tab, /, double-click','Add a node'],['Double-click a wire','Place a reroute'],['Space','Play / stop'],['Shift+click, Shift+drag','Select several nodes'],['G','Group in a frame'],['Delete','Remove'],['Cmd+Z, Shift+Cmd+Z','Undo, redo'],['Cmd+C, X, V','Copy, cut, paste'],['Cmd+D','Duplicate'],['Drop a file','Image, video, .obj, .stl, .mid'],['[ and ]','Brush size, in the drawing'],['B, S, E, I','Brush, smudge, eraser, eyedropper, in the drawing'],['Alt+click','Eyedropper, without changing tool'],['P','Pixel mode, in the drawing'],['Z, then click or drag','Zoom in (Alt: out), move the view, in the drawing'],['+ − 0','Zoom, back to 100%, in the drawing'],['Pinch, Ctrl+wheel, wheel','Zoom, move the view, in the drawing'],['← →, N','Change page, new page, in the drawing'],['?','This help']],
     confirmNew:'Start over from the default graph? The current graph will be lost (save it as .json first if needed).',
     loadErr:'Can\'t read this file: it isn\'t a valid Dessons graph.',
     camErr:'Webcam unavailable or denied.',
@@ -3837,27 +3843,30 @@ function moveRing(e){
   d.ring.style.top = r.top + (ay + z/2)/gy*r.height + 'px';
 }
 const noteName = m=> NOTE_NAMES[m % 12] + (Math.floor(m/12) - 1);
+// the grid's bitmap grows with the zoom, so its lines stay thin
+const gridRes = ()=> 1024*(drawEd.zoom.s >= 4 ? 4 : drawEd.zoom.s >= 2 ? 2 : 1);
 // the score's staff: cells, beats and bars on the time axis, and each row's note, with
 // the root's rows lit. Only when the reading runs along a side of the page
 function drawGridLines(){
   const d = drawEd, p = d.n.params, g = p.grid, gy = p.gridY || g, c = d.gridCv;
   c.hidden = !g || !brush.gridOn;
   if(c.hidden) return;
-  const x = c.getContext('2d'), W = c.width, upright = p.dir === 'tb' || p.dir === 'bt', straight = upright || p.dir === 'lr' || p.dir === 'rl';
+  if(c.width !== gridRes()) c.width = c.height = gridRes();
+  const x = c.getContext('2d'), W = c.width, k = W/1024, upright = p.dir === 'tb' || p.dir === 'bt', straight = upright || p.dir === 'lr' || p.dir === 'rl';
   const lp = loopOfDrawing(d.n), beats = (lp ? lp.params.bars : 2)*4, steps = upright ? gy : g, perBeat = steps/beats;
   x.clearRect(0, 0, W, W);
   const rule = (i, count, vertical, timed)=>{
     const u = i/perBeat, beat = timed && Math.abs(u - Math.round(u)) < 1e-6, bar = beat && Math.round(u) % 4 === 0;
     const q = Math.round(i*W/count) + 0.5;
     x.strokeStyle = bar ? 'rgba(0,160,70,.95)' : beat ? 'rgba(0,160,70,.55)' : 'rgba(128,128,128,.3)';
-    x.lineWidth = bar ? 2.5 : 1;
+    x.lineWidth = (bar ? 2.5 : 1)*k;
     x.beginPath(); if(vertical){ x.moveTo(q, 0); x.lineTo(q, W); } else { x.moveTo(0, q); x.lineTo(W, q); } x.stroke();
   };
   for(let i=1;i<g;i++) rule(i, g, true, straight && !upright);
   for(let i=1;i<gy;i++) rule(i, gy, false, upright);
   if(!straight) return;
   const scale = d.n.inp && d.n.inp.scale, rows = upright ? g : gy, pitches = pixelPitches(scale, rows), dir = DIR_DEFS[p.dir] || DIR_DEFS.lr;
-  const cell = W/rows, root = pitches[0] % 12, size = Math.min(cell*0.72, 20);
+  const cell = W/rows, root = pitches[0] % 12, size = Math.min(cell*0.72, 20*k);
   x.font = size + 'px monospace'; x.textBaseline = 'middle'; x.textAlign = 'left';
   for(let i=0;i<rows;i++){
     const rho = upright ? dir.fwd((i + 0.5)/g, 0.5)[1] : dir.fwd(0.5, (i + 0.5)/gy)[1], m = pitches[clamp(Math.floor(rho*rows), 0, rows - 1)];
@@ -3866,14 +3875,14 @@ function drawGridLines(){
       if(upright) x.fillRect(i*cell, 0, cell, W); else x.fillRect(0, i*cell, W, cell);
     }
     if(size < 9) continue;
-    const tx = upright ? i*cell + 2 : 4, ty = upright ? size : (i + 0.5)*cell;
-    x.lineWidth = 3; x.strokeStyle = 'rgba(255,255,255,.85)'; x.fillStyle = m % 12 === root ? '#006b2e' : '#333';
+    const tx = upright ? i*cell + 2*k : 4*k, ty = upright ? size : (i + 0.5)*cell;
+    x.lineWidth = 3*k; x.strokeStyle = 'rgba(255,255,255,.85)'; x.fillStyle = m % 12 === root ? '#006b2e' : '#333';
     x.strokeText(noteName(m), tx, ty); x.fillText(noteName(m), tx, ty);
   }
 }
 const gridKey = ()=>{
   const d = drawEd, p = d.n.params, sc = d.n.inp && d.n.inp.scale, lp = loopOfDrawing(d.n);
-  return [p.grid, p.gridY, p.dir, lp && lp.params.bars, sc && sc.pitches[0], sc && sc.pitches.length, brush.gridOn].join();
+  return [p.grid, p.gridY, p.dir, lp && lp.params.bars, sc && sc.pitches[0], sc && sc.pitches.length, brush.gridOn, gridRes()].join();
 };
 // the mode belongs to the drawing; strokes keep the grid they were made on
 function setDrawGrid(g){
@@ -4184,7 +4193,13 @@ function drawRedo(){
 function drawKey(e){
   const cmd = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
   if(e.key === 'Escape'){ if(drawEd.watch) stopPlayback(); closeDrawEditor(); return true; }
+  if(!cmd && !e.target.closest('input, select') && '+=-−0'.includes(e.key)){
+    e.preventDefault();
+    zoomDrawAt(e.key === '0' ? 1 : drawEd.zoom.s*(e.key === '+' || e.key === '=' ? 2 : 0.5));
+    return true;
+  }
   if(drawEd.watch) return e.key !== ' ';
+  if(!cmd && !e.target.closest('input') && key === 'z'){ setDrawTool(drawEd.tool === 'zoom' ? drawEd.back : 'zoom'); return true; }
   if(!cmd && !e.target.closest('input, select') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){ e.preventDefault(); setDrawPage(drawEd.n.params.page + (e.key === 'ArrowLeft' ? -1 : 1)); return true; }
   if(!cmd && !e.target.closest('input') && key === 'n'){ addDrawPage(false); return true; }
   if(cmd && key === 'z'){ e.preventDefault(); if(e.shiftKey) drawRedo(); else drawUndo(); return true; }
@@ -4201,14 +4216,16 @@ function drawKey(e){
   }
   return e.key !== ' ';     // the canvas shortcuts stay off, except play / stop
 }
+const paintTool = ()=> drawEd.tool !== 'pick' && drawEd.tool !== 'zoom';
 // the same sliders drive both tools; for the smudge, opacity is how far it drags
 function setDrawTool(tool){
   // the eyedropper is a moment, not a tool you stay on: the next opening starts with the brush
-  if(tool === 'pick') drawEd.back = brush.tool === 'pick' ? 'brush' : brush.tool;
+  if(tool === 'pick' || tool === 'zoom') drawEd.back = brush.tool === 'pick' ? 'brush' : brush.tool;
   else { brush.tool = tool; saveBrush(); }
   drawEd.tool = tool;
   drawEd.box.classList.toggle('picking', tool === 'pick');
-  drawEd.ring.hidden = tool === 'pick' || drawEd.ring.hidden;
+  drawEd.box.classList.toggle('zooming', tool === 'zoom');
+  drawEd.ring.hidden = !paintTool() || drawEd.ring.hidden;
   drawEd.box.querySelectorAll('.drawTool').forEach(b=> b.classList.toggle('primary', b.dataset.tool === tool));
   $('brOpacity').closest('.prm').firstChild.textContent = t(tool === 'smudge' ? 'brForce' : 'brOpacity');
 }
@@ -4399,7 +4416,7 @@ function drawOverlay(){
     mx.putImageData(new ImageData(new Uint8ClampedArray(im.data), im.w, im.h), 0, 0);
   }
   if(!playing) return;
-  const pos = loopPosNow() % 1;
+  const pos = loopPosNow() % 1, mark = 1/Math.sqrt(d.zoom.s);     // the playhead shouldn't cover what you're zoomed on
   noteSources(d.n).forEach(o=>{
     const dir = DIR_DEFS[o.dir] || DIR_DEFS.lr;
     let k = 0;
@@ -4407,16 +4424,117 @@ function drawOverlay(){
     x.strokeStyle = x.fillStyle = '#fff';
     if(!o.pathModel && !o.gesture){
       const tau = curvedTau(o, pos), [ax, ay] = dir.inv(tau, 0), [bx, by] = dir.inv(tau, 1);
-      x.lineWidth = 2;
+      x.lineWidth = 2*mark;
       x.beginPath(); x.moveTo(ax*W, ay*W); x.lineTo(bx*W, by*W); x.stroke();
     }
     o.notes.forEach(nt=>{
       if(k < nt.step || k >= nt.step + (nt.len || 1)) return;
       // a held note goes along its line with the playhead
       const [nx, ny] = nt.px != null && !(nt.len > 1 && o.pixel) ? [nt.px, nt.py] : dir.inv((k + 0.5)/o.steps, (nt.row + 0.5)/o.rows);
-      x.beginPath(); x.arc(nx*W, ny*W, 3 + 6*nt.vel/127, 0, Math.PI*2); x.fill();
+      x.beginPath(); x.arc(nx*W, ny*W, (3 + 6*nt.vel/127)*mark, 0, Math.PI*2); x.fill();
     });
   });
+}
+/* ---- zoom: the view moves, never the drawing. One transform on the frame, and whatever reads
+   the canvas's rectangle (brush, ring, eyedropper) follows by itself. Not saved with the drawing ---- */
+const DRAW_ZOOM_MAX = 8, DRAW_ZOOM_MARGIN = 60;
+function applyDrawZoom(){
+  const d = drawEd, z = d.zoom, r = d.stageBox.getBoundingClientRect(), side = d.frame.offsetWidth*z.s;
+  // larger than the window it can go a little past its edges, to paint them; smaller it stays centred
+  const room = size=> side > size + 0.5 ? (side - size)/2 + DRAW_ZOOM_MARGIN : 0;
+  z.x = clamp(z.x, -room(r.width), room(r.width)); z.y = clamp(z.y, -room(r.height), room(r.height));
+  d.frame.style.transform = z.s === 1 ? '' : `translate(${z.x}px, ${z.y}px) scale(${z.s})`;
+  d.frame.style.setProperty('--z', z.s);
+  d.cv.style.imageRendering = z.s >= 3 ? 'pixelated' : '';
+  d.zoomPct.textContent = Math.round(z.s*100) + ' %';
+  d.zoomOutBtn.disabled = z.s === 1; d.zoomInBtn.disabled = z.s === DRAW_ZOOM_MAX;
+  ringSize();
+}
+// around a point of the screen, which stays where it is; the centre of the view by default
+function zoomDrawAt(s, cx, cy){
+  const d = drawEd, z = d.zoom, r = d.stageBox.getBoundingClientRect();
+  const px = cx === undefined ? 0 : cx - r.left - r.width/2, py = cy === undefined ? 0 : cy - r.top - r.height/2;
+  s = clamp(s, 1, DRAW_ZOOM_MAX);
+  if(s < 1.02) s = 1;
+  z.x = px - (px - z.x)*s/z.s; z.y = py - (py - z.y)*s/z.s; z.s = s;
+  applyDrawZoom();
+}
+// a second finger means the first wasn't painting: its stroke goes
+function dropStroke(){
+  const d = drawEd;
+  if(!d.cur) return;
+  d.cur = null; d.n.drawLive = null;
+  markDirty(d.n.id);
+  refreshDrawEditor();
+}
+function initDrawZoom(){
+  const d = drawEd, z = d.zoom, stage = d.stageBox, touches = new Map();
+  let pan = null, pinch = null;
+  const spread = ()=>{
+    const [a, b] = [...touches.values()];
+    return {dist:Math.max(1, Math.hypot(a[0] - b[0], a[1] - b[1])), x:(a[0] + b[0])/2, y:(a[1] + b[1])/2};
+  };
+  // in the capture phase: these gestures must never reach the canvas as paint
+  stage.addEventListener('pointerdown', e=>{
+    if(e.target.closest('.drawZoomBar')) return;
+    if(e.pointerType === 'touch'){
+      touches.set(e.pointerId, [e.clientX, e.clientY]);
+      if(touches.size > 1){
+        e.stopPropagation();
+        dropStroke();
+        pan = null; d.box.classList.remove('panning');
+        pinch = spread();
+        return;
+      }
+    }
+    if(e.button !== 1 && (e.button || d.tool !== 'zoom')) return;
+    e.preventDefault(); e.stopPropagation();
+    stage.setPointerCapture(e.pointerId);
+    d.ring.hidden = true;
+    pan = {id:e.pointerId, sx:e.clientX, sy:e.clientY, x:z.x, y:z.y, moved:false, click:!e.button, out:e.altKey};
+  }, true);
+  stage.addEventListener('pointermove', e=>{
+    d.box.classList.toggle('zoomOut', e.altKey);
+    if(touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
+    if(pinch){
+      e.stopPropagation();
+      const now = spread();
+      zoomDrawAt(z.s*now.dist/pinch.dist, now.x, now.y);
+      z.x += now.x - pinch.x; z.y += now.y - pinch.y;
+      applyDrawZoom();
+      pinch = now;
+      return;
+    }
+    if(!pan || pan.id !== e.pointerId) return;
+    const dx = e.clientX - pan.sx, dy = e.clientY - pan.sy;
+    if(!pan.moved && Math.hypot(dx, dy) < 4) return;
+    pan.moved = true;
+    d.box.classList.add('panning');
+    z.x = pan.x + dx; z.y = pan.y + dy;
+    applyDrawZoom();
+  }, true);
+  const up = e=>{
+    touches.delete(e.pointerId);
+    if(touches.size < 2) pinch = null;
+    if(!pan || pan.id !== e.pointerId) return;
+    const p = pan;
+    pan = null;
+    d.box.classList.remove('panning');
+    if(e.type === 'pointerup' && p.click && !p.moved) zoomDrawAt(z.s*(p.out ? 0.5 : 2), e.clientX, e.clientY);
+  };
+  stage.addEventListener('pointerup', up, true);
+  stage.addEventListener('pointercancel', up, true);
+  stage.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const line = e.deltaMode ? 30 : 1;
+    // a trackpad's pinch arrives as ctrl+wheel; a mouse's notch is big, so it's capped
+    if(e.ctrlKey || e.metaKey || d.tool === 'zoom') zoomDrawAt(z.s*Math.exp(-clamp(e.deltaY*line, -50, 50)*0.01), e.clientX, e.clientY);
+    else { z.x -= e.deltaX*line; z.y -= e.deltaY*line; applyDrawZoom(); }
+    if(!d.watch) moveRing(e);
+  }, {passive:false});
+  d.zoomObs = new ResizeObserver(()=>{ if(drawEd === d) applyDrawZoom(); });
+  d.zoomObs.observe(stage);
+  applyDrawZoom();
 }
 function openDrawEditor(n, watch){
   closeDrawEditor();
@@ -4432,7 +4550,18 @@ function openDrawEditor(n, watch){
   const move = document.createElement('canvas'); move.id = 'drawMove'; move.width = move.height = MAXDIM; move.hidden = true;
   frame.append(cv, move, held, onion, gridCv, scan, empty);
   const stageBox = document.createElement('div'); stageBox.className = 'drawStage';
-  stageBox.appendChild(frame);
+  const zoomBar = document.createElement('div'); zoomBar.className = 'drawZoomBar';
+  const zoomBtn = (label, title, go)=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'miniBtn'; b.textContent = label; b.title = t(title); b.setAttribute('aria-label', t(title));
+    b.addEventListener('click', go);
+    return b;
+  };
+  const zoomOutBtn = zoomBtn('−', 'drZoomOut', ()=> zoomDrawAt(drawEd.zoom.s/2)), zoomPct = zoomBtn('', 'drZoomFit', ()=> zoomDrawAt(1)), zoomInBtn = zoomBtn('+', 'drZoomIn', ()=> zoomDrawAt(drawEd.zoom.s*2));
+  zoomPct.classList.add('zoomPct');
+  zoomBar.append(zoomOutBtn, zoomPct, zoomInBtn);
+  zoomBar.addEventListener('click', e=>{ if(e.detail) document.activeElement.blur(); });
+  stageBox.append(frame, zoomBar);
   const strip = document.createElement('div'); strip.className = 'pageStrip';
   area.append(stageBox, strip);
   const tools = document.createElement('div'); tools.className = 'drawTools';
@@ -4500,7 +4629,7 @@ function openDrawEditor(n, watch){
   holdRow.classList.add('pxOnly');
   toolSec.append(gridRow, rowsRow, squareBtn, pxSlider, showRow, holdRow);
   const toolRow = document.createElement('div'); toolRow.className = 'btnRow';
-  [['brush', 'toolBrush', 'B'], ['smudge', 'toolSmudge', 'S'], ['erase', 'toolErase', 'E'], ['pick', 'toolPick', 'I']].forEach(([id, label, key])=>{
+  [['brush', 'toolBrush', 'B'], ['smudge', 'toolSmudge', 'S'], ['erase', 'toolErase', 'E'], ['pick', 'toolPick', 'I'], ['zoom', 'toolZoom', 'Z']].forEach(([id, label, key])=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'miniBtn drawTool'; b.dataset.tool = id; b.textContent = t(label); b.title = t(label) + ' (' + key + ')';
     b.addEventListener('click', ()=> setDrawTool(id));
@@ -4638,13 +4767,14 @@ function openDrawEditor(n, watch){
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
   document.body.classList.add('drawing');
-  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, empty, voiceBox, fillPalette, move, strip, onion, onionCache:{}, heard:-1, raf:0, replay:0, watch:!!watch, count, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv};
+  drawEd = {n, cv, ctx:cv.getContext('2d', {willReadFrequently:false}), cache:{}, cur:null, redo:[], ring, undo, redoBtn, replayBtn, clear, box, empty, voiceBox, fillPalette, move, strip, onion, onionCache:{}, heard:-1, raf:0, replay:0, watch:!!watch, count, time, bar, scan, sctx:scan.getContext('2d'), held, layerEls:new Map(), showColor:showName, tool:'brush', back:'brush', picking:false, gridCv, frame, stageBox, zoomPct, zoomOutBtn, zoomInBtn, zoom:{s:1, x:0, y:0}};
+  initDrawZoom();
   drawEd.scanRaf = requestAnimationFrame(drawOverlay);
   refreshDrawEditor();
   if(!watch){ setDrawTool(brush.tool); setDrawGrid(n.params.grid); renderPageStrip(); drawOnionSkin(); }
   else { strip.hidden = true; return; }
   syncDrawLayers();
-  cv.addEventListener('pointerenter', e=>{ ring.hidden = false; ringSize(); moveRing(e); });
+  cv.addEventListener('pointerenter', e=>{ ring.hidden = !paintTool(); ringSize(); moveRing(e); });
   cv.addEventListener('pointerleave', ()=>{ if(!drawEd.cur) ring.hidden = true; });
   cv.addEventListener('pointerdown', e=>{
     if(e.button) return;
@@ -4667,6 +4797,7 @@ function openDrawEditor(n, watch){
     drawAdd(e);
   });
   cv.addEventListener('pointermove', e=>{
+    ring.hidden = !paintTool();
     moveRing(e);
     if(drawEd.picking){ pickColor(e); return; }
     if(!drawEd.cur) return;
@@ -4694,6 +4825,7 @@ function closeDrawEditor(){
   if(!drawEd) return;
   if(drawEd.replay) cancelAnimationFrame(drawEd.replay);
   cancelAnimationFrame(drawEd.scanRaf);
+  drawEd.zoomObs.disconnect();
   if(drawEd.cur){ drawEd.n.drawLive = null; markDirty(drawEd.n.id); }
   if(drawReplay){ const n = drawReplay.n; drawReplay = null; markDirty(n.id); }
   drawEd.box.remove(); drawEd.ring.remove();
