@@ -381,6 +381,11 @@
   .toolBar svg{width:18px; height:18px; display:block;}
   .toolBar .miniBtn.primary{background:var(--accent); border-color:var(--accent); color:var(--bg);}
   .toolSep{width:1px; height:20px; margin:0 3px; background:var(--line);}
+  .repPick{display:flex; align-items:center; gap:4px; height:31px; padding:0 4px 0 7px; border:1px solid var(--line); border-radius:5px; background:var(--panel-2); color:var(--text-dim);}
+  .repPick.on{border-color:var(--accent); color:var(--accent);}
+  .repPick svg{width:18px; height:18px; display:block; flex:none;}
+  .repPick select{border:none; background:transparent; color:inherit; font-size:12px; padding:2px 0; cursor:pointer;}
+  .repPick select option{background:var(--panel); color:var(--text);}
   .btnRow .miniBtn{flex:1;}
   .thumb{display:block; width:100%; border-radius:5px; background:#06100f; image-rendering:pixelated;}
   .thumb.empty{display:none;}
@@ -607,7 +612,7 @@ const I18N = {
     p_pageChain:'Enchaîner les pages', p_pageLoops:'Boucles par page', drExportReplay:'Exporter le replay en .mid', drExportVideo:'Exporter le replay en vidéo', drVideoTip:'Filmée en temps réel : elle dure le temps du replay.', drVideoRec:'Filmé en temps réel : garde cet onglet au premier plan. Arrêter garde ce qui est déjà filmé.', drVideoNo:'Ce navigateur ne sait pas enregistrer de vidéo.', drExportSilent:'Vidéo sans son', drSilentTip:'Plus léger pour un gros dessin : ni musique ni analyse pendant le tournage, seulement la peinture. Filmée en temps réel.', tpl_flip:'Flipbook', tplDesc_flip:'Quatre pages, une par boucle.',
     secVoices:'Instruments', secAnim:'Animation', voiceSuggest:'Instruments suggérés', voiceSuggestTitle:'Un instrument pour chaque couleur sans le sien, d’après Kandinsky. Modifiable ensuite.', voiceMain:'Piste principale', voiceNone:'Peins : chaque couleur utilisée apparaît ici.', voiceHint:'Un instrument, une piste, pour toutes ses couleurs. Clique sur une pastille pour l’envoyer ailleurs.', voiceMove:'changer d’instrument', voiceSteps:'Pas du dessin', voiceDir:'Sens du dessin',
     pxSquare:'Remettre des cases carrées', pxRows:'Hauteurs', pxRowsSame:'Comme la grille', pxRowsScale:'la gamme', p_perStep:'Notes par pas', p_lightOct:'Octave selon la clarté', p_hold:'Notes tenues', p_read:'Lecture', readScan:'Balayage', readGesture:'Ordre du geste', p_trace:'dernier trait',
-    brSound:'Pinceau sonore', mirrorX:'Miroir gauche-droite : un palindrome', mirrorY:'Miroir haut-bas : la mélodie inversée', repOff:'Pas de répétition', repTitle:'Répéter le trait sur la largeur',
+    brSound:'Pinceau sonore', mirrorX:'Miroir gauche-droite : un palindrome', mirrorY:'Miroir haut-bas : la mélodie inversée', repTitle:'Répéter le trait sur la largeur',
     p_animGo:'Animation active', p_animX:'Défilement X', p_animY:'Défilement Y', p_animRot:'Rotation', p_animLoops:'Cycle (boucles)', animHint:'Le dessin se répète sur les côtés et bouge pendant la lecture : la tête lit un autre passage à chaque boucle.', tpl_anim:'Dessin qui défile', tplDesc_anim:'Un motif qui monte, un passage différent à chaque boucle.',
     btnArrange:'Arranger', arrangeTitle:'Remettre les nodes en ordre, dans le sens du signal',
     btnFile:'Fichier ▾', helpTitle:'Raccourcis', tabProps:'Réglages', propsEmpty:'Pas de réglage ici.', foldTitle:'Replier ou déplier',
@@ -714,7 +719,7 @@ const I18N = {
     p_pageChain:'Chain the pages', p_pageLoops:'Loops per page', drExportReplay:'Export the replay as .mid', drExportVideo:'Export the replay as video', drVideoTip:'Filmed in real time: it lasts as long as the replay.', drVideoRec:'Filmed in real time: keep this tab in front. Stop keeps what has been filmed so far.', drVideoNo:'This browser can’t record video.', drExportSilent:'Video without sound', drSilentTip:'Lighter for a big drawing: no music and no analysis while filming, only the painting. Filmed in real time.', tpl_flip:'Flipbook', tplDesc_flip:'Four pages, one per loop.',
     secVoices:'Instruments', secAnim:'Animation', voiceSuggest:'Suggested instruments', voiceSuggestTitle:'An instrument for each color without one, after Kandinsky. You can change them afterwards.', voiceMain:'Main track', voiceNone:'Paint: each colour used appears here.', voiceHint:'One instrument, one track, for all its colors. Click a swatch to send it elsewhere.', voiceMove:'change instrument', voiceSteps:'Drawing’s steps', voiceDir:'Drawing’s direction',
     pxSquare:'Back to square cells', pxRows:'Pitches', pxRowsSame:'Same as the grid', pxRowsScale:'the scale', p_perStep:'Notes per step', p_lightOct:'Octave follows lightness', p_hold:'Held notes', p_read:'Reading', readScan:'Scan', readGesture:'Gesture order', p_trace:'last stroke',
-    brSound:'Sounding brush', mirrorX:'Left-right mirror: a palindrome', mirrorY:'Top-bottom mirror: the melody inverted', repOff:'No repeat', repTitle:'Repeat the stroke across the width',
+    brSound:'Sounding brush', mirrorX:'Left-right mirror: a palindrome', mirrorY:'Top-bottom mirror: the melody inverted', repTitle:'Repeat the stroke across the width',
     p_animGo:'Animation on', p_animX:'Scroll X', p_animY:'Scroll Y', p_animRot:'Rotation', p_animLoops:'Cycle (loops)', animHint:'The drawing repeats on its sides and moves during playback: the playhead reads a different passage each loop.', tpl_anim:'Scrolling drawing', tplDesc_anim:'A rising pattern, a different passage each loop.',
     btnArrange:'Arrange', arrangeTitle:'Put the nodes in order, following the signal',
     btnFile:'File ▾', helpTitle:'Shortcuts', tabProps:'Settings', propsEmpty:'No settings here.', foldTitle:'Fold or unfold',
@@ -3467,7 +3472,12 @@ const DRAW_ICONS = {
   smudge:'<path d="M2.5 11.5c2-3 4-3 6.5 0s4.5 3 6.5 0"/><path d="M2.5 6.5c2-3 4-3 6.5 0s4.5 3 6.5 0" opacity=".45"/>',
   erase:'<path d="M10.5 2.8l4.7 4.7-7 7H5.3L2.6 11.8z"/><path d="M6.6 6.7l4.7 4.7"/><path d="M9 14.5h6.5"/>',
   pick:'<path d="M12.6 2.2a1.9 1.9 0 0 1 2.7 2.7l-1.6 1.6-2.7-2.7z" fill="currentColor"/><path d="M10.4 4.4l3.2 3.2"/><path d="M11 6.8l-7.3 7.3-.9 2.1 2.1-.9 7.3-7.3"/>',
-  zoom:'<circle cx="7.5" cy="7.5" r="4.8"/><path d="M11 11l4.5 4.5"/><path d="M5.3 7.5h4.4M7.5 5.3v4.4"/>'
+  zoom:'<circle cx="7.5" cy="7.5" r="4.8"/><path d="M11 11l4.5 4.5"/><path d="M5.3 7.5h4.4M7.5 5.3v4.4"/>',
+  mirrorX:'<path d="M9 2v14" stroke-dasharray="1.6 2"/><path d="M6.5 5L2.5 9l4 4z" fill="currentColor"/><path d="M11.5 5l4 4-4 4z"/>',
+  mirrorY:'<path d="M2 9h14" stroke-dasharray="1.6 2"/><path d="M5 6.5L9 2.5l4 4z" fill="currentColor"/><path d="M5 11.5l4 4 4-4z"/>',
+  sound:'<path d="M2.5 7v4h3l4 3.5v-11L5.5 7z" fill="currentColor"/><path d="M12 6.5a3.5 3.5 0 0 1 0 5"/><path d="M14.2 4.4a6.5 6.5 0 0 1 0 9.2"/>',
+  mute:'<path d="M2.5 7v4h3l4 3.5v-11L5.5 7z" fill="currentColor"/><path d="M12 7l4 4M16 7l-4 4"/>',
+  repeat:'<rect x="1.8" y="5" width="4" height="8" rx="1"/><rect x="7" y="5" width="4" height="8" rx="1" opacity=".6"/><rect x="12.2" y="5" width="4" height="8" rx="1" opacity=".35"/>'
 };
 const drawIcon = id=> '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + DRAW_ICONS[id] + '</svg>';
 const DRAW_RES = 1024;
@@ -4849,29 +4859,39 @@ function openDrawEditor(n, watch, cache){
   toolSec.append(brushSlider('brSize', 'brSize', 1, BRUSH_MAX, 'size', v=> v, brushCurve), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
     brushSlider('brHard', 'brHard', 0, 100, 'hard', pct), brushSlider('brPress', 'brPress', 0, 100, 'press', pct));
   // mirrors and repeats: a shape drawn once, a phrase answered
-  const symRow = document.createElement('div'); symRow.className = 'btnRow';
-  [[1, '⇆', 'mirrorX'], [2, '⇅', 'mirrorY']].forEach(([bit, glyph, label])=>{
+  // mirrors, sound, repeats: same icon row as the tools above
+  const symRow = document.createElement('div'); symRow.className = 'toolBar';
+  const toggle = (id, label, on, flip)=>{
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'miniBtn' + ((brush.mirror || 0) & bit ? ' primary' : ''); b.textContent = glyph; b.title = t(label); b.setAttribute('aria-label', b.title);
-    b.addEventListener('click', ()=>{
-      brush.mirror = (brush.mirror || 0) ^ bit; saveBrush();
-      b.classList.toggle('primary', !!(brush.mirror & bit));
-      frame.classList.toggle('mirX', !!(brush.mirror & 1)); frame.classList.toggle('mirY', !!(brush.mirror & 2));
-    });
+    b.type = 'button'; b.className = 'miniBtn' + (on ? ' primary' : ''); b.innerHTML = drawIcon(id);
+    b.title = t(label); b.setAttribute('aria-label', b.title); b.setAttribute('aria-pressed', !!on);
+    b.addEventListener('click', ()=>{ const now = flip(); b.classList.toggle('primary', now); b.setAttribute('aria-pressed', now); });
     symRow.appendChild(b);
-  });
+    return b;
+  };
+  [[1, 'mirrorX'], [2, 'mirrorY']].forEach(([bit, label])=> toggle(label, label, (brush.mirror || 0) & bit, ()=>{
+    brush.mirror = (brush.mirror || 0) ^ bit; saveBrush();
+    frame.classList.toggle('mirX', !!(brush.mirror & 1)); frame.classList.toggle('mirY', !!(brush.mirror & 2));
+    return !!(brush.mirror & bit);
+  }));
   frame.classList.toggle('mirX', !!((brush.mirror || 0) & 1)); frame.classList.toggle('mirY', !!((brush.mirror || 0) & 2));
+  symRow.appendChild(Object.assign(document.createElement('span'), {className:'toolSep'}));
+  const soundBtn = toggle(brush.sound !== false ? 'sound' : 'mute', 'brSound', brush.sound !== false, ()=>{
+    brush.sound = brush.sound === false; saveBrush();
+    soundBtn.innerHTML = drawIcon(brush.sound ? 'sound' : 'mute');
+    return brush.sound;
+  });
+  symRow.appendChild(Object.assign(document.createElement('span'), {className:'toolSep'}));
+  const repBox = document.createElement('label'); repBox.className = 'repPick';
+  repBox.innerHTML = drawIcon('repeat');
   const repSel = document.createElement('select');
-  [1, 2, 3, 4, 6, 8].forEach(k=> repSel.appendChild(new Option(k === 1 ? t('repOff') : '× ' + k, k)));
-  repSel.value = brush.rep || 1; repSel.title = t('repTitle'); repSel.setAttribute('aria-label', repSel.title);
-  repSel.addEventListener('change', ()=>{ brush.rep = +repSel.value; saveBrush(); });
-  symRow.appendChild(repSel);
-  const soundRow = document.createElement('label'); soundRow.className = 'prm full';
-  const soundLab = document.createElement('span'), soundBox = document.createElement('input');
-  soundLab.textContent = t('brSound'); soundBox.type = 'checkbox'; soundBox.checked = brush.sound !== false; soundBox.style.justifySelf = 'start';
-  soundBox.addEventListener('change', ()=>{ brush.sound = soundBox.checked; saveBrush(); });
-  soundRow.append(soundLab, soundBox);
-  toolSec.append(symRow, soundRow);
+  [1, 2, 3, 4, 6, 8].forEach(k=> repSel.appendChild(new Option(k === 1 ? '×1' : '× ' + k, k)));
+  repSel.value = brush.rep || 1; repBox.title = t('repTitle'); repSel.setAttribute('aria-label', t('repTitle'));
+  const repOn = ()=> repBox.classList.toggle('on', +repSel.value > 1);
+  repSel.addEventListener('change', ()=>{ brush.rep = +repSel.value; saveBrush(); repOn(); });
+  repBox.appendChild(repSel); repOn();
+  symRow.appendChild(repBox);
+  toolSec.append(symRow);
   const name = document.createElement('div'); name.className = 'nyName';
   const grid = document.createElement('div'); grid.className = 'nyGrid';
   // what the colour will play: its instrument, the one it'll join, or the main track's
