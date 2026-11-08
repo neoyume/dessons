@@ -890,6 +890,37 @@ test('Vidéo du replay : papier, peinture et cadre 9:16', ()=>{
   eq(px(540, 450), [255, 0, 0]);
   closeDrawEditor();
 });
+test('Vidéo sans son : ni Boucle, ni piste audio, ni analyse pendant le tournage', ()=>{
+  const real = {rec:window.MediaRecorder, dl:downloadBlob}, got = [];
+  let tracks = null;
+  window.MediaRecorder = class {
+    static isTypeSupported(m){ return m === 'video/webm'; }
+    constructor(s, o){ this.state = 'inactive'; this.mimeType = o.mimeType; tracks = s.getTracks().map(t=> t.kind); this.opts = o; }
+    start(){ this.state = 'recording'; }
+    stop(){ this.state = 'inactive'; this.ondataavailable({data:new Blob(['x'])}); this.onstop(); }
+  };
+  downloadBlob = (b, f)=> got.push(f);
+  try{
+    const {n} = drawing({memory:0, strokes:[vln(2000), vln(5000)]});
+    openDrawEditor(n);
+    startReplayVideo(n, true);
+    ok(drawEd.watch && replayVideo && drawReplay.silent && !playing, 'pas de Boucle');
+    eq(tracks, ['video']);
+    ok(!replayVideo.rec.opts.audioBitsPerSecond);
+    replayVideoFrame();
+    ok(replayVideo.on, 'démarre tout de suite');
+    drawReplay.t0 -= drawReplay.ms;
+    replayFrame(); replayVideoFrame();
+    ok(replayVideo.end > performance.now(), 'garde sa dernière image');
+    replayVideo.end = 1; replayVideoFrame();
+    eq(got, ['dessons-replay-silent-9x16.webm']);
+    ok(!replayVideo && !drawReplay && drawEd && !drawEd.watch);
+  } finally {
+    if(replayVideo) leaveReplay();
+    closeDrawEditor(); stopPlayback();
+    window.MediaRecorder = real.rec; downloadBlob = real.dl;
+  }
+});
 test('Vidéo du replay : filme jusqu’au bout, garde sa dernière image, revient au chevalet', ()=>{
   const real = {rec:window.MediaRecorder, dl:downloadBlob}, got = [];
   let started = 0;
