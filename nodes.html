@@ -203,6 +203,11 @@
   #drawEditor.watch .drawTools{padding:12px; gap:10px;}
   .drawLeft{border-left:none; border-right:1px solid var(--line);}
   .drawLeft[hidden]{display:none;}
+  .drawRail{flex:none; display:flex; flex-direction:column; align-items:center; padding:10px 6px; background:var(--panel); border-right:1px solid var(--line); overflow-y:auto;}
+  .drawRail[hidden]{display:none;}
+  .drawRail .toolBar{flex-direction:column; flex-wrap:nowrap; gap:4px;}
+  .drawRail .toolBar .miniBtn{width:34px; height:34px;}
+  .drawRail .toolSep{width:20px; height:1px; margin:4px 0;}
   /* head and foot stay on screen however short the window is */
   .drawHead, .drawFoot{flex:none; display:flex; align-items:center; gap:5px; padding:9px 12px;}
   .drawHead{border-bottom:1px solid var(--line);}
@@ -4994,9 +4999,11 @@ function openDrawEditor(n, watch, cache){
   left.addEventListener('click', e=>{ if(e.detail && e.target.closest('button, summary')) document.activeElement.blur(); });
   const toolDet = toolSec.parentElement, readDet = readSec.parentElement, animDet = animSec.parentElement;
   const wide = matchMedia('(min-width: 1100px)');
+  // and the tool icons stand in a column at the far left, as in Photoshop or Affinity; their settings stay in the panel
+  const rail = document.createElement('div'); rail.className = 'drawRail'; rail.setAttribute('aria-label', t('secTool'));
   const placeSecs = ()=>{
-    if(wide.matches && !watch){ leftScroll.append(toolDet, readDet); left.hidden = false; }
-    else { scroll.prepend(toolDet); scroll.insertBefore(readDet, animDet); left.hidden = true; }
+    if(wide.matches && !watch){ leftScroll.append(toolDet, readDet); rail.appendChild(toolBar); toolBar.setAttribute('aria-orientation', 'vertical'); left.hidden = rail.hidden = false; }
+    else { scroll.prepend(toolDet); scroll.insertBefore(readDet, animDet); toolSec.prepend(toolBar); toolBar.setAttribute('aria-orientation', 'horizontal'); left.hidden = rail.hidden = true; }
   };
   placeSecs();
   if(!watch) wide.addEventListener('change', placeSecs);
@@ -5012,7 +5019,7 @@ function openDrawEditor(n, watch, cache){
     });
     tools.append(time, bar, btn('replayStop', leaveReplay, true));
   }
-  box.append(left, area, tools);
+  box.append(rail, left, area, tools);
   $('workspace').appendChild(box);
   if(!watch) document.body.appendChild(ring);
   document.body.classList.add('drawing');
