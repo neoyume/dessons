@@ -131,3 +131,15 @@ Ajouts successifs (tous rétro-compatibles avec l'export `.mid` de base) :
 - Export vers d'autres formats (Ableton .als, simple CSV de notes, ou JSON réutilisable)
 - Mode batch : traiter un dossier d'images d'un coup pour générer plusieurs loops
 - Choix de la caméra (`enumerateDevices`) et résolution webcam ; enregistrement de la sortie vidéo webcam avec la boucle
+- **Passe UI/UX** (2026-11-08) :
+  - **Navigation entre pages** : `nav.pageNav` (Atelier · Nodes · Dessin), à côté de FR/EN, même bloc dans `nodes.html`. `#nodesBtn`/`#drawBtn` sont devenus ces onglets (mêmes ids) ; l'étape 3 ne garde que les sorties (`.mid`, vidéo, DAW). Clés `navWorkshop`/`navNodes`/`navDraw` (remplacent `btnNodes`/`btnDrawMode`).
+  - **« Essayer avec un exemple »** (`#sampleBtn`, `sampleImage()`) : une image dessinée sur un canvas (graine fixe : l'exemple sonne toujours pareil), passée en `File` à `loadFile()`, donc même chemin qu'un fichier déposé, auto-play compris. Aucune ressource externe : marche en `file://` et sous la CSP.
+  - **États vides** : `#layersEmpty` s'efface seul dès que `#layerList` a un enfant (`:has()`, aucun JS) ; `#pianoRollWrap` est caché par `setPreviewEmpty()` tant qu'aucune source n'est chargée.
+  - **Alerte Web MIDI** (`#midiWarn`, clé `midiWarnBadge`, ex-`safariWarnBadge`) : affichée **seulement** si `!midiSupported()`, depuis `updatePlayBtnState()`. Avant, elle s'affichait dans tous les navigateurs, Chrome compris. Ton jaune d'information, plus rouge.
+  - **Statuts « non initialisé »** (`midiUninit`, `synthUninit`) : la ligne est cachée, c'est l'état normal ; elle réapparaît dès qu'il se passe quelque chose.
+  - **Bouton grisé = une raison** : `updatePlayBtnState()` pose `title` (`needSource`) sur Écouter / Export .mid / Export vidéo / Jouer dans le DAW tant qu'il n'y a pas de source, et `midiWarnBadge` sur Jouer dans le DAW si Web MIDI manque.
+  - **Libellés** : « ▶ Écouter » (ex-« Écouter l'aperçu ») et « Jouer dans le DAW » partout, Nodes compris.
+  - **Presets en haut du panneau Musique** (ils agissent sur toute la page) ; empilé (< 1080 px) : Source → Musique → Analyse.
+  - **Grilles en `minmax(0, …)`** : un `1fr` seul prend la largeur min-content d'un enfant (canvas de 900 px) et déborde. Mise en page téléphone (< 600 px) : en-tête et rangée de transport passent à la ligne, icônes en 32×30.
+  - **Focus clavier** global (`:where(…):focus-visible`, spécificité nulle) ; valeurs des curseurs en `--text` au lieu de `--accent`, le vert reste pour l'actif et le cliquable.
+  - **Piège des captures** : Chrome headless avec `--window-size=390,…` ne descend pas sous ~500 px de large, la page semble déborder alors qu'elle ne déborde pas. Vérifier le mobile par émulation (`Emulation.setDeviceMetricsOverride`, `mobile:true`).

@@ -37,7 +37,7 @@ Une fonction ajoutée ou un piège trouvé va dans la note de sa partie. Ici, se
 - Le zéro-dépendance / zéro-build : ne pas introduire npm/webpack sans que ce soit une décision explicite et assumée avec l'utilisateur
 - Le fait que ça reste utilisable en `file://` direct (double-clic) en plus de GitHub Pages
 - La logique de gamme (aucune note hors gamme ne doit pouvoir sortir) — c'est un principe central du projet, pas un détail
-- Le fait que l'export `.mid` marche sans Web MIDI : le mode temps réel est un bonus, jamais un prérequis. Si `navigator.requestMIDIAccess` est absent, le reste doit fonctionner normalement (seul le bouton « Jouer dans Logic » est désactivé). Idem webcam : si `getUserMedia` manque, image + vidéo doivent marcher.
+- Le fait que l'export `.mid` marche sans Web MIDI : le mode temps réel est un bonus, jamais un prérequis. Si `navigator.requestMIDIAccess` est absent, le reste doit fonctionner normalement (seul le bouton « Jouer dans le DAW » est désactivé, avec l'alerte `#midiWarn`). Idem webcam : si `getUserMedia` manque, image + vidéo doivent marcher.
 - Pas de notes bloquées : tout ajout au scheduler temps réel doit garantir un note-off correspondant, et `stopPlayback()` doit rester le filet de sécurité (clear + note-off explicites + CC 123).
 - La parité FR/EN : toute nouvelle chaîne visible passe par `I18N` (les deux langues) ou `[data-i18n]`, jamais en dur. `t()` pour le JS. Vérifier que `Object.keys(I18N.fr)` == `Object.keys(I18N.en)` — dans **les trois** pages (`compose.html` et `nodes.html` ont chacune leur propre dictionnaire, la langue est partagée via `dessons.lang`).
 - Le nettoyage des sources : toujours passer par `stopSource()` avant d'en démarrer une autre (sinon caméra qui reste allumée, timers qui s'empilent).

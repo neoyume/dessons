@@ -55,6 +55,8 @@
     font-family:var(--sans); padding:28px 20px 60px; min-height:100vh;
   }
   ::selection{background:var(--cyan); color:var(--bg);}
+  /* keyboard focus everywhere, zero specificity: a component's own focus style still wins */
+  :where(button, a, select, input, textarea, summary, [tabindex]):focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
   .wrap{max-width:1180px; margin:0 auto;}
   header{
     margin-bottom:26px; display:flex; align-items:center; flex-wrap:wrap; gap:20px;
@@ -79,7 +81,8 @@
 
   /* Logo en haut à gauche, FR/EN en haut à droite, bandeau 1-2-3 sur toute la largeur dessous
      (ordre visuel via order, le DOM reste h1 → flowSteps → langToggle). */
-  header .langToggle{order:2; margin-left:auto;}
+  header .pageNav{order:2; margin-left:auto;}
+  header .langToggle{order:2;}
   header .flowSteps{order:3;}
   .flowSteps{
     flex:1 1 100%;
@@ -112,16 +115,16 @@
   .langToggle button:not(.active):hover{color:var(--text);}
 
   .rack{
-    display:grid; grid-template-columns: 1fr 3fr 1fr; gap:16px;
+    display:grid; grid-template-columns: minmax(0,1fr) minmax(0,3fr) minmax(0,1fr); gap:16px;
   }
-  /* narrower than 3 usable columns: stack, but keep the reading order
-     source/preview -> analysis -> music instead of the DOM order (which puts
-     Music first so it sits to the left of the image on desktop). */
+  /* narrower than 3 usable columns: stack as source/preview -> music -> analysis
+     (the DOM puts Music first so it sits left of the image on desktop). Music
+     before analysis: scale and tempo are what a musician reaches for next. */
   @media (max-width: 1080px){
-    .rack{grid-template-columns:1fr;}
+    .rack{grid-template-columns:minmax(0,1fr);}
     .panel-source{order:1;}
-    .panel-analysis{order:2;}
-    .panel-music{order:3;}
+    .panel-music{order:2;}
+    .panel-analysis{order:3;}
   }
 
   .panel{
@@ -136,7 +139,7 @@
   .sectionHead h2{margin-bottom:0;}
   .resetBtn{
     flex:none; background:none; border:1px solid var(--line); color:var(--text-dim);
-    font-size:10.5px; padding:4px 9px; border-radius:5px; cursor:pointer;
+    font-size:11.5px; padding:4px 9px; border-radius:5px; cursor:pointer;
     font-family:var(--sans); text-transform:none; letter-spacing:.2px;
     transition:border-color .15s, color .15s;
   }
@@ -164,7 +167,7 @@
      Instruments" <h2>s share a header row instead of the 2nd one trailing
      lower, inside .layersPanel, below the media's own title. */
   .sourceMediaRow{
-    display:grid; grid-template-columns:2fr 1fr; column-gap:16px; row-gap:14px; align-items:start;
+    display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); column-gap:16px; row-gap:14px; align-items:start;
     grid-template-areas:"srcHead layersHead" "media layers";
   }
   .sourceMediaRow .srcHead{grid-area:srcHead;}
@@ -179,7 +182,7 @@
   #freezeBtn, #srcHint{margin-bottom:10px;}
   .layersPanel{grid-area:layers; min-width:0;}
   @media (max-width: 1080px){
-    .sourceMediaRow{grid-template-columns:1fr; grid-template-areas:"srcHead" "media" "layersHead" "layers";}
+    .sourceMediaRow{grid-template-columns:minmax(0,1fr); grid-template-areas:"srcHead" "media" "layersHead" "layers";}
   }
 
   .previewWrap{position:relative; text-align:center;}
@@ -216,6 +219,15 @@
   .previewPlaceholder[hidden]{display:none;}
   .previewPlaceholder .srcBtns3{width:100%; max-width:300px;}
   .previewPlaceholder .hint{margin:0; max-width:260px;}
+  .badge.warn[hidden], .pianoRollWrap[hidden]{display:none;}
+  /* the shortest way to hear something: a generated picture, no file needed */
+  .sampleBtn{
+    background:var(--accent); color:var(--bg); border:none; border-radius:7px; cursor:pointer;
+    padding:9px 18px; font-size:13px; font-weight:700; letter-spacing:.3px;
+  }
+  .sampleBtn:hover{filter:brightness(1.12);}
+  .layersEmpty{margin:0; padding:14px; border:1px dashed var(--line); border-radius:7px;}
+  .layersPanel:has(#layerList > *) .layersEmpty{display:none;}
   /* overlay "×" shown once media is loaded — sits above the canvas/mask/scan
      layers regardless of z-index thanks to DOM order (see #mediaBox kids) */
   .removeMediaBtn{
@@ -231,7 +243,21 @@
 
   /* crop + size/notes info sit to the left of Direction/Curve instead of
      stacked above them — saves vertical space. */
-  .metaTransportRow{display:flex; justify-content:space-between; gap:16px; margin-top:10px;}
+  .metaTransportRow{display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; margin-top:10px;}
+  /* phone: the header and the transport row stack instead of running off the side */
+  @media (max-width: 600px){
+    body{padding:18px 16px 48px;}
+    header h1 .logoMark{height:44px;} header h1 .logo{height:32px;}
+    header .pageNav{margin-left:0; order:3;} header .langToggle{order:2; margin-left:auto;}
+    header .flowSteps{order:4;}
+    .flowSteps .step3{flex:1 1 100%;}
+    .flowAction, .flowActionPlay #playBtn, .songAction #addToSongBtn{width:auto; flex:1 1 140px;}
+    .flowActionPlay{flex:1 1 100%;}
+    .metaTransportRow .actionCol{flex:1 1 100%;}
+    .iconLbl{width:56px;}
+    .curveEditor, .pathRow{margin-left:0;}
+    .iconGroup button{width:32px; height:30px;}
+  }
   .metaCol{flex:1; min-width:0;}
   .metaCol .cropRow{margin-top:0;}
   .metaCol .previewMeta{margin-top:8px;}
@@ -247,9 +273,10 @@
     display:flex; justify-content:space-between; font-size:12.5px;
     margin-bottom:6px; color:var(--text);
   }
-  .ctrl label span.val{color:var(--accent); font-family:var(--mono); font-size:12px;}
+  /* values in plain text: the green stays for what is active or clickable first */
+  .ctrl label span.val{color:var(--text); font-family:var(--mono); font-size:12px;}
   .ctrl label span.val.editable{cursor:text; border-bottom:1px dotted var(--accent-dim);}
-  .ctrl label span.val.editable:hover{color:#fff;}
+  .ctrl label span.val.editable:hover{color:var(--accent);}
   .valEdit{
     width:46px; background:var(--panel-2); border:1px solid var(--accent); color:var(--accent);
     font-family:var(--mono); font-size:11.5px; padding:1px 4px; border-radius:3px;
@@ -272,7 +299,7 @@
   .sliderRow input[type=range]{flex:1;}
   .miniBtn{
     flex:none; background:var(--panel-2); border:1px solid var(--line); color:var(--text-dim);
-    font-size:10.5px; padding:5px 10px; border-radius:5px; cursor:pointer; font-family:var(--sans);
+    font-size:11.5px; padding:5px 10px; border-radius:5px; cursor:pointer; font-family:var(--sans);
     transition:border-color .15s, color .15s;
   }
   .miniBtn:hover{color:var(--text); border-color:var(--accent);}
@@ -303,7 +330,7 @@
      3 separate sliders (values stay editable, just moved next to the graph) */
   .toneCurveHead{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:12.5px; color:var(--text);}
   .toneCurveVals{display:flex; gap:10px; font-family:var(--mono); font-size:12px;}
-  .toneCurveVals .val{color:var(--accent);}
+  .toneCurveVals .val{color:var(--text);}
   .toneCurveGraph{width:100%; height:120px; display:block; cursor:pointer; touch-action:none; border-radius:4px; border:1px solid var(--line); background:var(--panel-2);}
 
   .divider{height:1px; background:var(--line); margin:18px 0;}
@@ -388,7 +415,7 @@
   .layerThresh{display:flex; align-items:center; gap:6px; margin-top:6px;}
   .layerThreshLbl{font-size:11px; color:var(--text-dim); flex:none;}
   .layerThresh input[type=range]{flex:1;}
-  .layerThresh .val{font-family:var(--mono); color:var(--accent); font-size:11px; width:24px; text-align:right; flex:none;}
+  .layerThresh .val{font-family:var(--mono); color:var(--text); font-size:11px; width:24px; text-align:right; flex:none;}
   .layerThreshReset{
     flex:none; width:18px; height:18px; padding:0; border:1px solid var(--line); border-radius:4px;
     background:var(--panel-2); color:var(--text-dim); cursor:pointer; font-size:10px; line-height:1;
@@ -397,7 +424,7 @@
   .layerThreshReset:hover:not(:disabled){color:var(--text); border-color:var(--accent);}
   .layerThreshReset:disabled{opacity:.3; cursor:default;}
   .layer.muted .layerThresh{opacity:.4;}
-  .layerNoteCount{flex:none; font-family:var(--mono); color:var(--text-dim); font-size:10.5px; margin-left:auto; padding-left:6px;}
+  .layerNoteCount{flex:none; font-family:var(--mono); color:var(--text-dim); font-size:11px; margin-left:auto; padding-left:6px;}
 
   /* same outline treatment as #playBtn — transparent fill, cyan stroke + text
      at rest, faint tint on hover, muted (not full-cyan) when disabled. Kept on
@@ -461,16 +488,15 @@
   .songLink.flash{color:var(--accent);}
   .actionCol.songAction[hidden]{display:none;}  /* song page on standby, see CLAUDE.md */
 
-  /* link to nodes.html — an <a> dressed as the secondary outline button */
-  a#nodesBtn, a#drawBtn{
-    width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
-    background:transparent; color:var(--cyan); text-decoration:none;
-    border:1.5px solid var(--cyan); padding:7px; font-size:12.5px; font-weight:700; letter-spacing:.3px;
-    border-radius:7px; white-space:nowrap;
-    transition:background-color .15s, color .15s, border-color .15s;
+  /* the three pages, same block in nodes.html: a tab bar, not buttons that compete with the exports */
+  .pageNav{display:flex; flex:none; border:1px solid var(--line); border-radius:7px; overflow:hidden;}
+  .pageNav a{
+    padding:6px 12px; font-size:12px; color:var(--text-dim); text-decoration:none; background:var(--panel);
+    border-left:1px solid var(--line); white-space:nowrap; transition:color .15s, background-color .15s;
   }
-  a#nodesBtn svg, a#drawBtn svg{width:14px; height:14px; flex:none; display:block;}
-  a#nodesBtn:hover, a#drawBtn:hover{background-color:rgba(77,217,201,.12);}
+  .pageNav a:first-child{border-left:none;}
+  .pageNav a:hover{color:var(--text); background:var(--panel-2);}
+  .pageNav a[aria-current="page"]{color:var(--bg); background:var(--cyan);}
 
   button#previewBtn{
     width:100%; background:transparent; color:var(--cyan);
@@ -515,15 +541,17 @@
   .curveEditor circle.cp{fill:var(--accent); stroke:var(--bg); stroke-width:1; cursor:grab;}
   .curveEditor circle.cp:active{cursor:grabbing;}
   .midiRow{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:8px;}
+  .midiRow[hidden]{display:none;}
   .dot{width:8px; height:8px; border-radius:50%; background:var(--line); flex:none;}
   .dot.on{background:var(--cyan); box-shadow:0 0 6px var(--cyan);}
 
   .hint{font-size:11.5px; color:var(--text-dim); margin-top:8px; line-height:1.5;}
   .hint.err{color:#e5484d;}
 
+  /* information, not an error: export and listening still work, only the DAW button is out */
   .badge.warn{
-    display:flex; align-items:center; gap:7px; font-size:11.5px; color:#ff8a8e;
-    background:rgba(229,72,77,.12); border:1px solid rgba(229,72,77,.4);
+    display:flex; align-items:center; gap:7px; font-size:11.5px; color:#ffd84d;
+    background:rgba(255,216,77,.07); border:1px solid rgba(255,216,77,.3);
     border-radius:6px; padding:8px 10px; margin-bottom:14px; line-height:1.4;
   }
 
@@ -588,18 +616,6 @@
             <span data-i18n="btnVideoExport">Export vidéo</span>
           </button>
         </div>
-        <div class="actionCol flowAction">
-          <a id="nodesBtn" href="nodes.html">
-            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="5" height="4" rx="1"></rect><rect x="11.5" y="11.5" width="5" height="4" rx="1"></rect><path d="M6.5 4.5c5 0 0 9 5 9"></path></svg>
-            <span data-i18n="btnNodes">Mode Nodes</span>
-          </a>
-        </div>
-        <div class="actionCol flowAction">
-          <a id="drawBtn" href="nodes.html?draw">
-            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l1-4 8-8 3 3-8 8z"></path><path d="M10.5 4.5l3 3"></path></svg>
-            <span data-i18n="btnDrawMode">Mode Dessin</span>
-          </a>
-        </div>
         <div class="actionCol flowAction songAction" hidden>
           <button id="addToSongBtn" disabled>
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="5" width="4" height="8" rx="1"></rect><rect x="7" y="5" width="4" height="8" rx="1"></rect><path d="M14.5 6.5v5M12 9h5"></path></svg>
@@ -616,6 +632,11 @@
         </div>
       </span>
     </div>
+    <nav class="pageNav" aria-label="Dessons">
+      <a href="index.html" aria-current="page" data-i18n="navWorkshop">Atelier</a>
+      <a id="nodesBtn" href="nodes.html" data-i18n="navNodes">Nodes</a>
+      <a id="drawBtn" href="nodes.html?draw" data-i18n="navDraw">Dessin</a>
+    </nav>
     <div class="langToggle" id="langToggle">
       <button type="button" data-lang="fr">FR</button>
       <button type="button" data-lang="en">EN</button>
@@ -629,6 +650,20 @@
         <h2 data-i18n="musicTitle">Musique</h2>
         <button type="button" class="resetBtn" id="resetMusic" data-i18n="btnReset">Réinitialiser</button>
       </div>
+      <div class="presetBar" id="presetBar">
+        <label for="presetSelect" data-i18n="lblPreset">Preset</label>
+        <select id="presetSelect"></select>
+        <div class="presetBarBtns">
+          <button type="button" class="miniBtn" id="presetSaveBtn" data-i18n="btnPresetSave">💾 Enregistrer</button>
+          <button type="button" class="miniBtn" id="presetDeleteBtn" hidden data-i18n="btnPresetDelete">🗑 Supprimer</button>
+        </div>
+        <div class="presetBarBtns presetBarBtns2">
+          <button type="button" class="miniBtn" id="presetExportBtn" data-i18n="btnPresetExport">⬆ Exporter</button>
+          <button type="button" class="miniBtn" id="presetImportBtn" data-i18n="btnPresetImport">⬇ Importer</button>
+          <input type="file" id="presetImportInput" accept="application/json,.json" hidden>
+        </div>
+      </div>
+      <div class="divider"></div>
 
       <div class="ctrl">
         <label style="margin-bottom:6px;" data-i18n="lblScale">Gamme</label>
@@ -676,20 +711,6 @@
         <input type="range" id="gate" min="10" max="100" value="80">
       </div>
 
-      <div class="divider"></div>
-      <div class="presetBar" id="presetBar">
-        <label for="presetSelect" data-i18n="lblPreset">Preset</label>
-        <select id="presetSelect"></select>
-        <div class="presetBarBtns">
-          <button type="button" class="miniBtn" id="presetSaveBtn" data-i18n="btnPresetSave">💾 Enregistrer</button>
-          <button type="button" class="miniBtn" id="presetDeleteBtn" hidden data-i18n="btnPresetDelete">🗑 Supprimer</button>
-        </div>
-        <div class="presetBarBtns presetBarBtns2">
-          <button type="button" class="miniBtn" id="presetExportBtn" data-i18n="btnPresetExport">⬆ Exporter</button>
-          <button type="button" class="miniBtn" id="presetImportBtn" data-i18n="btnPresetImport">⬇ Importer</button>
-          <input type="file" id="presetImportInput" accept="application/json,.json" hidden>
-        </div>
-      </div>
     </div>
 
     <!-- CENTER (50%): source + preview, then layers/export/real-time -->
@@ -725,11 +746,13 @@
                 <span data-i18n="btnWebcam">Webcam</span>
               </button>
             </div>
+            <button type="button" class="sampleBtn" id="sampleBtn" data-i18n="btnSample">Essayer avec un exemple</button>
             <div class="hint" id="dropHint" data-i18n="dropHint">...ou glisse-dépose une image ou une vidéo ici (JPG / PNG / WebP · MP4 / WebM / MOV)</div>
           </div>
         </div>
         </div>
         <div class="layersPanel">
+          <div class="hint layersEmpty" id="layersEmpty" data-i18n="layersEmpty">Tes calques apparaîtront ici.</div>
           <div id="layerList"></div>
         </div>
       </div>
@@ -765,18 +788,18 @@
           <div class="previewMeta"><span id="dims">—</span><span id="noteCount">0 notes</span></div>
         </div>
         <div class="actionCol">
-          <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter l'aperçu</button>
+          <button id="previewBtn" disabled data-i18n="btnPreview">▶ Écouter</button>
           <div class="midiRow"><span class="dot" id="synthDot"></span><span id="synthState">—</span></div>
         </div>
       </div>
-      <div class="pianoRollWrap">
+      <div class="pianoRollWrap" id="pianoRollWrap" hidden>
         <canvas id="pianoRoll" width="900" height="120"></canvas>
       </div>
       <div class="hint" id="pickHint" hidden data-i18n="pickArm">Clique dans l'image pour choisir la couleur du calque.</div>
 
       <div class="divider"></div>
       <div class="hint" data-i18n="previewHint">Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.</div>
-      <div class="badge warn" data-i18n="safariWarnBadge">⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.</div>
+      <div class="badge warn" id="midiWarn" hidden data-i18n="midiWarnBadge">Ce navigateur ne gère pas Web MIDI.</div>
       <div class="ctrl checkboxCtrl">
         <label class="checkboxLbl"><input type="checkbox" id="sustainToggle"> <span data-i18n="lblSustain">Sustain (aperçu & MIDI)</span></label>
       </div>
@@ -898,7 +921,10 @@ const I18N = {
     presetImportSuccess: "{x} preset(s) importé(s).",
     presetImportError: "Fichier de presets illisible ou invalide.",
     presetImportOverwriteConfirm: "{x} preset(s) portent déjà ce nom et seront remplacés. Continuer ?",
-    safariWarnBadge: "⚠️ Web MIDI n'est pas géré par Safari — utilise Chrome ou Edge pour le temps réel.",
+    midiWarnBadge: "Ce navigateur ne gère pas Web MIDI : « Jouer dans le DAW » demande Chrome ou Edge. L'export .mid et l'écoute marchent ici.",
+    btnSample: "Essayer avec un exemple",
+    layersEmpty: "Tes calques apparaîtront ici : chacun devient une piste MIDI, avec son canal et son instrument.",
+    needSource: "Charge d'abord une image, une vidéo ou la webcam.",
     lblSustain: "Sustain (aperçu & MIDI)",
     midiHintToggle: "Comment connecter à Logic",
     srcTitle: "Source",
@@ -988,15 +1014,16 @@ const I18N = {
     midiHint: "Envoie les notes en direct vers un port MIDI virtuel, la boucle tourne jusqu'à « Stop ». Sur macOS : ouvre <b>Configuration audio et MIDI</b> → menu <b>Fenêtre</b> → <b>Afficher les périphériques MIDI</b> → double-clic sur <b>IAC Driver</b> → coche <b>L'appareil est en ligne</b>. Dans Logic : crée une piste d'instrument logiciel et arme-la (bouton R). Chaque calque émet sur son propre canal MIDI (1, 2, 3…) : pour une piste par calque, enregistre tout sur une seule piste puis <b>clic droit sur la région → Séparer les événements MIDI → Par canal d'événement</b>.",
     footerFree: "Dessons est en source ouverte (source-available) et gratuit pour un usage non commercial (licence PolyForm). Mais le fichier MIDI que tu exportes ou joues t'appartient à 100 % ; utilise-le comme bon te semble, commercialement ou non.",
     footerKofi: "☕ Me soutenir sur Ko-fi",
-    btnNodes: "Mode Nodes",
-    btnDrawMode: "Mode Dessin",
+    navWorkshop: "Atelier",
+    navNodes: "Nodes",
+    navDraw: "Dessin",
     btnAddToSong: "Ajouter à la chanson",
     songLink: "Ouvrir la chanson →",
     songScenePrompt: "Nom de cette scène (intro, couplet, refrain…) :",
     sceneDefaultName: "Scène",
     songAdded: "« {x} » ajoutée · ouvrir →",
     songStorageErr: "Impossible d'enregistrer la scène : le stockage du navigateur (IndexedDB) est indisponible ici. Essaie depuis la version en ligne, ou un autre navigateur.",
-    btnPreview: "▶ Écouter l'aperçu",
+    btnPreview: "▶ Écouter",
     previewHint: "Aperçu au synthé intégré du navigateur — sons approximatifs, juste pour évaluer la boucle sans DAW.",
     synthUnavail: "Web Audio indisponible dans ce navigateur",
     synthUninit: "Synthé non initialisé",
@@ -1048,7 +1075,10 @@ const I18N = {
     presetImportSuccess: "{x} preset(s) imported.",
     presetImportError: "Couldn't read that presets file — it looks invalid.",
     presetImportOverwriteConfirm: "{x} preset(s) already use that name and will be overwritten. Continue?",
-    safariWarnBadge: "⚠️ Web MIDI isn't supported in Safari — use Chrome or Edge for real-time playback.",
+    midiWarnBadge: "This browser doesn't support Web MIDI: “Play in DAW” needs Chrome or Edge. .mid export and listening work here.",
+    btnSample: "Try an example",
+    layersEmpty: "Your layers will show up here: each one becomes a MIDI track, with its own channel and instrument.",
+    needSource: "Load an image, a video or the webcam first.",
     lblSustain: "Sustain (preview & MIDI)",
     midiHintToggle: "How to connect to Logic",
     srcTitle: "Source",
@@ -1138,15 +1168,16 @@ const I18N = {
     midiHint: "Sends notes live to a virtual MIDI port; the loop runs until you hit “Stop”. On macOS: open <b>Audio MIDI Setup</b> → <b>Window</b> menu → <b>Show MIDI Studio</b> → double-click <b>IAC Driver</b> → tick <b>Device is online</b>. In Logic: create a software instrument track and arm it (R button). Each layer sends on its own MIDI channel (1, 2, 3…): to get one track per layer, record everything onto a single track, then <b>right-click the region → Separate MIDI Events → By Event Channel</b>.",
     footerFree: "Neoyume's Dessons is source-available and free for non-commercial usage (PolyForm license). However, the MIDI file you export or play is 100% yours; use it however you want, commercially or not.",
     footerKofi: "☕ Support me on Ko-fi",
-    btnNodes: "Node mode",
-    btnDrawMode: "Drawing mode",
+    navWorkshop: "Workshop",
+    navNodes: "Nodes",
+    navDraw: "Drawing",
     btnAddToSong: "Add to song",
     songLink: "Open the song →",
     songScenePrompt: "Name this scene (intro, verse, chorus…):",
     sceneDefaultName: "Scene",
     songAdded: "“{x}” added · open →",
     songStorageErr: "Couldn't save the scene: browser storage (IndexedDB) isn't available here. Try the online version, or another browser.",
-    btnPreview: "▶ Preview sound",
+    btnPreview: "▶ Listen",
     previewHint: "Preview with the browser's built-in synth — rough sounds, just to judge the loop without a DAW.",
     synthUnavail: "Web Audio unavailable in this browser",
     synthUninit: "Synth not initialized",
@@ -1196,6 +1227,10 @@ function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     const v = D[el.getAttribute('data-i18n')];
     if(v != null) el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    const v = D[el.getAttribute('data-i18n-title')];
+    if(v != null) el.title = v;
   });
   document.querySelectorAll('[data-i18n-html]').forEach(el=>{
     const v = D[el.getAttribute('data-i18n-html')];
@@ -1382,6 +1417,7 @@ function clearPreview(){
 // image of that same state, only ever shown once something is loaded.
 function setPreviewEmpty(empty){
   preview.hidden = empty;
+  $('pianoRollWrap').hidden = empty;      // an empty roll under an empty frame says nothing
   $('previewPlaceholder').hidden = !empty;
   $('removeMediaBtn').hidden = empty;
 }
@@ -1400,6 +1436,32 @@ function removeMedia(){
   setPreviewEmpty(true);
 }
 $('removeMediaBtn').addEventListener('click', removeMedia);
+
+// "Try an example": a picture drawn here, so it works offline and in file://, and goes
+// through loadFile() like any dropped file. Seeded, so the example always sounds the same.
+function sampleImage(){
+  const W = 640, H = 400, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  let seed = 7;
+  const rnd = ()=> (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const sky = x.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#0b1d3a'); sky.addColorStop(.6, '#5a2a6e'); sky.addColorStop(1, '#f08a4b');
+  x.fillStyle = sky; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#ffd84d'; x.beginPath(); x.arc(470, 190, 70, 0, Math.PI * 2); x.fill();
+  for(let i = 0; i < 40; i++){ x.fillStyle = '#f3efe9'; x.fillRect(rnd() * W, rnd() * H * .45, 3, 3); }
+  [['#1f6b5c', 250, 90], ['#0e3f3a', 300, 70], ['#062523', 345, 55]].forEach(([col, base, amp])=>{
+    x.fillStyle = col; x.beginPath(); x.moveTo(0, H);
+    for(let px = 0; px <= W; px += 20) x.lineTo(px, base - Math.abs(Math.sin(px / 90 + base)) * amp - rnd() * 18);
+    x.lineTo(W, H); x.fill();
+  });
+  x.strokeStyle = '#4dd9c9'; x.lineWidth = 3;
+  for(let i = 0; i < 5; i++){ x.beginPath(); x.moveTo(40, 360 - i * 9); x.lineTo(600, 372 - i * 9); x.stroke(); }
+  return c;
+}
+$('sampleBtn').addEventListener('click', ()=>{
+  sampleImage().toBlob(b=>{ if(b) loadFile(new File([b], 'dessons-example.png', {type:'image/png'})); }, 'image/png');
+});
 
 function loadFile(file){
   if(!file) return;
@@ -2602,6 +2664,8 @@ function setMidiState(key, on, arg){
   renderMidiState();
 }
 function renderMidiState(){
+  // "not initialised" is the normal state, not news: the row stays empty until something happens
+  midiState.parentElement.hidden = lastMidi.key === 'midiUninit';
   midiState.textContent = (t(lastMidi.key) || lastMidi.key).replace('{x}', lastMidi.arg);
   midiDot.classList.toggle('on', lastMidi.on);
 }
@@ -2613,12 +2677,18 @@ function updatePlayBtnState(){
   $('addToSongBtn').disabled = !img;
   updateSynthState();
   updateVideoExportBtn();
+  // a disabled button says why
+  const why = img ? '' : t('needSource');
+  [previewBtn, $('exportBtn'), $('videoExportBtn')].forEach(b=>{ b.title = b.disabled ? why : ''; });
+  $('midiWarn').hidden = midiSupported();
   if(!midiSupported()){
     playBtn.disabled = true;
+    playBtn.title = t('midiWarnBadge');
     setMidiState('midiUnavail', false);
     return;
   }
   playBtn.disabled = videoExporting || !img;
+  playBtn.title = playBtn.disabled ? why : '';
 }
 
 function ensureMidi(){
@@ -3096,6 +3166,7 @@ function synthStatusKey(){
 function updateSynthState(){
   const key = synthStatusKey();
   const arg = ac ? ac.state : '';
+  $('synthState').parentElement.hidden = key === 'synthUninit';
   $('synthState').textContent = (t(key) || key).replace('{x}', arg);
   $('synthDot').classList.toggle('on', !!ac && ac.state === 'running');
 }
