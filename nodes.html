@@ -375,6 +375,12 @@
   }
   input[type=range]::-moz-range-thumb{width:10px; height:10px; border-radius:50%; background:var(--accent); border:2px solid var(--bg);}
   .btnRow{display:flex; gap:5px; flex-wrap:wrap;}
+  .toolBar{display:flex; align-items:center; gap:3px; flex-wrap:wrap;}
+  .toolBar .miniBtn{width:31px; height:31px; padding:0; display:flex; align-items:center; justify-content:center;}
+  .toolBar .miniBtn[hidden]{display:none;}
+  .toolBar svg{width:18px; height:18px; display:block;}
+  .toolBar .miniBtn.primary{background:var(--accent); border-color:var(--accent); color:var(--bg);}
+  .toolSep{width:1px; height:20px; margin:0 3px; background:var(--line);}
   .btnRow .miniBtn{flex:1;}
   .thumb{display:block; width:100%; border-radius:5px; background:#06100f; image-rendering:pixelated;}
   .thumb.empty{display:none;}
@@ -3453,6 +3459,17 @@ const NY_PALETTE = [
   ['fuji','#D5CFFF'],['lightvender','#DFD6EB'],['coral','#ED7D9A'],['momo','#FDD0B1'],['yeast','#F2D87A'],['lime','#DBE000'],['applegreen','#86BE45'],['aqua','#86FBDB'],['ramune','#00FFFF'],
   ['white','#FFFFFF'],['sakura','#FCE3EE'],['lightlime','#FAF7BE'],['lightmatcha','#E8FFC9'],['lightaqua','#CFFFF0'],['lightblue','#C9E8F4']
 ];
+// the drawing's tool bar: one icon per tool, 18×18, same line style as the workshop's icons
+const DRAW_ICONS = {
+  normal:'<path d="M2.5 13.5c2.5-5 4.5 1.5 7-2.5s3-6.5 6-7.5"/>',
+  pixel:'<rect x="2.5" y="2.5" width="5.5" height="5.5" fill="currentColor"/><rect x="10" y="10" width="5.5" height="5.5" fill="currentColor"/><rect x="10" y="2.5" width="5.5" height="5.5"/><rect x="2.5" y="10" width="5.5" height="5.5"/>',
+  brush:'<path d="M15.5 2.5l-7 7"/><path d="M8.5 9.5c-.8-.8-2.3-.9-3.4.2-1.3 1.3-.6 3-2.6 4.8 2.6.6 5.1.2 6.3-1.1 1-1 .9-2.6-.3-3.9z" fill="currentColor"/>',
+  smudge:'<path d="M2.5 11.5c2-3 4-3 6.5 0s4.5 3 6.5 0"/><path d="M2.5 6.5c2-3 4-3 6.5 0s4.5 3 6.5 0" opacity=".45"/>',
+  erase:'<path d="M10.5 2.8l4.7 4.7-7 7H5.3L2.6 11.8z"/><path d="M6.6 6.7l4.7 4.7"/><path d="M9 14.5h6.5"/>',
+  pick:'<path d="M12.6 2.2a1.9 1.9 0 0 1 2.7 2.7l-1.6 1.6-2.7-2.7z" fill="currentColor"/><path d="M10.4 4.4l3.2 3.2"/><path d="M11 6.8l-7.3 7.3-.9 2.1 2.1-.9 7.3-7.3"/>',
+  zoom:'<circle cx="7.5" cy="7.5" r="4.8"/><path d="M11 11l4.5 4.5"/><path d="M5.3 7.5h4.4M7.5 5.3v4.4"/>'
+};
+const drawIcon = id=> '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + DRAW_ICONS[id] + '</svg>';
 const DRAW_RES = 1024;
 const decoded = new WeakMap();
 function strokePoints(st){
@@ -4778,14 +4795,27 @@ function openDrawEditor(n, watch, cache){
   voiceSec.append(lightRow, voiceBox, suggest, voiceHint);
   const ring = document.createElement('div'); ring.className = 'brushRing'; ring.hidden = true;
   const pct = v=> v + '%';
-  const modeRow = document.createElement('div'); modeRow.className = 'btnRow';
-  [['normal', 'modeNormal'], ['pixel', 'modePixel']].forEach(([id, label])=>{
+  // one row of icons: what you paint with, then how (free or pixel). The name is in the tooltip, with its key
+  const toolBar = document.createElement('div'); toolBar.className = 'toolBar'; toolBar.setAttribute('role', 'toolbar');
+  const iconBtn = (cls, id, label, key)=>{
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'miniBtn drawMode'; b.dataset.mode = id; b.textContent = t(label); b.title = t(label) + ' (P)';
-    b.addEventListener('click', ()=> setDrawGrid(id === 'pixel' ? (n.params.grid || brush.lastGrid || 32) : 0));
-    modeRow.appendChild(b);
+    b.type = 'button'; b.className = 'miniBtn ' + cls; b.innerHTML = drawIcon(id);
+    b.title = t(label) + ' (' + key + ')'; b.setAttribute('aria-label', t(label));
+    toolBar.appendChild(b);
+    return b;
+  };
+  [['brush', 'toolBrush', 'B'], ['smudge', 'toolSmudge', 'S'], ['erase', 'toolErase', 'E'], ['pick', 'toolPick', 'I'], ['zoom', 'toolZoom', 'Z']].forEach(([id, label, key])=>{
+    const b = iconBtn('drawTool', id, label, key);
+    b.dataset.tool = id;
+    b.addEventListener('click', ()=> setDrawTool(id));
   });
-  toolSec.appendChild(modeRow);
+  toolBar.appendChild(Object.assign(document.createElement('span'), {className:'toolSep'}));
+  [['normal', 'modeNormal'], ['pixel', 'modePixel']].forEach(([id, label])=>{
+    const b = iconBtn('drawMode', id, label, 'P');
+    b.dataset.mode = id;
+    b.addEventListener('click', ()=> setDrawGrid(id === 'pixel' ? (n.params.grid || brush.lastGrid || 32) : 0));
+  });
+  toolSec.appendChild(toolBar);
   const gridRow = document.createElement('label'); gridRow.className = 'prm full pxOnly';
   const gridLab = document.createElement('span'), gridSel = document.createElement('select');
   gridLab.textContent = t('pxGrid'); gridSel.id = 'pxGrid';
@@ -4816,14 +4846,6 @@ function openDrawEditor(n, watch, cache){
   const holdRow = paramEl(n, NODE_DEFS.srcDraw.params.find(d=> d.id === 'hold'), true);
   holdRow.classList.add('pxOnly');
   toolSec.append(gridRow, rowsRow, squareBtn, pxSlider, showRow, holdRow);
-  const toolRow = document.createElement('div'); toolRow.className = 'btnRow';
-  [['brush', 'toolBrush', 'B'], ['smudge', 'toolSmudge', 'S'], ['erase', 'toolErase', 'E'], ['pick', 'toolPick', 'I'], ['zoom', 'toolZoom', 'Z']].forEach(([id, label, key])=>{
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'miniBtn drawTool'; b.dataset.tool = id; b.textContent = t(label); b.title = t(label) + ' (' + key + ')';
-    b.addEventListener('click', ()=> setDrawTool(id));
-    toolRow.appendChild(b);
-  });
-  toolSec.appendChild(toolRow);
   toolSec.append(brushSlider('brSize', 'brSize', 1, BRUSH_MAX, 'size', v=> v, brushCurve), brushSlider('brOpacity', 'brOpacity', 1, 100, 'opacity', pct),
     brushSlider('brHard', 'brHard', 0, 100, 'hard', pct), brushSlider('brPress', 'brPress', 0, 100, 'press', pct));
   // mirrors and repeats: a shape drawn once, a phrase answered
