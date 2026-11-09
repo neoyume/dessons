@@ -38,6 +38,10 @@
   }
   *{box-sizing:border-box;}
   button, input, select, textarea{font-family:inherit;}
+  /* iPad: a long press (finger or Pencil) would start Safari's text selection, and while it
+     shows, the next tap only dismisses it: a button seems dead. Fields stay selectable. */
+  #stage, #drawEditor{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none;}
+  #stage input, #stage textarea, #drawEditor input, #drawEditor textarea{-webkit-user-select:text; user-select:text;}
   html, body{height:100%;}
   body{
     margin:0; background:radial-gradient(120% 100% at 15% -10%, var(--glow) 0%, var(--bg) 55%);
@@ -4697,6 +4701,9 @@ function initDrawZoom(){
   stage.addEventListener('contextmenu', e=> e.preventDefault());
   // in the capture phase: these gestures must never reach the canvas as paint
   stage.addEventListener('pointerdown', e=>{
+    // a selection left by a long press elsewhere would eat the next tap on iPad
+    const sel = getSelection();
+    if(sel && !sel.isCollapsed) sel.removeAllRanges();
     if(e.target.closest('.drawZoomBar')) return;
     if(e.pointerType === 'touch'){
       touches.set(e.pointerId, [e.clientX, e.clientY]);
@@ -5853,6 +5860,11 @@ function startMarquee(e){
   };
   stage.addEventListener('pointermove', move); stage.addEventListener('pointerup', up);
 }
+// backs up the CSS user-select: no text selection on the graph nor in the drawing editor (iPad long press)
+document.addEventListener('selectstart', e=>{
+  const el = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+  if(el && el.closest('#stage, #drawEditor') && !el.closest('input, textarea')) e.preventDefault();
+});
 stage.addEventListener('pointerdown', e=>{
   if(!isBackground(e)) return;
   hideMenu();
